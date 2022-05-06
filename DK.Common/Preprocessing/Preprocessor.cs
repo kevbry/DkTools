@@ -691,7 +691,12 @@ namespace DK.Preprocessing
 			p.result.Merge(Preprocess(parms));
 
 			p.writer.Append(includeSource);
-		}
+
+			if (!HasIncludeDependency(includeNode.FullPathName))
+			{
+                AddIncludeDependency(includeNode.FullPathName, include: true, localizedFile: false, includeNode.GetSource(_appSettings).Text);
+			}
+        }
 
 		public void AddIncludeDependency(string fullPathName, bool include, bool localizedFile, string content)
 		{
@@ -707,6 +712,15 @@ namespace DK.Preprocessing
 		{
 			get { return _includeDependencies; }
 		}
+
+		public bool HasIncludeDependency(string fullPathName)
+        {
+			foreach (var id in _includeDependencies)
+            {
+				if (id.FileName.Equals(fullPathName)) return true;
+            }
+			return false;
+        }
 
 		private void ProcessIfDef(PreprocessorParams p, bool activeIfDefined)
 		{

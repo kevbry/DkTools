@@ -135,6 +135,7 @@
     <Compile Include="Definitions\StringDefDefinition.cs" />
     <Compile Include="Definitions\TableDefinition.cs" />
     <Compile Include="Definitions\VariableDefinition.cs" />
+    <Compile Include="Diagnostics\ConsoleLogger.cs" />
     <Compile Include="Diagnostics\ILogger.cs" />
     <Compile Include="Diagnostics\ILoggerExtensions.cs" />
     <Compile Include="Diagnostics\LogLevel.cs" />
@@ -259,6 +260,7 @@
     <Compile Include="Preprocessing\Tokens\Token.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Code\CodeSpan.cs" />
+    <Compile Include="SemLock.cs" />
     <Compile Include="StringHelper.cs" />
     <Compile Include="Scanning\FFScanMode.cs" />
     <Compile Include="Syntax\ProbeClassifiedString.cs" />

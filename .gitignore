@@ -11,6 +11,10 @@
 /DK.Implementation.Windows/obj/
 /DkTools/bin/
 /DkTools/obj/
+/DKX.Compilation/bin/
+/DKX.Compilation/obj/
+/DKX.Compiler/bin/
+/DKX.Compiler/obj/
 /packages/
 /TestResults/
 /Tests/bin/
