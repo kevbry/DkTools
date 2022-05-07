@@ -6,6 +6,8 @@ namespace DK
     public static class Constants
     {
         public static readonly DateTime ZeroDate = new DateTime(1900, 1, 1);
+        public static readonly string[] EmptyStringArray = new string[0];
+        public static readonly byte[] EmptyByteArray = new byte[0];
 
         public static readonly HashSet<string> ProbeExtensions = StringHelper.ParseWordList("cc cc& cc+ ct ct& ct+ f f& f+ i i& i+ gp gp& gp+ nc nc& nc+ sc sc& sc+ sp sp& sp+ st st& st+ t t& t+");
         public static readonly HashSet<string> IncludeExtensions = StringHelper.ParseWordList("i i& i+ id id& id+ ie ie& ie+ il il& il+");

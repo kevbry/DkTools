@@ -7,6 +7,10 @@
 /DK.Common/obj/
 /DK.Common.Tests/bin/
 /DK.Common.Tests/obj/
+/DK.Implementation.Virtual/bin/
+/DK.Implementation.Virtual/obj/
+/DK.Implementation.Virtual.Tests/bin/
+/DK.Implementation.Virtual.Tests/obj/
 /DK.Implementation.Windows/bin/
 /DK.Implementation.Windows/obj/
 /DkTools/bin/

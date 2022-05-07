@@ -42,4 +42,21 @@ namespace DK.AppEnvironment
 
         void CreateDirectory(string path);
     }
+
+    public static class IFileSystemUtil
+    {
+        public static void CreateDirectoryRecursive(this IFileSystem fs, string path)
+        {
+            if (string.IsNullOrEmpty(path)) throw new System.IO.DirectoryNotFoundException(path);
+
+            var parentPath = PathUtil.GetDirectoryName(path);
+
+            if (!string.IsNullOrEmpty(parentPath) && !fs.DirectoryExists(parentPath))
+            {
+                fs.CreateDirectoryRecursive(parentPath);
+            }
+
+            fs.CreateDirectory(path);
+        }
+    }
 }
