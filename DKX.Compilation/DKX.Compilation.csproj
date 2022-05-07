@@ -52,8 +52,11 @@
     <Compile Include="ReportItem.cs" />
     <Compile Include="Jobs\ICompileJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WbdkExports\IWbdkExportsFileReader.cs" />
+    <Compile Include="WbdkExports\IWbdkExportsFileReaderFactory.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportFileJob.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportsJob.cs" />
+    <Compile Include="WbdkExports\WbdkExportsFileReader.cs" />
     <Compile Include="WbdkExports\WbdkExportsModel.cs" />
   </ItemGroup>
   <ItemGroup>

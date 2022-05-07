@@ -1,0 +1,22 @@
+﻿char(255) trim(char(255) str)
+{
+	unsigned	len;        // DK7
+	unsigned	i;          // DK7
+	int first, last;
+
+	// Find the first and last non-space chars.
+	first = -1;
+	len = strlen(str);
+	for (i = 0; i < len; i += 1)
+	{
+		if (str[i] != ' ')
+		{
+			if (first == -1) { first = i; }
+			last = (like last)i;        // DK7
+		}
+	}
+
+	if (first == -1) { return ""; }
+
+	return str[first, last - first + 1];
+}

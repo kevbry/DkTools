@@ -2,10 +2,7 @@
 using DK.Implementation.Virtual;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests
 {
@@ -27,6 +24,7 @@ namespace DKX.Compilation.Tests
         }
 
         protected DkAppContext App => _app;
+        protected VirtualFileSystem FS => _fs;
 
         class TestAppConfigSource : IAppConfigSource
         {
@@ -88,25 +86,30 @@ namespace DKX.Compilation.Tests
 
         public void SetupCompileFiles()
         {
-            _fs.CreateDirectory(@"x:\src");
-            _fs.CreateDirectory(@"x:\src\include");
-            _fs.CreateDirectory(@"x:\src\lib");
-            _fs.CreateDirectory(@"x:\src\bin");
-            _fs.CreateDirectory(@"x:\src\obj");
-            _fs.CreateDirectory(@"x:\src\tmp");
+            _fs.CreateDirectory(@"x:\bin");
             _fs.CreateDirectory(@"x:\platform");
             _fs.CreateDirectory(@"x:\platform\include");
+            _fs.CreateDirectory(@"x:\src");
+            _fs.CreateDirectory(@"x:\src\gateway");
+            _fs.CreateDirectory(@"x:\src\include");
+            _fs.CreateDirectory(@"x:\src\lib");
+            _fs.CreateDirectory(@"x:\src\obj");
+            _fs.CreateDirectory(@"x:\src\tmp");
 
             SetupFile(@"x:\platform\include\stdlib.i", "stdlib.i.txt");
             SetupFile(@"x:\src\dict", "dict.txt");
             SetupFile(@"x:\src\age.f", "age.f.txt");
+            SetupFile(@"x:\src\trim.f", "trim.f.txt");
+            SetupFile(@"x:\src\util.nc", "util.nc.txt");
+            SetupFile(@"x:\src\gateway\gateway.cc", "gateway.cc.txt");
+            SetupFile(@"x:\src\include\all.i", null);
         }
 
         private void SetupFile(string pathName, string testFileName)
         {
             var uri = new Uri(Assembly.GetExecutingAssembly().GetName().CodeBase);
             var exeDir = System.IO.Path.GetDirectoryName(uri.AbsolutePath);
-            var content = System.IO.File.ReadAllText($"{exeDir}\\TestSource\\{testFileName}");
+            var content = testFileName != null ? System.IO.File.ReadAllText($"{exeDir}\\TestSource\\{testFileName}") : string.Empty;
             _fs.WriteFileText(pathName, content);
         }
     }

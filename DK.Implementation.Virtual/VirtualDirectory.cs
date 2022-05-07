@@ -52,7 +52,15 @@ namespace DK.Implementation.Virtual
 
         public void WriteFile(string name, byte[] bytes)
         {
-            _files[name] = new VirtualFile(_fs, this, name, bytes);
+            if (!_files.TryGetValue(name, out var file))
+            {
+                _files[name] = new VirtualFile(_fs, this, name, bytes);
+            }
+            else
+            {
+                file.Content = bytes;
+                file.ModifiedDate = _fs.CurrentDate;
+            }
         }
 
         public void CreateDirectory(string name)

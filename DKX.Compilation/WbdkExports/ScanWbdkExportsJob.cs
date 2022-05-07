@@ -14,12 +14,15 @@ namespace DKX.Compilation.WbdkExports
         private DkAppContext _app;
         private ICompileJobQueue _queue;
         private string _workDir;
+        private IWbdkExportsFileReaderFactory _exportsReaderFactory;
+        private Dictionary<string, DateTime> _dateCache = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
-        public ScanWbdkExportsJob(DkAppContext app, ICompileJobQueue jobQueue, string workDir)
+        public ScanWbdkExportsJob(DkAppContext app, ICompileJobQueue jobQueue, string workDir, IWbdkExportsFileReaderFactory exportsReaderFactory)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _queue = jobQueue ?? throw new ArgumentNullException(nameof(jobQueue));
             _workDir = workDir ?? throw new ArgumentNullException(nameof(workDir));
+            _exportsReaderFactory = exportsReaderFactory ?? throw new ArgumentNullException(nameof(exportsReaderFactory));
         }
 
         public string Description => "Scan WBDK Exports";
@@ -37,7 +40,6 @@ namespace DKX.Compilation.WbdkExports
                     foreach (var result in ScanForWbdkExportFiles(sourceDir, string.Empty))
                     {
                         cancel.ThrowIfCancellationRequested();
-                        if (foundFiles.Count > 10) break;   // TODO
 
                         var pathNameLower = result.pathName.ToLower();
                         if (!foundFiles.Contains(pathNameLower))
@@ -46,7 +48,11 @@ namespace DKX.Compilation.WbdkExports
 
                             var relDir = PathUtil.CombinePath(_workDir, result.relPath);
                             var exportsPathName = PathUtil.CombinePath(relDir, PathUtil.GetFileName(result.pathName) + CompileConstants.WbdkExportsExtension);
-                            await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, exportsPathName, result.fileContext));
+
+                            if (ShouldFileBeRescanned(result.pathName, exportsPathName))
+                            {
+                                await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, exportsPathName, result.fileContext));
+                            }
                         }
                     }
                 }
@@ -83,6 +89,48 @@ namespace DKX.Compilation.WbdkExports
             public string pathName;
             public string relPath;
             public FileContext fileContext;
+        }
+
+        private DateTime GetFileDate(string pathName)
+        {
+            if (_dateCache.TryGetValue(pathName, out var date)) return date;
+
+            date = _app.FileSystem.GetFileModifiedDate(pathName);
+            _dateCache[pathName] = date;
+            return date;
+        }
+
+        private bool ShouldFileBeRescanned(string sourcePathName, string exportsPathName)
+        {
+            // Check the modified date of the source file.
+            if (_app.FileSystem.FileExists(exportsPathName))
+            {
+                if (GetFileDate(sourcePathName) > GetFileDate(exportsPathName))
+                {
+                    _app.Log.Debug("Exports file is older than it's source file: {0}", sourcePathName);
+                    return true;
+                }
+            }
+            else
+            {
+                _app.Log.Debug("Exports file does not yet exist: {0}", sourcePathName);
+                return true;
+            }
+
+            // Check if any of the include dependencies have been touched.
+            var exportsReader = _exportsReaderFactory.CreateReader(exportsPathName);
+            var exportsDate = GetFileDate(exportsPathName);
+            foreach (var includePathName in exportsReader.GetIncludeDependencies())
+            {
+                if (GetFileDate(includePathName) > exportsDate)
+                {
+                    _app.Log.Debug("Exports file is older than include dependency: {0}, {1}", sourcePathName, includePathName);
+                    return true;
+                }
+            }
+
+            _app.Log.Debug("Exports file is up to date: {0}", sourcePathName);
+            return false;
         }
     }
 }

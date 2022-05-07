@@ -208,6 +208,15 @@ namespace DK.Implementation.Virtual
             dir.WriteFile(name, data);
         }
 
+        public void TouchFile(string pathName)
+        {
+            pathName = CleanPath(pathName);
+            var file = FindFileOrNull(pathName);
+            if (file == null) throw new VirtualFileNotFoundException(pathName);
+
+            file.ModifiedDate = CurrentDate;
+        }
+
         public void CreateDirectory(string path)
         {
             path = CleanPath(path);
@@ -225,5 +234,18 @@ namespace DK.Implementation.Virtual
 
             dir.CreateDirectory(PathUtil.GetFileName(path));
         }
+
+        public DateTime GetFileModifiedDate(string pathName)
+        {
+            pathName = CleanPath(pathName);
+            var file = FindFileOrNull(pathName);
+            if (file == null) throw new VirtualFileNotFoundException(pathName);
+
+            return file.ModifiedDate;
+        }
+
+        public DateTime CurrentDate => DateTime.Now + DateOffset;
+
+        public TimeSpan DateOffset { get; set; }
     }
 }

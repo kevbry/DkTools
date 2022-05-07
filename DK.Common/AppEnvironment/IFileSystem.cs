@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace DK.AppEnvironment
 {
@@ -41,6 +42,8 @@ namespace DK.AppEnvironment
         void WriteFileBytes(string pathName, byte[] data);
 
         void CreateDirectory(string path);
+
+        DateTime GetFileModifiedDate(string pathName);
     }
 
     public static class IFileSystemUtil
@@ -57,6 +60,22 @@ namespace DK.AppEnvironment
             }
 
             fs.CreateDirectory(path);
+        }
+
+        public static IEnumerable<string> GetFilesInDirectoryRecursive(this IFileSystem fs, string dirPath)
+        {
+            foreach (var pathName in fs.GetFilesInDirectory(dirPath))
+            {
+                yield return pathName;
+            }
+
+            foreach (var path in fs.GetDirectoriesInDirectory(dirPath))
+            {
+                foreach (var pathName in fs.GetFilesInDirectoryRecursive(path))
+                {
+                    yield return pathName;
+                }
+            }
         }
     }
 }

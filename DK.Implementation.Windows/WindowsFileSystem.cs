@@ -1,4 +1,5 @@
 ﻿using DK.AppEnvironment;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -43,5 +44,7 @@ namespace DK.Implementation.Windows
         public void WriteFileBytes(string pathName, byte[] data) => File.WriteAllBytes(pathName, data);
 
         public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+
+        public DateTime GetFileModifiedDate(string pathName) => File.GetLastWriteTime(pathName);
     }
 }
