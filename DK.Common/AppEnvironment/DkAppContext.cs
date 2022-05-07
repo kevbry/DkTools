@@ -34,7 +34,7 @@ namespace DK.AppEnvironment
         public ILogger Log => _log;
         public DkAppSettings Settings => _settings;
 
-        public void LoadAppSettings(string appName)
+        public void LoadAppSettings(string appName = null)
         {
             var settings = DkEnvironment.LoadAppSettings(this, appName);
             _settings = settings;

@@ -32,7 +32,9 @@ namespace DK.Implementation.Virtual
 
         public IEnumerable<VirtualDirectory> Directories => _subDirs.Values;
         public IEnumerable<VirtualFile> Files => _files.Values;
-        public string FullPath =>  _parent != null ? string.Concat(_parent.FullPath, VirtualFileSystem.DelimString, _name) : string.Concat(_name, VirtualFileSystem.DelimString);
+        public string FullPath =>  _parent != null
+            ? string.Concat(_parent.FullPath.TrimEnd(VirtualFileSystem.DelimChar), VirtualFileSystem.DelimString, _name)
+            : string.Concat(_name, VirtualFileSystem.DelimString);
         public string Name => _name;
         public VirtualDirectory Parent => _parent;
 

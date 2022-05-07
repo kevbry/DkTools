@@ -17,6 +17,8 @@
 /DkTools/obj/
 /DKX.Compilation/bin/
 /DKX.Compilation/obj/
+/DKX.Compilation.Tests/bin/
+/DKX.Compilation.Tests/obj/
 /DKX.Compiler/bin/
 /DKX.Compiler/obj/
 /packages/

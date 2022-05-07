@@ -5,6 +5,7 @@ using DK.Definitions;
 using DK.Diagnostics;
 using DK.Modeling;
 using DK.Preprocessing;
+using DKX.Compilation.Jobs;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace DKX.Compilation.WbdkExports
 {
-    class ScanWbdkExportFileJob : ICompileJob
+    public class ScanWbdkExportFileJob : ICompileJob
     {
         private DkAppContext _app;
         private string _pathName;
@@ -30,6 +31,9 @@ namespace DKX.Compilation.WbdkExports
         }
 
         public string Description => $"Scan WBDK Exports: {_pathName}";
+        public string PathName => _pathName;
+        public string ExportsPathName => _exportsPathName;
+        public FileContext FileContext => _fileContext;
 
         public Task ExecuteAsync(CancellationToken cancel)
         {

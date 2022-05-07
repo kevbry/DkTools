@@ -1,0 +1,21 @@
+﻿create typedef custno_t numeric(9) unsigned;
+create typedef noyes_t enum { no, yes };
+create typedef yesno_t enum { yes, no };
+
+create	table cust 101 102  updates
+    prompt "Member"
+( 
+    no				custno_t,
+    branch			enum { " ", bdoon, eaton, wstgate },
+    benefit			enum { " ", regular, business },
+	signer			enum { " ", no, yes, req },
+	name			char(19)		ALLCAPS,
+	middle			char(19)        ALLCAPS,
+	usual			char(13)		ALLCAPS,
+	surname			char(38)		ALLCAPS,
+	sex 			enum { " ", M, F },
+	bdate			date,
+	sin 			numeric(9) unsigned,
+	partyid			numeric(9) unsigned,
+	primary			noyes_t
+)

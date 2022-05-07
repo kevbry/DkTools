@@ -1,0 +1,4 @@
+﻿numeric(3) unsigned age(date bdate)
+{
+	return sysdate() - bdate / 365;
+}

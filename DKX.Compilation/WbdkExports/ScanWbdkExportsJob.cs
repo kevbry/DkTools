@@ -1,6 +1,7 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
 using DK.Diagnostics;
+using DKX.Compilation.Jobs;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -8,16 +9,16 @@ using System.Threading.Tasks;
 
 namespace DKX.Compilation.WbdkExports
 {
-    class ScanWbdkExportsJob : ICompileJob
+    public class ScanWbdkExportsJob : ICompileJob
     {
         private DkAppContext _app;
-        private CompileQueue _queue;
+        private ICompileJobQueue _queue;
         private string _workDir;
 
-        public ScanWbdkExportsJob(DkAppContext app, CompileQueue queue, string workDir)
+        public ScanWbdkExportsJob(DkAppContext app, ICompileJobQueue jobQueue, string workDir)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
-            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _queue = jobQueue ?? throw new ArgumentNullException(nameof(jobQueue));
             _workDir = workDir ?? throw new ArgumentNullException(nameof(workDir));
         }
 
@@ -45,7 +46,7 @@ namespace DKX.Compilation.WbdkExports
 
                             var relDir = PathUtil.CombinePath(_workDir, result.relPath);
                             var exportsPathName = PathUtil.CombinePath(relDir, PathUtil.GetFileName(result.pathName) + CompileConstants.WbdkExportsExtension);
-                            await _queue.EnqueueAsync(new ScanWbdkExportFileJob(_app, result.pathName, exportsPathName, result.fileContext));
+                            await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, exportsPathName, result.fileContext));
                         }
                     }
                 }

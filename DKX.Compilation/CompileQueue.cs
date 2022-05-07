@@ -2,15 +2,15 @@
 using DK.AppEnvironment;
 using DK.Code;
 using DK.Diagnostics;
+using DKX.Compilation.Jobs;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation
 {
-    internal class CompileQueue
+    internal class CompileQueue : ICompileJobQueue
     {
         private DkAppContext _app;
         private string _name;
@@ -121,7 +121,7 @@ namespace DKX.Compilation
             }
         }
 
-        public async Task EnqueueAsync(ICompileJob job)
+        public async Task EnqueueCompileJobAsync(ICompileJob job)
         {
             if (job == null) throw new ArgumentNullException(nameof(job));
 

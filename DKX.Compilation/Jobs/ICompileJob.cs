@@ -1,9 +1,9 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace DKX.Compilation
+namespace DKX.Compilation.Jobs
 {
-    interface ICompileJob
+    public interface ICompileJob
     {
         string Description { get; }
 

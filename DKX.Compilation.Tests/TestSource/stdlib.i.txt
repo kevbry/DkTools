@@ -1,0 +1,347 @@
+﻿//	stdlib.i
+//	Fincentric PROBE - Standard Library Header
+//
+//	The information contained herein is a trade  secret  of  Fincentric
+//	Corporation and is confidential.  It is  provided  under a  License
+//	Agreement, and may be copied or disclosed only under the  terms  of
+//	that agreement.  Any reproduction or disclosure  of  this  material
+//	without the express written authorization of Fincentric Corporation
+//	or pursuant to the License Agreement is unlawful.
+//
+//	Copyright � 2001-2010 Fincentric Corporation.
+//	All rights reserved.
+//
+//	Modifications:
+//
+//	14jul13 sah VI18530 DK security trigger issues
+//  17jan08 dam added throwerror and invokefacility
+//	17Jan08 mav VI15879 Improve Periodic Integrity Checking performance.
+//  09may07 dam New feature: refusecommit
+//  03jan07 sah VI 15898 created new function strfind() to find substrings of strings
+//  03dec06 sah VI15896/15897  added new functions to make it possible to stream data to more than 1 file
+//  14apr05 sah VI14151 prototype change for longer wsname() length
+//	28apr03	rhou Added prototype for getemsg() so it can be accessed by DK programs.
+//	01mar03 dam VI5806 strlenvariant part of fec, extern is not necessary
+//	14Feb03 mb  VI5806 added new API for variant string handling "strlenvariant()"
+//	16jan03 dam mask preferences, ae calls
+//	04mar02	mb	VI8178: added CASCADEVALIDATE item to the trigclient_t enum (used by runtriggers())
+//  04jan02	ak	VI7667: changed message buffer to accept up to 255 characters for setmsg, getmsg
+//	11jul01 dam pwordkey,pwordget sb &+
+//	11jul01 dam incdate,finddate,makedate,maketime dont use generic int
+//	11jul01 dam qlocaleid sb unsigned not int
+//	03jul01 dam String/Word functions use mutable string params
+//	25apr01 dam Added find one only stuff
+//	13jul99 dam	Added search_t
+//	21dec98 dam	Added printlisting
+//	20oct98 dam	Added formmode and closeall prototype.
+//	16sep98 dam	Added weekday prototype.
+//	10jul98 dam	Added formatdir_t for format field trigger.
+//	18jul97	mb	added waitfor() API Probe function
+//	03dec96	mb	added print() API Probe function
+//	24sep96	mt	Don't expose "setwarehoused" as a PROBE API
+//	30aug96	mt	added new enum type "warehstatus_t", for edits
+//			trigger, at the server 
+//	09aug96	mb	added new API Probe functions:	remote_message_to_file(char(255));
+//												remote_message_to_string(char(255));
+//												send_file_to_remote(char(255));
+//												send_string_to_remote(char(255));
+//	09aug96	mb	added mode_t enum for global_action_##(mode_t mode)
+//	16jul96	mt	added new function prototype for warehoused
+//				transactions: "setwarehoused"
+//	16jul96	mt	added new function prototype for warehoused
+//				transactions: "getwarehoused"
+//	15jul96	mt	added new enum type, for warehoused 
+//				transactions: "wareh_t"
+//	09feb96	abc	added 3 parameters to asof prototype;
+//				added EarliestEffective prototype
+//	09feb96	abc	started modification history
+
+#ifndef STDLIB_I
+#define STDLIB_I
+
+// ----------------- avoid conflict with c++ reserved words -----------------
+
+#define	delete		_delete
+
+// -------------------------- unicode compatibility -------------------------
+
+#define puts		_putts
+#define strlen		_tcslen
+
+// -------------------------- safe-strings ----------------------------------
+
+#define strlwr		strlower
+#define strupr		strupper
+
+// --------------------------------- include --------------------------------
+
+#include <control.i>
+
+// ---------------------------- type definitions ----------------------------
+
+#define accessmode_t	enum { READ_WRITE, READ_ONLY, SAFE_WRITE }
+
+#define afssearch_t		enum { FIRST, NEXT, PREV, LAST, EQUAL }
+
+#define afsnavigate_t	enum { FIRST, NEXT, PREV, LAST, EXIT }
+
+#define alphamonth_t	enum { " ", Jan, Feb, Mar, Apr, May, Jun,\
+						 Jul, Aug, Sep, Oct, Nov, Dec }
+
+#define backdate_t		enum { BACKDATE, NOBACKDATE }
+
+#define dateunits_t		enum { " ", DAYS, WEEKS, SEMIMONTHS, MONTHS, YEARS,\
+						 days, weeks, semimonths, months, years }
+
+#define edits_t			enum { INSERT, UPDATE, FORM }
+
+#define finddate_t		enum { LT, GE, LE, GT }
+
+#define findop_t		enum { " ", _1, _2, _3, _4,\
+						 EQ, NEXT, PREVIOUS, GT, GE, LT, LE, FIRST, LAST,\
+						 eq, next, previous, gt, ge, lt, le, first, last,\
+						 EQforUpdate, FIRSTforUpdate,\
+						 EQonly, NEXTonly, PREVIOUSonly, GTonly, GEonly, LTonly, LEonly, FIRSTonly, LASTonly }
+
+#define qfindop_t		enum { " ", _1, _2, _3, _4,\
+						 EQ, NEXT, PREVIOUS, GT, GE, LT, LE, FIRST, LAST,\
+						 eq, next, previous, gt, ge, lt, le, first, last,\
+						 EQforUpdate, FIRSTforUpdate }
+
+#define formatdir_t		enum { FORMAT, PARSE, INITIALIZE }
+
+#define integ_t			enum { CHECK, CHECK_DISP, FIX, FIX_RECALC, MODE }
+
+#define formmethod_t	enum { " ", CLEAR, INSERT, SEARCHFIRST, SEARCHNEXT,\
+							SEARCHEQUAL, SEARCHPREVIOUS, SEARCHLAST, UPDATE }
+
+#define mode_t			enum { MAINFRAME, MODELESSFORM, MODELESSLISTING, MODELESSUPDATES,\
+							MODALFORM, MODALLISTING, MODALUPDATES, OPENFILEDLG,\
+							PRINTSETUPDLG, PAGESETUPDLG, PRINTDLG, PRINTINGDLG,\
+							ERRORBOX, TOOLBARDLG, ABOUTDLG}
+
+#define multi_t			enum { NOTMULTI, FIRST, MIDDLE, LAST }
+
+#define notebuf_t		long
+
+#define noterow_t		numeric(14)
+
+#define openform_t		enum { MODAL, MODELESS, DEFAULT }
+
+#define formview_t		enum { fvNULL, fvDETAIL, fvZOOM, fvTOOL } 
+
+#define page_t			int
+
+#define pod_t			enum { BOD, EOD }
+
+#define position_t		enum { MIDDLE, FIRST, LAST, SINGLE }
+
+#define recalc_t		enum { NORECALC, RECALC }
+
+#define revoke_t		enum { SELECT, INSERT, UPDATE, DELETE }
+
+#define search_t		enum { FIRST, NEXT, PREV, LAST, EQUAL }
+
+#define setdelim_t		enum { RETURNFORM }
+
+#define setsnap_t		enum { NEXT, NEXTEND, NEXT_OFF, NEXTEND_OFF,\
+						 NEXTBEG, NEXTBEG_OFF, REPLAYREQ }
+
+#define	trigopt_t		enum { NOEDITS, EDITS, NOTRIGGERS, NOAUDIT, ISOLATED, ISOLATED_NOEDIT }
+
+#define trigclient_t	enum { NOTRIGGER, CASCADETRIGGERS, CASCADEVALIDATE }
+
+#define update_t		enum { NOUPDATE, UPDATE }
+
+#define	wait_t			enum { NOWAIT, WAIT }
+
+#define wareh_t			enum { NOWAREHOUSED, WAREHOUSED }
+
+#define warehstatus_t	enum { NORMAL, WAREHOUSED, UNWAREHOUSING }
+
+#define work_t			int
+
+#define aisdriverid_t	enum {AIS_GATEWAY_ID, AIS_PERIODIC_ID, AIS_REPORT_ID, AIS_SAM_ID, AIS_SRVRPROG_ID }
+
+// -------------------------- function prototypes ---------------------------
+
+extern int					action(table, int);
+extern int					aisinit(aisdriverid_t);
+extern int					aisloop();
+extern void					aisexit();
+extern void					aisdie();
+extern int					asof(table, date, pod_t, date, int, int);
+extern int					backsnap(table, date, pod_t, backdate_t);
+extern work_t				beginwork();
+extern int					callform(table);
+extern void					clrrownoreq();
+extern void					charchng(char(255)&+, char, char);
+extern void					clearbuf(table);
+extern void					ClearPROBELocale();
+extern void					closeall();
+extern void					closeform(int);
+extern void					commit(work_t);
+extern int					compareoldbuf(table);
+extern numeric(2) unsigned	day(date);
+extern date					dbdate();
+extern date					dbdateRefresh();
+extern void					dbtoset(int);
+extern int					delete(table);
+extern void					dispflds();
+extern date					EarliestEffective(table, date);
+extern char(13)				encpwd(char(255));
+extern void					endmarker();
+extern char(70)				fieldcomment();
+extern char(30)				fieldname();
+extern char(30)				fieldprompt();
+extern int					find(table, indrel, findop_t);
+extern date					finddate(date, int, dateunits_t, numeric(2) unsigned, date, finddate_t);
+extern int					fixfilename(string 255 &+, char);
+extern char(70)				formcomment();
+extern openform_t			formmode();
+extern char(30)				formname();
+extern numeric(4) unsigned	formpageno();
+extern char(30)				formprompt();
+extern formview_t			formview();
+extern void					freenotebuf(table, notebuf_t);
+extern void					freeoldbuf(table);
+extern void					genpwd(char(6)&);
+extern char(255)			getaemsg();
+extern short				getaeno();
+extern short				getaemsgid();
+extern char(255)			getaeparam(unsigned base1param);
+extern unsigned				getaeparamcnt();
+extern char(255)			getmsg();
+extern char(255)			getemsg();
+extern collate_t			getcurrencybyname(char(128) name);
+extern collate_t			getlcprefbyname(char(128) name);
+extern collate_t			getlocalebyname(char(128) name);
+extern int					getlocalename(collate_t localeid,char(128)&+ name);
+extern int					getmulti();
+extern wareh_t				getwarehoused(table);
+extern void					highlight(int);
+extern numeric(2) unsigned	hour(time);
+extern date					incdate(date, int, dateunits_t, numeric(2) unsigned);
+extern int					insert(table, trigopt_t);
+extern int					insrel(table, table, trigopt_t);
+extern int					inssnap(table, date, backdate_t);
+extern int					integ(table, integ_t);
+extern int					integRange(table, integ_t, date, date);
+extern int					invokefacility(char(255));
+extern int					isdirty();
+extern int					isgermane(char(255));
+extern int					isident(char(255));
+extern int					isrefusecommit();
+extern numeric(18,14)		logten(numeric(18,10));
+extern int					listingextract(char(255));
+extern void					listupdates(table, date, date, int, int, int, char(255), int, int);
+extern date					makedate(numeric(3) unsigned, alphamonth_t, numeric(2) unsigned);
+extern time					maketime(numeric(2) unsigned, numeric(2) unsigned, numeric(2) unsigned);
+extern numeric(2) unsigned	minute(time);
+extern alphamonth_t			month(date);
+extern notebuf_t			notebuf(table);
+extern noterow_t			noterec(table);
+extern noterow_t			noterow(table);
+extern char(255)			nullstr(char(255));
+extern int					openform(table, openform_t);
+extern numeric(4) unsigned	pageno();
+extern numeric(4) unsigned	pagerow();
+extern numeric(18)			PCounterStart();
+extern numeric(18,8)		PCounterElapsed(numeric(18));
+extern char					pendchar();
+extern void					pointbuf(table, notebuf_t);
+extern void					pointrec(table, noterow_t);
+extern void					pointrow(table, noterow_t);
+extern numeric(18,10)		power(numeric(18,10), numeric(18,14));
+extern void					print(int);
+extern void					printlisting(char(255),int);
+extern void					puts(char(255));
+extern char(255)			pwordkey(char(255)&+, char(255), int);
+extern char(255)			pwordget(char(255)&+, int, int);
+extern void					qaction(table, int);
+extern void					qlistingreq(int, int, int, int);
+extern void					qbufreq(table);
+extern void					qbufsend(table);
+extern void					qdbno(int);
+extern int					qcheck();
+extern void					qcompareoldbuf(table);
+extern void					qdelete(table);
+extern void					qemsgbuf(char(255));
+extern void					qfind(table, indrel, qfindop_t);
+extern void					qgetcur();
+extern unsigned				qhash();
+extern void					qinit();
+extern void					qinitdos();
+extern void					qinsert(table, trigopt_t);
+extern void					qinsrel(table, table, trigopt_t);
+extern void					qkeysend(table, indrel);
+extern int					qlistingextract(char(255));
+extern void					qlocaleid(unsigned);
+extern void					qrecnoreq(table);
+extern void					qrecnosend(table);
+extern int					qroom();
+extern void					qrownoreq(table);
+extern void					qrownosend(table);
+extern int					qsend();
+extern int					qsendnw();
+extern void					qsetoldbuf(table);
+extern void					qupdate(table, trigopt_t);
+extern void					qupdrel(table, table, trigopt_t);
+extern void					recmarker(table);
+extern void					refusecommit();
+extern void					revoke(revoke_t);
+extern void					rollback(work_t);
+extern void					rowmarker(table);
+extern void					runtriggers(trigclient_t);
+extern int					saveconfirm(char(255));
+extern int					savedbuser(char(255));
+extern numeric(2) unsigned	second(time);
+extern int					select_action(char(255));
+extern int					select_listing(char(255));
+extern int					select_menu(char(255));
+extern int					sesprio(int, int);
+extern void					SetAccessMode(accessmode_t);
+extern void					setdelim(setdelim_t);
+extern int					setdirty(int);
+extern void					setkilltime(date, time);
+extern unsigned				setlangid(unsigned lang);
+extern unsigned				setlocaleid(unsigned);
+//extern int					setmsg(char(70));
+extern int					setmsg(char(255));
+// changed for VI 7667 to 255 - it actually operates with up to 255 characters
+extern void					setoldbuf(table);
+extern void					SetPROBELocale();
+extern int					setsnap(table, setsnap_t, update_t);
+extern pod_t				snappod(table);
+extern int					snapshot(table);
+extern void					strcap(char(255)&+, char(255));
+extern int					strfind(char(255), char(255));
+extern unsigned				strlen(char(255));
+extern void					strlwr(char(255)&+);
+extern void					strrip(char(255)&+);
+extern int					strsrch(char(255), char);
+extern void					strstrip(char(255)&+);
+extern void					strupr(char(255)&+);
+extern int					strwords(char(255)&+, char(255), int);
+extern void					suspend(int);
+extern date					sysdate();
+extern int					systemex(char(255), wait_t);
+extern int					systemrl(char(255));
+extern time					systime();
+extern void					throwerror(char(255));
+extern int					update(table, trigopt_t);
+extern int					updrel(table, table, trigopt_t);
+extern int					waitfor(char(255));
+extern int					weekday(date);
+extern int					wordpos(char(255)&+, int, int, int);
+extern int					wordrepl(char(255)&+, int, char(255));
+extern int					wordstrip(char(255)&+);
+extern char(48)				wsname();
+extern numeric(3) unsigned	year(date);
+
+extern int					remote_message_to_file(char(255));
+extern int					remote_message_to_string(char(255));
+extern int					send_file_to_remote(char(255));
+extern int					send_string_to_remote(char(255));
+extern int					makeUniqueFileOrDir(char(255)&+, char(255), int);
+#endif	// STDLIB_I
