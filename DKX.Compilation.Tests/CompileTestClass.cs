@@ -87,6 +87,7 @@ namespace DKX.Compilation.Tests
         public void SetupCompileFiles()
         {
             _fs.CreateDirectory(@"x:\bin");
+            _fs.CreateDirectory(@"x:\bin\.dkx");
             _fs.CreateDirectory(@"x:\platform");
             _fs.CreateDirectory(@"x:\platform\include");
             _fs.CreateDirectory(@"x:\src");

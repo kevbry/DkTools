@@ -129,7 +129,7 @@ namespace DKX.Compilation.WbdkExports
                 }
             }
 
-            _app.Log.Debug("Exports file is up to date: {0}", sourcePathName);
+            //_app.Log.Debug("Exports file is up to date: {0}", sourcePathName);
             return false;
         }
     }

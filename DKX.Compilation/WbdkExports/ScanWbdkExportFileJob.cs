@@ -3,8 +3,8 @@ using DK.AppEnvironment;
 using DK.Code;
 using DK.Definitions;
 using DK.Diagnostics;
-using DK.Modeling;
 using DK.Preprocessing;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.Jobs;
 using Newtonsoft.Json;
 using System;
@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DKM = DK.Modeling;
 
 namespace DKX.Compilation.WbdkExports
 {
@@ -52,7 +53,7 @@ namespace DKX.Compilation.WbdkExports
                 disabled: false);
             source.Flush();
 
-            var fileStore = new FileStore(_app);
+            var fileStore = new DKM.FileStore(_app);
             var model = fileStore.CreatePreprocessedModel(
                 appSettings: _app.Settings,
                 source: source,
@@ -81,7 +82,7 @@ namespace DKX.Compilation.WbdkExports
             else
             {
                 var funcDefs = model.PreprocessorModel.LocalFunctions
-                    .Where(x => x.Definition.Privacy == FunctionPrivacy.Public)
+                    .Where(x => x.Definition.Privacy == DKM.FunctionPrivacy.Public)
                     .Select(x => x.Definition);
                 CreateExportsFile(funcDefs, model.PreprocessorModel.IncludeDependencies);
             }
@@ -95,17 +96,48 @@ namespace DKX.Compilation.WbdkExports
             {
                 SourceFile = _pathName,
                 TimeStamp = DateTime.Now,
-                Exports = funcDefs.Any() ? funcDefs.Select(x => new WbdkExport
-                {
-                    ClassName = x.ClassName,
-                    Name = x.Name,
-                    DkSignature = x.Signature.ToDbString()
-                }).ToArray() : null,
-                DependentFiles = includeDependencies.Select(x => x.FileName).ToArray()
+                Exports = funcDefs.Any() ? funcDefs.Select(f => TransformFunction(f)).ToArray() : null
             };
 
             var json = JsonConvert.SerializeObject(file, Formatting.Indented);
+            _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(_exportsPathName));
             _app.FileSystem.WriteFileText(_exportsPathName, json);
+        }
+
+        private WbdkExport TransformFunction(FunctionDefinition funcDef)
+        {
+            var functionExport = new WbdkExport
+            {
+                ClassName = funcDef.ClassName,
+                Name = funcDef.Name,
+            };
+
+            if (funcDef.Arguments.Any())
+            {
+                var args = new List<WbdkExportArgument>();
+                var unnamedNumber = 0;
+                foreach (var arg in funcDef.Arguments)
+                {
+                    var dataType = DkDataTypeParser.Parse(new CodeParser(arg.DataType.Source.ToString()));
+                    if (dataType == null) dataType = DataType.Unsupported;
+
+                    args.Add(new WbdkExportArgument
+                    {
+                        Name = !string.IsNullOrEmpty(arg.Name) ? arg.Name : $"unnamed{++unnamedNumber}",
+                        DataType = dataType.Value.ToCode(),
+                        Ref = arg.PassByMethod == DKM.PassByMethod.Reference || arg.PassByMethod == DKM.PassByMethod.ReferencePlus,
+                        Out = false
+                    });
+                }
+
+                functionExport.Arguments = args.ToArray();
+            }
+
+            var returnDataType = DkDataTypeParser.Parse(new CodeParser(funcDef.DataType.Source.ToString()));
+            if (returnDataType == null) returnDataType = DataType.Unsupported;
+            functionExport.ReturnDataType = returnDataType.Value.ToCode();
+
+            return functionExport;
         }
     }
 }

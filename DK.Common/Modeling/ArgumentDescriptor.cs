@@ -46,6 +46,8 @@ namespace DK.Modeling
 			get { return _passByMethod; }
 		}
 
+		public ProbeClassifiedString Source => _source;
+
 		public string ToDbString()
 		{
 			var sb = new StringBuilder();

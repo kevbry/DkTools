@@ -52,6 +52,8 @@ namespace DK.AppEnvironment
         {
             if (string.IsNullOrEmpty(path)) throw new System.IO.DirectoryNotFoundException(path);
 
+            if (fs.DirectoryExists(path)) return;
+
             var parentPath = PathUtil.GetDirectoryName(path);
 
             if (!string.IsNullOrEmpty(parentPath) && !fs.DirectoryExists(parentPath))

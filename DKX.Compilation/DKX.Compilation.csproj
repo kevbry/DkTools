@@ -45,6 +45,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CompileConstants.cs" />
+    <Compile Include="DataTypes\DkDataTypeParser.cs" />
+    <Compile Include="DataTypes\BaseType.cs" />
+    <Compile Include="DataTypes\DataType.cs" />
     <Compile Include="ErrorCode.cs" />
     <Compile Include="CompileQueue.cs" />
     <Compile Include="Compiler.cs" />
