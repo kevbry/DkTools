@@ -157,8 +157,8 @@ namespace DKX.Compilation.DataTypes
                     if (_scale != 0) return $"numeric({_width}, {_scale})";
                     return $"numeric({_width})";
                 case BaseType.UNumeric:
-                    if (_scale != 0) return $"unumeric({_width}, {_scale})";
-                    return $"unumeric({_width})";
+                    if (_scale != 0) return $"unsigned({_width}, {_scale})";
+                    return $"unsigned({_width})";
                 case BaseType.Char:
                     return "char";
                 case BaseType.UChar:
@@ -255,6 +255,16 @@ namespace DKX.Compilation.DataTypes
                         }
                         if (!code.ReadExact(')')) return null;
                         return new DataType(BaseType.Numeric, width: width, scale: scale);
+                    case "unsigned":
+                        if (!code.ReadExact('(')) return null;
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
+                        scale = 0;
+                        if (code.ReadExact(','))
+                        {
+                            if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
+                        }
+                        if (!code.ReadExact(')')) return null;
+                        return new DataType(BaseType.UNumeric, width: width, scale: scale);
                     case "char":
                         return Char;
                     case "uchar":

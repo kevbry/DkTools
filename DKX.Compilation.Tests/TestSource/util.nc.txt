@@ -1,4 +1,4 @@
-﻿noyes_t StringIsBlankOrNull(char(255) str)
+﻿Boolean_t StringIsBlankOrNull(char(255) str)
 {
     return no;
 }

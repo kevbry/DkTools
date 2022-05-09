@@ -21,7 +21,6 @@ namespace DKX.Compilation.Tests
         public async Task AllExportsGenerated()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
 
@@ -60,8 +59,6 @@ namespace DKX.Compilation.Tests
         {
             var app = CreateAppContext();
             var fs = app.FileSystem as VirtualFileSystem;
-            fs.DateOffset = TimeSpan.FromMinutes(-60);
-            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
 
@@ -104,7 +101,7 @@ namespace DKX.Compilation.Tests
             }
 
             // Touch the files we want to pick up.
-            fs.DateOffset = TimeSpan.Zero;
+            fs.DateOffset = TimeSpan.FromMinutes(1);
             foreach (var pathName in touchedPathNames) fs.TouchFile(pathName);
 
             // Run again now that select files have been touched.
@@ -132,8 +129,6 @@ namespace DKX.Compilation.Tests
         {
             var app = CreateAppContext();
             var fs = app.FileSystem as VirtualFileSystem;
-            fs.DateOffset = TimeSpan.FromMinutes(-60);
-            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
             var exportsReaderFactory = new TestExportsFileReaderFactory();
@@ -161,28 +156,23 @@ namespace DKX.Compilation.Tests
                 }
             }
 
+            TestContext.Out.WriteLine("Exports with include dependency:");
             foreach (var pathName in applicablePathNames)
             {
                 var scanJob = jobQueue.Jobs.Cast<ScanWbdkExportFileJob>().Where(x => x.PathName.EqualsI(pathName)).FirstOrDefault();
-                Assert.IsNotNull(scanJob);
-
-                Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
-                var relPathName = pathName.Substring(@"x:\src\".Length);
-
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
-                Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
 
                 app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
                 app.FileSystem.WriteFileText(scanJob.ExportsPathName, string.Empty);
 
                 if (touchedPathNames.Any(x => x.EqualsI(pathName)))
                 {
+                    TestContext.Out.WriteLine($"- {scanJob.ExportsPathName}");
                     exportsReaderFactory.SetIncludeDependencies(scanJob.ExportsPathName, new string[] { @"x:\src\include\all.i" });
                 }
             }
 
             // Touch the include files which will trigger the other exports to be rebuilt.
-            fs.DateOffset = TimeSpan.Zero;
+            fs.DateOffset = TimeSpan.FromMinutes(1);
             fs.TouchFile(@"x:\src\include\all.i");
 
             // Run again now that the include file has been touched.
@@ -211,7 +201,6 @@ namespace DKX.Compilation.Tests
         {
             var app = CreateAppContext();
             var fs = app.FileSystem as VirtualFileSystem;
-            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
 

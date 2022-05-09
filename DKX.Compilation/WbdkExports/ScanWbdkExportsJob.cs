@@ -132,7 +132,7 @@ namespace DKX.Compilation.WbdkExports
             {
                 if (GetFileDate(sourcePathName) > GetFileDate(exportsPathName))
                 {
-                    _app.Log.Debug("Exports file is older than it's source file: {0}", sourcePathName);
+                    _app.Log.Debug("Exports file is older than its source file: {0}", sourcePathName);
                     return true;
                 }
             }

@@ -17,5 +17,6 @@ create	table cust 101 102  updates
 	bdate			date,
 	sin 			numeric(9) unsigned,
 	partyid			numeric(9) unsigned,
-	primary			noyes_t
+	primary			noyes_t,
+	bdate			date
 )

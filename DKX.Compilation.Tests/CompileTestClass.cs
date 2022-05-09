@@ -15,6 +15,7 @@ namespace DKX.Compilation.Tests
             var config = new TestAppConfigSource();
 
             var app = new DkAppContext(fs, log, config);
+            SetupCompileFiles(app);
             app.LoadAppSettings();
             return app;
         }
@@ -77,7 +78,7 @@ namespace DKX.Compilation.Tests
             public int DefaultSamPort => 5001;
         }
 
-        public void SetupCompileFiles(DkAppContext app)
+        private void SetupCompileFiles(DkAppContext app)
         {
             app.FileSystem.CreateDirectory(@"x:\bin");
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");

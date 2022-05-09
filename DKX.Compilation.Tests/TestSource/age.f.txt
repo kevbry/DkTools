@@ -1,4 +1,4 @@
-﻿numeric(3) unsigned age(date bdate)
+﻿numeric(3) unsigned age(like cust.bdate bdate)
 {
 	return sysdate() - bdate / 365;
 }
