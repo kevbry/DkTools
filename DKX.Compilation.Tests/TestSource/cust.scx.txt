@@ -1,0 +1,4 @@
+﻿int Find(like cust.no custNo)
+{
+    return 0;
+}

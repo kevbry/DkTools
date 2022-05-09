@@ -91,6 +91,7 @@ namespace DKX.Compilation.Tests
             app.FileSystem.CreateDirectory(@"x:\src\obj");
             app.FileSystem.CreateDirectory(@"x:\src\tmp");
 
+            // DK source
             SetupFile(app, @"x:\platform\include\stdlib.i", "stdlib.i.txt");
             SetupFile(app, @"x:\src\dict", "dict.txt");
             SetupFile(app, @"x:\src\age.f", "age.f.txt");
@@ -98,6 +99,12 @@ namespace DKX.Compilation.Tests
             SetupFile(app, @"x:\src\util.nc", "util.nc.txt");
             SetupFile(app, @"x:\src\gateway\gateway.cc", "gateway.cc.txt");
             SetupFile(app, @"x:\src\include\all.i", null);
+
+            // DKX source
+            SetupFile(app, @"x:\src\cust.scx", "cust.scx.txt");
+            SetupFile(app, @"x:\src\info.ccx", "info.ccx.txt");
+            SetupFile(app, @"x:\src\info.scx", "info.scx.txt");
+            SetupFile(app, @"x:\src\test.ncx", "test.ncx.txt");
         }
 
         private void SetupFile(DkAppContext app, string pathName, string testFileName)

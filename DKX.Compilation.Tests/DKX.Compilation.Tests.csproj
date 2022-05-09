@@ -53,6 +53,11 @@
   <ItemGroup>
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />
+    <Compile Include="Files\ScanForCompileJobTests.cs" />
+    <Compile Include="Files\TestCompileFileJob.cs" />
+    <Compile Include="Files\TestCompileFileJobFactory.cs" />
+    <Compile Include="Files\TestObjectFileReader.cs" />
+    <Compile Include="Files\TestObjectFileReaderFactory.cs" />
     <Compile Include="WbdkExports\ScanWbdExportFileJobTests.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportsJobTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -62,6 +67,18 @@
     <Compile Include="TestLogger.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="TestSource\info.ccx.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestSource\info.scx.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestSource\test.ncx.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestSource\cust.scx.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestSource\util.nc.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

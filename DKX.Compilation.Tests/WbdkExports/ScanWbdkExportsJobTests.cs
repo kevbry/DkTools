@@ -50,7 +50,7 @@ namespace DKX.Compilation.Tests.WbdkExports
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.wbdkx", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
             }
         }
@@ -94,7 +94,7 @@ namespace DKX.Compilation.Tests.WbdkExports
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.wbdkx", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
 
                 app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
@@ -120,7 +120,7 @@ namespace DKX.Compilation.Tests.WbdkExports
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.wbdkx", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
             }
         }
@@ -196,8 +196,8 @@ namespace DKX.Compilation.Tests.WbdkExports
             }
         }
 
-        [TestCase(@"x:\src\age.f", @"x:\bin\.dkx\age.f.exports")]
-        [TestCase(@"x:\src\gateway\gateway.cc", @"x:\bin\.dkx\gateway\gateway.cc.exports")]
+        [TestCase(@"x:\src\age.f", @"x:\bin\.dkx\age.f.wbdkx")]
+        [TestCase(@"x:\src\gateway\gateway.cc", @"x:\bin\.dkx\gateway\gateway.cc.wbdkx")]
         public async Task DeleteFile(string sourceFile, string exportFile)
         {
             var app = CreateAppContext();

@@ -16,7 +16,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             var app = CreateAppContext();
 
             var pathName = @"x:\src\age.f";
-            var exportsPathName = @"x:\bin\.dkx\age.f.exports";
+            var exportsPathName = @"x:\bin\.dkx\age.f.wbdkx";
             var tableHashProvider = new TestTableHashProvider();
             var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.Function, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
@@ -54,7 +54,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             var app = CreateAppContext();
 
             var pathName = @"x:\src\gateway\gateway.cc";
-            var exportsPathName = @"x:\bin\.dkx\gateway\gateway.cc.exports";
+            var exportsPathName = @"x:\bin\.dkx\gateway\gateway.cc.wbdkx";
             var tableHashProvider = new TestTableHashProvider();
             var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.ClientClass, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
@@ -90,7 +90,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             var app = CreateAppContext();
 
             var pathName = @"x:\src\util.nc";
-            var exportsPathName = @"x:\bin\.dkx\util.nc.exports";
+            var exportsPathName = @"x:\bin\.dkx\util.nc.wbdkx";
             var tableHashProvider = new TestTableHashProvider();
             var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.NeutralClass, tableHashProvider);
             await job.ExecuteAsync(cancel: default);

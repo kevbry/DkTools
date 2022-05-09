@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
+using DKX.Compilation.Files;
 using DKX.Compilation.Schema;
 using DKX.Compilation.WbdkExports;
 using System;
@@ -28,14 +29,33 @@ namespace DKX.Compilation
 
             // Scan legacy files for exports
             _app.Log.Info("Checking WBDK exports");
-            var scanQueue = new CompileQueue(_app, "WBDK Exports Scan Queue");
-            await scanQueue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, scanQueue, _workDir,
+            var queue = new CompileQueue(_app, "WBDK Exports Scan Queue");
+            var tableHashProvider = new TableHashProvider(_app);
+            await queue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, queue, _workDir,
                 new WbdkExportsFileReaderFactory(_app),
-                new TableHashProvider(_app)));
+                tableHashProvider));
 
-            await scanQueue.ProcessQueueToCompletionAsync(cancel);
+            await queue.ProcessQueueToCompletionAsync(cancel);
 
-            ImportReportItems(scanQueue.ReportItems);
+            ImportReportItems(queue.ReportItems);
+            if (HasErrors)
+            {
+                Report();
+                return;
+            }
+
+            queue = new CompileQueue(_app, "DKX Compilation Queue");
+            await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
+                app: _app,
+                workDir: _workDir,
+                compileQueue: queue,
+                compileFileJobFactory: new CompileFileJobFactory(_app),
+                objectFileReaderFactory: new ObjectFileReaderFactory(_app),
+                tableHashProvider: tableHashProvider));
+
+            await queue.ProcessQueueToCompletionAsync(cancel);
+
+            ImportReportItems(queue.ReportItems);
             if (HasErrors)
             {
                 Report();
