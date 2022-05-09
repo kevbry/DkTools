@@ -61,12 +61,17 @@
     <Compile Include="Files\ObjectFileReader.cs" />
     <Compile Include="Files\ObjectFileReaderFactory.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
+    <Compile Include="Nodes\MethodNode.cs" />
+    <Compile Include="Nodes\Node.cs" />
     <Compile Include="ReportItem.cs" />
     <Compile Include="Jobs\ICompileJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Schema\ITableHashProvider.cs" />
     <Compile Include="Schema\TableHashProvider.cs" />
     <Compile Include="Files\ScanForCompileJob.cs" />
+    <Compile Include="Nodes\FileNode.cs" />
+    <Compile Include="Variables\ArgumentType.cs" />
+    <Compile Include="Variables\Variable.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReader.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReaderFactory.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportFileJob.cs" />

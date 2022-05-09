@@ -2,6 +2,7 @@
 using DK.Code;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
+using DKX.Compilation.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +35,10 @@ namespace DKX.Compilation.Files
         {
             _app.Log.Info("Compiling: {0}", _dkxPathName);
 
-            // TODO
+            var source = _app.FileSystem.GetFileText(_dkxPathName);
+            var code = new CodeParser(source);
+            var fileNode = new FileNode(_dkxPathName, code);
+            fileNode.Parse();
 
             return Task.CompletedTask;
         }

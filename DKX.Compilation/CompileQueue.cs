@@ -98,7 +98,7 @@ namespace DKX.Compilation
                         }
                         catch (Exception ex)
                         {
-                            _reportItems.Add(new ReportItem(FilePosition.Empty, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, ex));
+                            _reportItems.Add(new ReportItem(null, CodeSpan.Empty, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, ex));
                             _haltErrors = true;
                         }
                     }

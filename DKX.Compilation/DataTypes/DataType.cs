@@ -206,7 +206,7 @@ namespace DKX.Compilation.DataTypes
         #endregion
 
         #region Code Parsing
-        public DataType? Parse(CodeParser code)
+        public static DataType? Parse(CodeParser code)
         {
             var startPos = code.Position;
 
@@ -225,91 +225,88 @@ namespace DKX.Compilation.DataTypes
             return null;
         }
 
-        private DataType? ParseWord(CodeParser code, string word)
+        private static DataType? ParseWord(CodeParser code, string word)
         {
-            if (code.ReadWord())
+            switch (word)
             {
-                switch (code.Text)
-                {
-                    case "unsupported":
-                        return Unsupported;
-                    case "void":
-                        return Void;
-                    case "bool":
-                        return Bool;
-                    case "short":
-                        return Short;
-                    case "ushort":
-                        return UShort;
-                    case "int":
-                        return Int;
-                    case "uint":
-                        return UInt;
-                    case "numeric":
-                        if (!code.ReadExact('(')) return null;
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
-                        byte scale = 0;
-                        if (code.ReadExact(','))
-                        {
-                            if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
-                        }
+                case "unsupported":
+                    return Unsupported;
+                case "void":
+                    return Void;
+                case "bool":
+                    return Bool;
+                case "short":
+                    return Short;
+                case "ushort":
+                    return UShort;
+                case "int":
+                    return Int;
+                case "uint":
+                    return UInt;
+                case "numeric":
+                    if (!code.ReadExact('(')) return null;
+                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
+                    byte scale = 0;
+                    if (code.ReadExact(','))
+                    {
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
+                    }
+                    if (!code.ReadExact(')')) return null;
+                    return new DataType(BaseType.Numeric, width: width, scale: scale);
+                case "unsigned":
+                    if (!code.ReadExact('(')) return null;
+                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
+                    scale = 0;
+                    if (code.ReadExact(','))
+                    {
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
+                    }
+                    if (!code.ReadExact(')')) return null;
+                    return new DataType(BaseType.UNumeric, width: width, scale: scale);
+                case "char":
+                    return Char;
+                case "uchar":
+                    return UChar;
+                case "string":
+                    if (code.ReadExact('('))
+                    {
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinStringLength || width > MaxStringLength) return null;
                         if (!code.ReadExact(')')) return null;
-                        return new DataType(BaseType.Numeric, width: width, scale: scale);
-                    case "unsigned":
-                        if (!code.ReadExact('(')) return null;
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
-                        scale = 0;
-                        if (code.ReadExact(','))
-                        {
-                            if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
-                        }
-                        if (!code.ReadExact(')')) return null;
-                        return new DataType(BaseType.UNumeric, width: width, scale: scale);
-                    case "char":
-                        return Char;
-                    case "uchar":
-                        return UChar;
-                    case "string":
-                        if (code.ReadExact('('))
-                        {
-                            if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinStringLength || width > MaxStringLength) return null;
-                            if (!code.ReadExact(')')) return null;
-                            return new DataType(BaseType.String, width: width);
-                        }
-                        return String255;
-                    case "date":
-                        return Date;
-                    case "time":
-                        return Time;
-                    case "enum":
-                        if (!code.ReadExact('{')) return null;
-                        var options = new List<string>();
-                        while (true)
-                        {
-                            if (code.ReadWord()) options.Add(code.Text);
-                            else if (code.ReadStringLiteral()) options.Add(CodeParser.StringLiteralToString(code.Text));
-                            else return null;
+                        return new DataType(BaseType.String, width: width);
+                    }
+                    return String255;
+                case "date":
+                    return Date;
+                case "time":
+                    return Time;
+                case "enum":
+                    if (!code.ReadExact('{')) return null;
+                    var options = new List<string>();
+                    while (true)
+                    {
+                        if (code.ReadWord()) options.Add(code.Text);
+                        else if (code.ReadStringLiteral()) options.Add(CodeParser.StringLiteralToString(code.Text));
+                        else return null;
 
-                            if (code.ReadExact('}')) return new DataType(BaseType.Enum, options.ToArray());
-                            if (code.ReadExact(',')) continue;
-                            return null;
-                        }
-                    case "table":
-                        return Table;
-                    case "indrel":
-                        return Indrel;
-                    case "variant":
-                        return Variant;
-                    case "like":
+                        if (code.ReadExact('}')) return new DataType(BaseType.Enum, options.ToArray());
+                        if (code.ReadExact(',')) continue;
+                        return null;
+                    }
+                case "table":
+                    return Table;
+                case "indrel":
+                    return Indrel;
+                case "variant":
+                    return Variant;
+                case "like":
+                    if (!code.ReadWord()) return null;
+                    var word1 = code.Text;
+                    if (code.ReadExact('.'))
+                    {
                         if (!code.ReadWord()) return null;
-                        var word1 = code.Text;
-                        if (code.ReadExact('.'))
-                        {
-                            if (!code.ReadWord()) return null;
-                            return new DataType(BaseType.Like2, new string[] { word1, code.Text });
-                        }
-                        return new DataType(BaseType.Like1, new string[] { word1 });
-                }
+                        return new DataType(BaseType.Like2, new string[] { word1, code.Text });
+                    }
+                    return new DataType(BaseType.Like1, new string[] { word1 });
             }
 
             return null;
