@@ -1,6 +1,7 @@
 ﻿using DK;
 using DK.AppEnvironment;
 using DK.Code;
+using DK.Implementation.Virtual;
 using DKX.Compilation.WbdkExports;
 using NUnit.Framework;
 using System;
@@ -19,17 +20,18 @@ namespace DKX.Compilation.Tests
         [Test]
         public async Task AllExportsGenerated()
         {
-            SetupCompileFiles();
+            var app = CreateAppContext();
+            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
 
-            FS.CreateDirectory(@"x:\bin\.dkx");
-            var job = new ScanWbdkExportsJob(App, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
             await job.ExecuteAsync(cancel: default);
 
             TestContext.Out.WriteLine("Applicable files:");
             var applicablePathNames = new List<string>();
-            foreach (var pathName in FS.GetFilesInDirectoryRecursive(@"x:\src"))
+            foreach (var pathName in app.FileSystem.GetFilesInDirectoryRecursive(@"x:\src"))
             {
                 if (_hasWbdkExportsRegex.IsMatch(pathName))
                 {
@@ -48,7 +50,7 @@ namespace DKX.Compilation.Tests
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports.json", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
             }
         }
@@ -56,14 +58,16 @@ namespace DKX.Compilation.Tests
         [Test]
         public async Task OnlyModifiedFilesPickedUp()
         {
-            FS.DateOffset = TimeSpan.FromMinutes(-60);
-            SetupCompileFiles();
+            var app = CreateAppContext();
+            var fs = app.FileSystem as VirtualFileSystem;
+            fs.DateOffset = TimeSpan.FromMinutes(-60);
+            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
 
             // Run once to update the files
-            FS.CreateDirectory(@"x:\bin\.dkx");
-            var job = new ScanWbdkExportsJob(App, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
             await job.ExecuteAsync(cancel: default);
 
             // Pick the files we're going to touch
@@ -71,7 +75,7 @@ namespace DKX.Compilation.Tests
             var applicablePathNames = new List<string>();
             var touchedPathNames = new List<string>();
             var index = 0;
-            foreach (var pathName in FS.GetFilesInDirectoryRecursive(@"x:\src"))
+            foreach (var pathName in app.FileSystem.GetFilesInDirectoryRecursive(@"x:\src"))
             {
                 if (_hasWbdkExportsRegex.IsMatch(pathName))
                 {
@@ -92,20 +96,20 @@ namespace DKX.Compilation.Tests
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports.json", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
 
-                FS.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
-                FS.WriteFileText(scanJob.ExportsPathName, string.Empty);
+                app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
+                app.FileSystem.WriteFileText(scanJob.ExportsPathName, string.Empty);
             }
 
             // Touch the files we want to pick up.
-            FS.DateOffset = TimeSpan.Zero;
-            foreach (var pathName in touchedPathNames) FS.TouchFile(pathName);
+            fs.DateOffset = TimeSpan.Zero;
+            foreach (var pathName in touchedPathNames) fs.TouchFile(pathName);
 
             // Run again now that select files have been touched.
             jobQueue.Jobs.Clear();
-            job = new ScanWbdkExportsJob(App, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
             await job.ExecuteAsync(cancel: default);
 
             Assert.AreEqual(touchedPathNames.Count, jobQueue.Jobs.Count);
@@ -118,7 +122,7 @@ namespace DKX.Compilation.Tests
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports.json", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
             }
         }
@@ -126,15 +130,17 @@ namespace DKX.Compilation.Tests
         [Test]
         public async Task IncludeDependencies()
         {
-            FS.DateOffset = TimeSpan.FromMinutes(-60);
-            SetupCompileFiles();
+            var app = CreateAppContext();
+            var fs = app.FileSystem as VirtualFileSystem;
+            fs.DateOffset = TimeSpan.FromMinutes(-60);
+            SetupCompileFiles(app);
 
             var jobQueue = new TestJobQueue();
             var exportsReaderFactory = new TestExportsFileReaderFactory();
 
             // Run once to update the files
-            FS.CreateDirectory(@"x:\bin\.dkx");
-            var job = new ScanWbdkExportsJob(App, jobQueue, @"x:\bin\.dkx", exportsReaderFactory);
+            app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory);
             await job.ExecuteAsync(cancel: default);
 
             // Pick the files we're going to touch
@@ -142,7 +148,7 @@ namespace DKX.Compilation.Tests
             var applicablePathNames = new List<string>();
             var touchedPathNames = new List<string>();
             var index = 0;
-            foreach (var pathName in FS.GetFilesInDirectoryRecursive(@"x:\src"))
+            foreach (var pathName in app.FileSystem.GetFilesInDirectoryRecursive(@"x:\src"))
             {
                 if (_hasWbdkExportsRegex.IsMatch(pathName))
                 {
@@ -163,11 +169,11 @@ namespace DKX.Compilation.Tests
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports.json", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
 
-                FS.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
-                FS.WriteFileText(scanJob.ExportsPathName, string.Empty);
+                app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
+                app.FileSystem.WriteFileText(scanJob.ExportsPathName, string.Empty);
 
                 if (touchedPathNames.Any(x => x.EqualsI(pathName)))
                 {
@@ -176,12 +182,12 @@ namespace DKX.Compilation.Tests
             }
 
             // Touch the include files which will trigger the other exports to be rebuilt.
-            FS.DateOffset = TimeSpan.Zero;
-            FS.TouchFile(@"x:\src\include\all.i");
+            fs.DateOffset = TimeSpan.Zero;
+            fs.TouchFile(@"x:\src\include\all.i");
 
             // Run again now that the include file has been touched.
             jobQueue.Jobs.Clear();
-            job = new ScanWbdkExportsJob(App, jobQueue, @"x:\bin\.dkx", exportsReaderFactory);
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory);
             await job.ExecuteAsync(cancel: default);
 
             Assert.AreEqual(touchedPathNames.Count, jobQueue.Jobs.Count);
@@ -194,9 +200,39 @@ namespace DKX.Compilation.Tests
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}.exports.json", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}{CompileConstants.WbdkExportsExtension}", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
             }
+        }
+
+        [TestCase(@"x:\src\age.f", @"x:\bin\.dkx\age.f.exports")]
+        [TestCase(@"x:\src\gateway\gateway.cc", @"x:\bin\.dkx\gateway\gateway.cc.exports")]
+        public async Task DeleteFile(string sourceFile, string exportFile)
+        {
+            var app = CreateAppContext();
+            var fs = app.FileSystem as VirtualFileSystem;
+            SetupCompileFiles(app);
+
+            var jobQueue = new TestJobQueue();
+
+            fs.CreateDirectory(@"x:\bin\.dkx");
+
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            await job.ExecuteAsync(cancel: default);
+            foreach (var scanFileJob in jobQueue.Jobs.Cast<ScanWbdkExportFileJob>())
+            {
+                fs.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanFileJob.ExportsPathName));
+                fs.WriteFileText(scanFileJob.ExportsPathName, "");
+            }
+            fs.DeleteFile(sourceFile);
+
+            Assert.IsTrue(fs.FileExists(exportFile));
+
+            jobQueue.Jobs.Clear();
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            await job.ExecuteAsync(cancel: default);
+
+            Assert.IsFalse(fs.FileExists(exportFile));
         }
     }
 }

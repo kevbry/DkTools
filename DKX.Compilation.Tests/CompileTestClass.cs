@@ -8,23 +8,16 @@ namespace DKX.Compilation.Tests
 {
     class CompileTestClass
     {
-        private DkAppContext _app;
-        private VirtualFileSystem _fs;
-        private TestLogger _log;
-        private TestAppConfigSource _config;
-
-        public CompileTestClass()
+        protected DkAppContext CreateAppContext()
         {
-            _fs = new VirtualFileSystem();
-            _log = new TestLogger();
-            _config = new TestAppConfigSource();
+            var fs = new VirtualFileSystem();
+            var log = new TestLogger();
+            var config = new TestAppConfigSource();
 
-            _app = new DkAppContext(_fs, _log, _config);
-            _app.LoadAppSettings();
+            var app = new DkAppContext(fs, log, config);
+            app.LoadAppSettings();
+            return app;
         }
-
-        protected DkAppContext App => _app;
-        protected VirtualFileSystem FS => _fs;
 
         class TestAppConfigSource : IAppConfigSource
         {
@@ -84,34 +77,34 @@ namespace DKX.Compilation.Tests
             public int DefaultSamPort => 5001;
         }
 
-        public void SetupCompileFiles()
+        public void SetupCompileFiles(DkAppContext app)
         {
-            _fs.CreateDirectory(@"x:\bin");
-            _fs.CreateDirectory(@"x:\bin\.dkx");
-            _fs.CreateDirectory(@"x:\platform");
-            _fs.CreateDirectory(@"x:\platform\include");
-            _fs.CreateDirectory(@"x:\src");
-            _fs.CreateDirectory(@"x:\src\gateway");
-            _fs.CreateDirectory(@"x:\src\include");
-            _fs.CreateDirectory(@"x:\src\lib");
-            _fs.CreateDirectory(@"x:\src\obj");
-            _fs.CreateDirectory(@"x:\src\tmp");
+            app.FileSystem.CreateDirectory(@"x:\bin");
+            app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
+            app.FileSystem.CreateDirectory(@"x:\platform");
+            app.FileSystem.CreateDirectory(@"x:\platform\include");
+            app.FileSystem.CreateDirectory(@"x:\src");
+            app.FileSystem.CreateDirectory(@"x:\src\gateway");
+            app.FileSystem.CreateDirectory(@"x:\src\include");
+            app.FileSystem.CreateDirectory(@"x:\src\lib");
+            app.FileSystem.CreateDirectory(@"x:\src\obj");
+            app.FileSystem.CreateDirectory(@"x:\src\tmp");
 
-            SetupFile(@"x:\platform\include\stdlib.i", "stdlib.i.txt");
-            SetupFile(@"x:\src\dict", "dict.txt");
-            SetupFile(@"x:\src\age.f", "age.f.txt");
-            SetupFile(@"x:\src\trim.f", "trim.f.txt");
-            SetupFile(@"x:\src\util.nc", "util.nc.txt");
-            SetupFile(@"x:\src\gateway\gateway.cc", "gateway.cc.txt");
-            SetupFile(@"x:\src\include\all.i", null);
+            SetupFile(app, @"x:\platform\include\stdlib.i", "stdlib.i.txt");
+            SetupFile(app, @"x:\src\dict", "dict.txt");
+            SetupFile(app, @"x:\src\age.f", "age.f.txt");
+            SetupFile(app, @"x:\src\trim.f", "trim.f.txt");
+            SetupFile(app, @"x:\src\util.nc", "util.nc.txt");
+            SetupFile(app, @"x:\src\gateway\gateway.cc", "gateway.cc.txt");
+            SetupFile(app, @"x:\src\include\all.i", null);
         }
 
-        private void SetupFile(string pathName, string testFileName)
+        private void SetupFile(DkAppContext app, string pathName, string testFileName)
         {
             var uri = new Uri(Assembly.GetExecutingAssembly().GetName().CodeBase);
             var exeDir = System.IO.Path.GetDirectoryName(uri.AbsolutePath);
             var content = testFileName != null ? System.IO.File.ReadAllText($"{exeDir}\\TestSource\\{testFileName}") : string.Empty;
-            _fs.WriteFileText(pathName, content);
+            app.FileSystem.WriteFileText(pathName, content);
         }
     }
 }

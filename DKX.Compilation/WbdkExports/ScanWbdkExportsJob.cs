@@ -4,6 +4,7 @@ using DK.Diagnostics;
 using DKX.Compilation.Jobs;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,6 +32,31 @@ namespace DKX.Compilation.WbdkExports
         {
             _app.Log.Debug("Scanning for WBDK exports.");
 
+            var existingExports = GetFullListOfLinkedExportFiles().ToList();
+            var allExports = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + CompileConstants.WbdkExportsExtension).ToList();
+
+            foreach (var result in existingExports)
+            {
+                cancel.ThrowIfCancellationRequested();
+
+                if (ShouldFileBeRescanned(result.pathName, result.exportsPathName))
+                {
+                    await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, result.exportsPathName, result.fileContext));
+                }
+
+                allExports.Remove(result.exportsPathName);
+            }
+
+            // The remaining files in allExports will be the ones where the source file was deleted.
+            foreach (var exportPathName in allExports)
+            {
+                _app.Log.Debug("Delete Detected: {0}", exportPathName);
+                _app.FileSystem.DeleteFile(exportPathName);
+            }
+        }
+
+        private IEnumerable<WbdkScanResult> GetFullListOfLinkedExportFiles()
+        {
             var foundFiles = new HashSet<string>();
 
             foreach (var sourceDir in _app.Settings.SourceDirs)
@@ -39,21 +65,13 @@ namespace DKX.Compilation.WbdkExports
                 {
                     foreach (var result in ScanForWbdkExportFiles(sourceDir, string.Empty))
                     {
-                        cancel.ThrowIfCancellationRequested();
-
                         var pathNameLower = result.pathName.ToLower();
                         if (!foundFiles.Contains(pathNameLower))
                         {
                             foundFiles.Add(pathNameLower);
-
-                            var relDir = PathUtil.CombinePath(_workDir, result.relPath);
-                            var exportsPathName = PathUtil.CombinePath(relDir, PathUtil.GetFileName(result.pathName) + CompileConstants.WbdkExportsExtension);
-
-                            if (ShouldFileBeRescanned(result.pathName, exportsPathName))
-                            {
-                                await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, exportsPathName, result.fileContext));
-                            }
                         }
+
+                        yield return result;
                     }
                 }
             }
@@ -70,7 +88,13 @@ namespace DKX.Compilation.WbdkExports
                     case FileContext.ClientClass:
                     case FileContext.NeutralClass:
                     case FileContext.ServerClass:
-                        yield return new WbdkScanResult { pathName = pathName, relPath = relPath, fileContext = fileContext };
+                        yield return new WbdkScanResult
+                        {
+                            pathName = pathName,
+                            relPath = relPath,
+                            fileContext = fileContext,
+                            exportsPathName = PathUtil.CombinePath(_workDir, relPath, PathUtil.GetFileName(pathName) + CompileConstants.WbdkExportsExtension)
+                        };
                         break;
                 }
             }
@@ -89,6 +113,7 @@ namespace DKX.Compilation.WbdkExports
             public string pathName;
             public string relPath;
             public FileContext fileContext;
+            public string exportsPathName;
         }
 
         private DateTime GetFileDate(string pathName)

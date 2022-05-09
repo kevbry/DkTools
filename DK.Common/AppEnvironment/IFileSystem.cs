@@ -25,6 +25,8 @@ namespace DK.AppEnvironment
 
         IEnumerable<string> GetFilesInDirectory(string path);
 
+        IEnumerable<string> GetFilesInDirectory(string path, string pattern);
+
         IEnumerable<string> GetDirectoriesInDirectory(string path);
 
         char[] GetInvalidPathChars();
@@ -44,6 +46,10 @@ namespace DK.AppEnvironment
         void CreateDirectory(string path);
 
         DateTime GetFileModifiedDate(string pathName);
+
+        void DeleteFile(string pathName);
+
+        void DeleteDirectory(string path);
     }
 
     public static class IFileSystemUtil
@@ -74,6 +80,22 @@ namespace DK.AppEnvironment
             foreach (var path in fs.GetDirectoriesInDirectory(dirPath))
             {
                 foreach (var pathName in fs.GetFilesInDirectoryRecursive(path))
+                {
+                    yield return pathName;
+                }
+            }
+        }
+
+        public static IEnumerable<string> GetFilesInDirectoryRecursive(this IFileSystem fs, string dirPath, string pattern)
+        {
+            foreach (var pathName in fs.GetFilesInDirectory(dirPath, pattern))
+            {
+                yield return pathName;
+            }
+
+            foreach (var path in fs.GetDirectoriesInDirectory(dirPath))
+            {
+                foreach (var pathName in fs.GetFilesInDirectoryRecursive(path, pattern))
                 {
                     yield return pathName;
                 }

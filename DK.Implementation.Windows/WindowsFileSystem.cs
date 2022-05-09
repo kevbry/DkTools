@@ -27,6 +27,8 @@ namespace DK.Implementation.Windows
 
         public IEnumerable<string> GetFilesInDirectory(string path) => Directory.GetFiles(path);
 
+        public IEnumerable<string> GetFilesInDirectory(string path, string pattern) => Directory.GetFiles(path, pattern);
+
         public IEnumerable<string> GetDirectoriesInDirectory(string path) => Directory.GetDirectories(path);
 
         public char[] GetInvalidPathChars() => Path.GetInvalidPathChars();
@@ -46,5 +48,20 @@ namespace DK.Implementation.Windows
         public void CreateDirectory(string path) => Directory.CreateDirectory(path);
 
         public DateTime GetFileModifiedDate(string pathName) => File.GetLastWriteTime(pathName);
+
+        public void DeleteFile(string pathName)
+        {
+            var attribs = File.GetAttributes(pathName);
+            if (attribs.HasFlag(FileAttributes.ReadOnly)) File.SetAttributes(pathName, attribs & ~FileAttributes.ReadOnly);
+
+            File.Delete(pathName);
+        }
+
+        public void DeleteDirectory(string path)
+        {
+            foreach (var file in Directory.GetFiles(path)) DeleteFile(file);
+            foreach (var dir in Directory.GetDirectories(path)) DeleteDirectory(dir);
+            Directory.Delete(path);
+        }
     }
 }

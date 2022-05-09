@@ -67,5 +67,17 @@ namespace DK.Implementation.Virtual
         {
             if (!_subDirs.ContainsKey(name)) _subDirs[name] = new VirtualDirectory(_fs, this, name);
         }
+
+        public void DeleteFile(string name)
+        {
+            if (!_files.ContainsKey(name)) throw new VirtualFileNotFoundException(name);
+            _files.Remove(name);
+        }
+
+        public void DeleteDirectory(string name)
+        {
+            if (!_subDirs.ContainsKey(name)) throw new VirtualDirectoryNotFoundException(name);
+            _subDirs.Remove(name);
+        }
     }
 }

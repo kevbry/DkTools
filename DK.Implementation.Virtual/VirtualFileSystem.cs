@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DK.Implementation.Virtual
 {
@@ -137,6 +138,30 @@ namespace DK.Implementation.Virtual
             return Constants.EmptyStringArray;
         }
 
+        public IEnumerable<string> GetFilesInDirectory(string path, string pattern)
+        {
+            path = CleanPath(path);
+            var dir = FindDirectoryOrNull(path);
+            if (dir == null) return Constants.EmptyStringArray;
+
+            // Make a regular expression that simulates the traditional wildcard pattern.
+            var rx = new StringBuilder();
+            foreach (var ch in pattern)
+            {
+                if (ch.IsWordChar(false)) rx.Append(ch);
+                else if (char.IsWhiteSpace(ch)) rx.Append("\\s");
+                else if (ch == '*') rx.Append(".*");
+                else if (ch == '?') rx.Append(".");
+                else rx.AppendFormat("\\{0}", ch);
+            }
+            rx.Append('$');
+            var regex = new Regex(rx.ToString(), RegexOptions.IgnoreCase);
+
+            return dir.Files
+                .Where(x => regex.IsMatch(x.Name))
+                .Select(x => x.FullPathName);
+        }
+
         public IEnumerable<string> GetDirectoriesInDirectory(string path)
         {
             path = CleanPath(path);
@@ -247,5 +272,27 @@ namespace DK.Implementation.Virtual
         public DateTime CurrentDate => DateTime.Now + DateOffset;
 
         public TimeSpan DateOffset { get; set; }
+
+        public void DeleteFile(string pathName)
+        {
+            pathName = CleanPath(pathName);
+
+            var parentPath = PathUtil.GetDirectoryName(pathName);
+            var dir = FindDirectoryOrNull(parentPath);
+            if (dir == null) throw new VirtualDirectoryNotFoundException(parentPath);
+
+            dir.DeleteFile(PathUtil.GetFileName(pathName));
+        }
+
+        public void DeleteDirectory(string path)
+        {
+            path = CleanPath(path);
+
+            var parentPath = PathUtil.GetDirectoryName(path);
+            var dir = FindDirectoryOrNull(parentPath);
+            if (dir == null) throw new VirtualDirectoryNotFoundException(parentPath);
+
+            dir.DeleteDirectory(PathUtil.GetFileName(path));
+        }
     }
 }

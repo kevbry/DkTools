@@ -12,14 +12,15 @@ namespace DKX.Compilation.Tests
         [Test]
         public async Task AgeFunctionFile()
         {
-            SetupCompileFiles();
+            var app = CreateAppContext();
+            SetupCompileFiles(app);
 
             var pathName = @"x:\src\age.f";
-            var exportsPathName = @"x:\bin\.dkx\age.f.exports.json";
-            var job = new ScanWbdkExportFileJob(App, pathName, exportsPathName, FileContext.Function);
+            var exportsPathName = @"x:\bin\.dkx\age.f.exports";
+            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.Function);
             await job.ExecuteAsync(cancel: default);
 
-            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(FS.GetFileText(exportsPathName));
+            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
             Assert.IsNotNull(model);
 
             Assert.AreEqual(pathName, model.SourceFile);
