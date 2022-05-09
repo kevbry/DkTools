@@ -3,9 +3,11 @@ using DK.AppEnvironment;
 using DK.Code;
 using DK.Definitions;
 using DK.Diagnostics;
+using DK.Modeling.Tokens;
 using DK.Preprocessing;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Jobs;
+using DKX.Compilation.Schema;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -22,13 +24,15 @@ namespace DKX.Compilation.WbdkExports
         private string _pathName;
         private string _exportsPathName;
         private FileContext _fileContext;
+        private ITableHashProvider _tableHashProvider;
 
-        public ScanWbdkExportFileJob(DkAppContext app, string pathName, string exportsPathName, FileContext fileContext)
+        public ScanWbdkExportFileJob(DkAppContext app, string pathName, string exportsPathName, FileContext fileContext, ITableHashProvider tableHashProvider)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
             _exportsPathName = exportsPathName ?? throw new ArgumentNullException(nameof(exportsPathName));
             _fileContext = fileContext;
+            _tableHashProvider = tableHashProvider ?? throw new ArgumentNullException(nameof(tableHashProvider));
         }
 
         public string Description => $"Scan WBDK Exports: {_pathName}";
@@ -63,6 +67,8 @@ namespace DKX.Compilation.WbdkExports
                 cancel: cancel,
                 includeDependencies: null);
 
+            var tableDepends = GetTableDependenciesForModel(model).ToArray();
+
             if (_fileContext == FileContext.Function)
             {
                 var funcName = PathUtil.GetFileNameWithoutExtension(_pathName);
@@ -72,11 +78,11 @@ namespace DKX.Compilation.WbdkExports
                     ?.Definition;
                 if (funcDef != null)
                 {
-                    CreateExportsFile(new FunctionDefinition[] { funcDef }, model.PreprocessorModel.IncludeDependencies);
+                    CreateExportsFile(new FunctionDefinition[] { funcDef }, model.PreprocessorModel.IncludeDependencies, tableDepends);
                 }
                 else
                 {
-                    CreateExportsFile(new FunctionDefinition[0], model.PreprocessorModel.IncludeDependencies);
+                    CreateExportsFile(new FunctionDefinition[0], model.PreprocessorModel.IncludeDependencies, tableDepends);
                 }
             }
             else
@@ -84,19 +90,20 @@ namespace DKX.Compilation.WbdkExports
                 var funcDefs = model.PreprocessorModel.LocalFunctions
                     .Where(x => x.Definition.Privacy == DKM.FunctionPrivacy.Public)
                     .Select(x => x.Definition);
-                CreateExportsFile(funcDefs, model.PreprocessorModel.IncludeDependencies);
+                CreateExportsFile(funcDefs, model.PreprocessorModel.IncludeDependencies, tableDepends);
             }
 
             return Task.CompletedTask;
         }
 
-        private void CreateExportsFile(IEnumerable<FunctionDefinition> funcDefs, IEnumerable<IncludeDependency> includeDependencies)
+        private void CreateExportsFile(IEnumerable<FunctionDefinition> funcDefs, IEnumerable<IncludeDependency> includeDependencies, WbdkExportTableDependency[] tableDependencies)
         {
             var file = new WbdkExportsModel
             {
                 SourceFile = _pathName,
                 TimeStamp = DateTime.Now,
-                Exports = funcDefs.Any() ? funcDefs.Select(f => TransformFunction(f)).ToArray() : null
+                Exports = funcDefs.Any() ? funcDefs.Select(f => TransformFunction(f)).ToArray() : null,
+                TableDependencies = (tableDependencies?.Any() ?? false) ? tableDependencies : null
             };
 
             var json = JsonConvert.SerializeObject(file, Formatting.Indented);
@@ -138,6 +145,28 @@ namespace DKX.Compilation.WbdkExports
             functionExport.ReturnDataType = returnDataType.Value.ToCode();
 
             return functionExport;
+        }
+
+        private IEnumerable<WbdkExportTableDependency> GetTableDependenciesForModel(DKM.CodeModel model)
+        {
+            var tablesReferenced = new HashSet<string>();
+            foreach (var tableToken in model.File.FindDownward<TableToken>())
+            {
+                var tableName = tableToken.SourceDefinition.Name;
+#if DEBUG
+                if (!_app.Settings.Dict.IsTable(tableName)) throw new InvalidOperationException($"Model returned table '{tableName}' definition but it is not a table.");
+#endif
+                if (!tablesReferenced.Contains(tableName)) tablesReferenced.Add(tableName);
+            }
+
+            foreach (var tableName in tablesReferenced.OrderBy(t => t.ToLower()))
+            {
+                yield return new WbdkExportTableDependency
+                {
+                    TableName = tableName,
+                    Hash = _tableHashProvider.GetTableHash(tableName)
+                };
+            }
         }
     }
 }

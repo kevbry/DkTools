@@ -1,11 +1,11 @@
-﻿using DK.AppEnvironment;
-using DK.Code;
+﻿using DK.Code;
+using DKX.Compilation.Tests.Schema;
 using DKX.Compilation.WbdkExports;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System.Threading.Tasks;
 
-namespace DKX.Compilation.Tests
+namespace DKX.Compilation.Tests.WbdkExports
 {
     [TestFixture]
     class ScanWbdExportFileJobTests : CompileTestClass
@@ -17,7 +17,8 @@ namespace DKX.Compilation.Tests
 
             var pathName = @"x:\src\age.f";
             var exportsPathName = @"x:\bin\.dkx\age.f.exports";
-            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.Function);
+            var tableHashProvider = new TestTableHashProvider();
+            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.Function, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
 
             var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
@@ -25,6 +26,7 @@ namespace DKX.Compilation.Tests
 
             Assert.AreEqual(pathName, model.SourceFile);
 
+            // Validate exports
             Assert.IsNotNull(model.Exports);
             Assert.AreEqual(1, model.Exports.Length);
 
@@ -36,6 +38,14 @@ namespace DKX.Compilation.Tests
             Assert.IsNotNull(export.Arguments);
             Assert.AreEqual(1, export.Arguments.Length);
             ValidateExportArgument(export.Arguments[0], "bdate", "date", false, false);
+
+            // Validate table dependencies
+            Assert.IsNotNull(model.TableDependencies);
+            Assert.AreEqual(1, model.TableDependencies.Length);
+
+            var td = model.TableDependencies[0];
+            Assert.AreEqual("cust", td.TableName);
+            Assert.AreEqual(tableHashProvider.GetTableHash("cust"), td.Hash);
         }
 
         [Test]
@@ -45,7 +55,8 @@ namespace DKX.Compilation.Tests
 
             var pathName = @"x:\src\gateway\gateway.cc";
             var exportsPathName = @"x:\bin\.dkx\gateway\gateway.cc.exports";
-            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.ClientClass);
+            var tableHashProvider = new TestTableHashProvider();
+            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.ClientClass, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
 
             var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
@@ -53,6 +64,7 @@ namespace DKX.Compilation.Tests
 
             Assert.AreEqual(pathName, model.SourceFile);
 
+            // Validate exports
             Assert.IsNotNull(model.Exports);
             Assert.AreEqual(2, model.Exports.Length);
 
@@ -67,6 +79,9 @@ namespace DKX.Compilation.Tests
             Assert.AreEqual("gateway", export.ClassName);
             Assert.AreEqual("int", export.ReturnDataType);
             Assert.IsNull(export.Arguments);
+
+            // Validate table dependencies
+            Assert.IsNull(model.TableDependencies);
         }
 
         [Test]
@@ -76,7 +91,8 @@ namespace DKX.Compilation.Tests
 
             var pathName = @"x:\src\util.nc";
             var exportsPathName = @"x:\bin\.dkx\util.nc.exports";
-            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.NeutralClass);
+            var tableHashProvider = new TestTableHashProvider();
+            var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.NeutralClass, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
 
             var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
@@ -84,8 +100,9 @@ namespace DKX.Compilation.Tests
 
             Assert.AreEqual(pathName, model.SourceFile);
 
+            // Validate exports
             Assert.IsNotNull(model.Exports);
-            Assert.AreEqual(1, model.Exports.Length);
+            Assert.AreEqual(2, model.Exports.Length);
 
             var export = model.Exports[0];
             Assert.AreEqual("StringIsBlankOrNull", export.Name);
@@ -94,6 +111,20 @@ namespace DKX.Compilation.Tests
             Assert.IsNotNull(export.Arguments);
             Assert.AreEqual(1, export.Arguments.Length);
             ValidateExportArgument(export.Arguments[0], "str", "string", false, false);
+
+            export = model.Exports[1];
+            Assert.AreEqual("GetInstitutionName", export.Name);
+            Assert.AreEqual("util", export.ClassName);
+            Assert.AreEqual("string(80)", export.ReturnDataType);
+            Assert.IsNull(export.Arguments);
+
+            // Validate table dependencies
+            Assert.IsNotNull(model.TableDependencies);
+            Assert.AreEqual(1, model.TableDependencies.Length);
+
+            var td = model.TableDependencies[0];
+            Assert.AreEqual("info", td.TableName);
+            Assert.AreEqual(tableHashProvider.GetTableHash("info"), td.Hash);
         }
 
         private void ValidateExportArgument(WbdkExportArgument arg, string name, string dataType, bool isRef, bool isOut)

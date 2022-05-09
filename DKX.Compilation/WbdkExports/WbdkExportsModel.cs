@@ -8,6 +8,7 @@ namespace DKX.Compilation.WbdkExports
         public DateTime TimeStamp { get; set; }
         public WbdkExport[] Exports { get; set; }
         public string[] DependentFiles { get; set; }
+        public WbdkExportTableDependency[] TableDependencies { get; set; }
     }
 
     public class WbdkExport
@@ -24,5 +25,13 @@ namespace DKX.Compilation.WbdkExports
         public string DataType { get; set; }
         public bool Ref { get; set; }
         public bool Out { get; set; }
+    }
+
+    public class WbdkExportTableDependency
+    {
+        public static readonly WbdkExportTableDependency[] EmptyArray = new WbdkExportTableDependency[0];
+
+        public string TableName { get; set; }
+        public string Hash { get; set; }
     }
 }

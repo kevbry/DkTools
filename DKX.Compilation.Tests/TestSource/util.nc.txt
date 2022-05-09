@@ -2,3 +2,9 @@
 {
     return no;
 }
+
+like info.inst_name GetInstitutionName()
+{
+    if (find(info, physical, FIRST) != 0) { return ""; }
+    return info.inst_name;
+}

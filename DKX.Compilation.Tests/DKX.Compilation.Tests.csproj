@@ -53,10 +53,11 @@
   <ItemGroup>
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />
-    <Compile Include="ScanWbdExportFileJobTests.cs" />
-    <Compile Include="ScanWbdkExportsJobTests.cs" />
+    <Compile Include="WbdkExports\ScanWbdExportFileJobTests.cs" />
+    <Compile Include="WbdkExports\ScanWbdkExportsJobTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestExportsFileReader.cs" />
+    <Compile Include="Schema\TestTableHashProvider.cs" />
+    <Compile Include="WbdkExports\TestExportsFileReader.cs" />
     <Compile Include="TestJobQueue.cs" />
     <Compile Include="TestLogger.cs" />
   </ItemGroup>

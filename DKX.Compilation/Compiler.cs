@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
+using DKX.Compilation.Schema;
 using DKX.Compilation.WbdkExports;
 using System;
 using System.Collections.Generic;
@@ -28,8 +29,12 @@ namespace DKX.Compilation
             // Scan legacy files for exports
             _app.Log.Info("Checking WBDK exports");
             var scanQueue = new CompileQueue(_app, "WBDK Exports Scan Queue");
-            await scanQueue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, scanQueue, _workDir, new WbdkExportsFileReaderFactory(_app)));
+            await scanQueue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, scanQueue, _workDir,
+                new WbdkExportsFileReaderFactory(_app),
+                new TableHashProvider(_app)));
+
             await scanQueue.ProcessQueueToCompletionAsync(cancel);
+
             ImportReportItems(scanQueue.ReportItems);
             if (HasErrors)
             {

@@ -20,3 +20,9 @@ create	table cust 101 102  updates
 	primary			noyes_t,
 	bdate			date
 )
+
+create table info 200 updates
+	prompt "Institution Information"
+(
+	inst_name		char(80)
+)

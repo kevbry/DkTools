@@ -1,7 +1,9 @@
-﻿using DK.AppEnvironment;
+﻿using DK;
+using DK.AppEnvironment;
 using DK.Code;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
+using DKX.Compilation.Schema;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,13 +19,20 @@ namespace DKX.Compilation.WbdkExports
         private string _workDir;
         private IWbdkExportsFileReaderFactory _exportsReaderFactory;
         private Dictionary<string, DateTime> _dateCache = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private ITableHashProvider _tableHashProvider;
 
-        public ScanWbdkExportsJob(DkAppContext app, ICompileJobQueue jobQueue, string workDir, IWbdkExportsFileReaderFactory exportsReaderFactory)
+        public ScanWbdkExportsJob(
+            DkAppContext app,
+            ICompileJobQueue jobQueue,
+            string workDir,
+            IWbdkExportsFileReaderFactory exportsReaderFactory,
+            ITableHashProvider tableHashProvider)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _queue = jobQueue ?? throw new ArgumentNullException(nameof(jobQueue));
             _workDir = workDir ?? throw new ArgumentNullException(nameof(workDir));
             _exportsReaderFactory = exportsReaderFactory ?? throw new ArgumentNullException(nameof(exportsReaderFactory));
+            _tableHashProvider = tableHashProvider ?? throw new ArgumentNullException(nameof(tableHashProvider));
         }
 
         public string Description => "Scan WBDK Exports";
@@ -41,10 +50,12 @@ namespace DKX.Compilation.WbdkExports
 
                 if (ShouldFileBeRescanned(result.pathName, result.exportsPathName))
                 {
-                    await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, result.exportsPathName, result.fileContext));
+                    await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, result.exportsPathName, result.fileContext, _tableHashProvider));
                 }
 
-                allExports.Remove(result.exportsPathName);
+                var exportToRemove = allExports.Where(x => x.EqualsI(result.exportsPathName)).FirstOrDefault();
+                //if (exportToRemove == null) throw new InvalidOperationException($"Processed export is not in the list of all exports: {result.exportsPathName}"); TODO: remove
+                allExports.Remove(exportToRemove);
             }
 
             // The remaining files in allExports will be the ones where the source file was deleted.
@@ -150,6 +161,24 @@ namespace DKX.Compilation.WbdkExports
                 if (GetFileDate(includePathName) > exportsDate)
                 {
                     _app.Log.Debug("Exports file is older than include dependency: {0}, {1}", sourcePathName, includePathName);
+                    return true;
+                }
+            }
+
+            foreach (var td in exportsReader.GetTableDependencies())
+            {
+                if (_app.Settings.Dict.IsTable(td.TableName))
+                {
+                    var currentHash = _tableHashProvider.GetTableHash(td.TableName);
+                    if (currentHash != td.Hash)
+                    {
+                        _app.Log.Debug("Exports file is dependent on changed table '{1}': {0}", sourcePathName, td.TableName);
+                        return true;
+                    }
+                }
+                else
+                {
+                    _app.Log.Debug("Exports file is dependent on deleted table '{1}': {0}", sourcePathName, td.TableName);
                     return true;
                 }
             }

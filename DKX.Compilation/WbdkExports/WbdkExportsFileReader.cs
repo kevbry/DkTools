@@ -13,6 +13,7 @@ namespace DKX.Compilation.WbdkExports
     {
         private DkAppContext _app;
         private string _pathName;
+        private WbdkExportsModel _model;
 
         public WbdkExportsFileReader(DkAppContext app, string pathName)
         {
@@ -20,12 +21,26 @@ namespace DKX.Compilation.WbdkExports
             _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
         }
 
+        private void EnsureModelLoaded()
+        {
+            if (_model == null)
+            {
+                var json = _app.FileSystem.GetFileText(_pathName);
+                _model = JsonConvert.DeserializeObject<WbdkExportsModel>(json);
+                if (_model == null) throw new InvalidWbdkExportsFileException(_pathName);
+            }
+        }
+
         public IEnumerable<string> GetIncludeDependencies()
         {
-            var json = _app.FileSystem.GetFileText(_pathName);
-            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(json);
-            if (model == null) throw new InvalidWbdkExportsFileException(_pathName);
-            return model.DependentFiles ?? Constants.EmptyStringArray;
+            EnsureModelLoaded();
+            return _model.DependentFiles ?? Constants.EmptyStringArray;
+        }
+
+        public IEnumerable<WbdkExportTableDependency> GetTableDependencies()
+        {
+            EnsureModelLoaded();
+            return _model.TableDependencies ?? WbdkExportTableDependency.EmptyArray;
         }
     }
 

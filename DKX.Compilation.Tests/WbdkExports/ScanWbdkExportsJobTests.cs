@@ -2,6 +2,7 @@
 using DK.AppEnvironment;
 using DK.Code;
 using DK.Implementation.Virtual;
+using DKX.Compilation.Tests.Schema;
 using DKX.Compilation.WbdkExports;
 using NUnit.Framework;
 using System;
@@ -10,7 +11,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace DKX.Compilation.Tests
+namespace DKX.Compilation.Tests.WbdkExports
 {
     [TestFixture]
     class ScanWbdkExportsJobTests : CompileTestClass
@@ -25,7 +26,7 @@ namespace DKX.Compilation.Tests
             var jobQueue = new TestJobQueue();
 
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
-            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory(), new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
             TestContext.Out.WriteLine("Applicable files:");
@@ -64,7 +65,7 @@ namespace DKX.Compilation.Tests
 
             // Run once to update the files
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
-            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory(), new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
             // Pick the files we're going to touch
@@ -106,7 +107,7 @@ namespace DKX.Compilation.Tests
 
             // Run again now that select files have been touched.
             jobQueue.Jobs.Clear();
-            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory(), new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
             Assert.AreEqual(touchedPathNames.Count, jobQueue.Jobs.Count);
@@ -135,7 +136,7 @@ namespace DKX.Compilation.Tests
 
             // Run once to update the files
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
-            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory);
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory, new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
             // Pick the files we're going to touch
@@ -177,7 +178,7 @@ namespace DKX.Compilation.Tests
 
             // Run again now that the include file has been touched.
             jobQueue.Jobs.Clear();
-            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory);
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory, new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
             Assert.AreEqual(touchedPathNames.Count, jobQueue.Jobs.Count);
@@ -206,7 +207,7 @@ namespace DKX.Compilation.Tests
 
             fs.CreateDirectory(@"x:\bin\.dkx");
 
-            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory(), new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
             foreach (var scanFileJob in jobQueue.Jobs.Cast<ScanWbdkExportFileJob>())
             {
@@ -218,10 +219,58 @@ namespace DKX.Compilation.Tests
             Assert.IsTrue(fs.FileExists(exportFile));
 
             jobQueue.Jobs.Clear();
-            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory());
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory(), new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
             Assert.IsFalse(fs.FileExists(exportFile));
+        }
+
+        [Test]
+        public async Task TableDependencies()
+        {
+            var app = CreateAppContext();
+            var fs = app.FileSystem as VirtualFileSystem;
+
+            var jobQueue = new TestJobQueue();
+            var exportsReaderFactory = new TestExportsFileReaderFactory();
+            var tableHashProvider = new TestTableHashProvider();
+            tableHashProvider.SetTableHash("cust", "hash1");
+
+            // Run once to update the files
+            app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
+            var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory, tableHashProvider);
+            await job.ExecuteAsync(cancel: default);
+            var index = 0;
+            var dependentFiles = new List<string>();
+            foreach (ScanWbdkExportFileJob scanJob in jobQueue.Jobs)
+            {
+                app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(scanJob.ExportsPathName));
+                app.FileSystem.WriteFileText(scanJob.ExportsPathName, "");
+
+                // Pick which files will be dependent on the table change.
+                if ((index++) % 2 == 0) continue;
+                dependentFiles.Add(scanJob.PathName);
+                exportsReaderFactory.SetTableDependency(scanJob.ExportsPathName, "cust", tableHashProvider.GetTableHash("cust"));
+            }
+
+            TestContext.Out.WriteLine("Files to be dependent on table:");
+            foreach (var df in dependentFiles) TestContext.Out.WriteLine($"- {df}");
+
+            // Change the table signature
+            tableHashProvider.SetTableHash("cust", "hash2");
+
+            // Run again now that the include file has been touched.
+            jobQueue.Jobs.Clear();
+            job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", exportsReaderFactory, tableHashProvider);
+            await job.ExecuteAsync(cancel: default);
+
+            // Validate that the correct files were scanned
+            Assert.AreEqual(dependentFiles.Count, jobQueue.Jobs.Count);
+            foreach (var pathName in dependentFiles)
+            {
+                var scanJob = jobQueue.Jobs.Cast<ScanWbdkExportFileJob>().Where(x => x.PathName.EqualsI(pathName)).FirstOrDefault();
+                Assert.IsNotNull(scanJob);
+            }
         }
     }
 }
