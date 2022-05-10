@@ -15,5 +15,7 @@ namespace DKX.Compilation.Expressions
         }
 
         public CodeSpan Span => _span;
+
+        public override string ToString() => ToCode();
     }
 }

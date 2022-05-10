@@ -7,84 +7,69 @@ namespace DKX.Compilation.Expressions
     {
         public static Chain ReadExpressionOrNull(CodeParser code)
         {
-            return ReadChainOrNull(code);
+            return ReadValueOrNull(code, 0);
         }
 
-        private static Chain ReadChainOrNull(CodeParser code)
-        {
-            var chain = ReadValueOrNull(code);
-            if (chain == null) return null;
-
-            var precedence = 0;
-            do
-            {
-                precedence = ReadAfterValue(code, ref chain, precedence);
-            }
-            while (precedence != 0);
-
-            return chain;
-        }
-
-        private static Chain ReadValueOrNull(CodeParser code)
+        private static Chain ReadValueOrNull(CodeParser code, int leftPrec)
         {
             if (code.ReadWord())
             {
-                return new IdentifierChain(code.Text, code.Span);
+                var chain = new IdentifierChain(code.Text, code.Span);
+                return ReadAfterValue(code, chain, leftPrec);
             }
             else if (code.ReadStringLiteral())
             {
-                return new StringLiteralChain(CodeParser.StringLiteralToString(code.Text), code.Span);
+                var chain = new StringLiteralChain(CodeParser.StringLiteralToString(code.Text), code.Span);
+                return ReadAfterValue(code, chain, leftPrec);
             }
             else if (code.ReadNumber())
             {
-                return new NumberChain(code.Text, code.Span);
+                var chain = new NumberChain(code.Text, code.Span);
+                return ReadAfterValue(code, chain, leftPrec);
             }
             else if (code.ReadExact('('))
             {
-                var chain = ReadChainOrNull(code);
+                var chain = ReadValueOrNull(code, 0);
                 if (!code.ReadExact(')'))
                 {
                     return new ErrorChain(chain, code.Position, ErrorCode.ExpectedToken, ')');
                 }
                 else
                 {
-                    return chain;
+                    return ReadAfterValue(code, chain, leftPrec);
                 }
             }
             else return null;
         }
 
-        private static int ReadAfterValue(CodeParser code, ref Chain chain, int leftPrec)
+        private static Chain ReadAfterValue(CodeParser code, Chain chain, int leftPrec)
         {
             var startPos = code.Position;
             var op = ReadOperatorOrNull(code);
             if (op != null)
             {
                 var opPrec = op.Value.op.GetPrecedence();
-                if (leftPrec <= opPrec)
+                if (leftPrec >= opPrec)
                 {
-                    var right = ReadValueOrNull(code);
-                    if (right == null)
-                    {
-                        code.Position = startPos;
-                        chain = new ErrorChain(chain, chain.Span.Envelope(op.Value.span), ErrorCode.OperatorExpectsValueOnRight, op.Value.op.GetText());
-                        return 0;
-                    }
-                    else
-                    {
-                        chain = new OperatorChain(op.Value.op, chain, right);
-                        return opPrec;
-                    }
+                    code.Position = startPos;
+                    return chain;
+                }
+
+                var right = ReadValueOrNull(code, opPrec);
+                if (right == null)
+                {
+                    code.Position = startPos;
+                    return new ErrorChain(chain, chain.Span.Envelope(op.Value.span), ErrorCode.OperatorExpectsValueOnRight, op.Value.op.GetText());
                 }
                 else
                 {
-                    code.Position = startPos;
-                    return 0;
+                    var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(code, right, opPrec));
+                    return ReadAfterValue(code, newChain, leftPrec);
                 }
             }
             else
             {
-                return 0;
+                return chain;
             }
         }
 

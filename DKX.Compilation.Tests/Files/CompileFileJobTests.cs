@@ -267,7 +267,7 @@ class Test
 {
     private int _id;
     private string _name;
-    public unsigned(9) Rowno;
+    unsigned(9) Rowno;
 }
 ");
 
@@ -348,6 +348,41 @@ class Test
             Assert.AreEqual("SecondsPerDay", constant.Name);
             Assert.AreEqual("int", constant.DataType);
             Assert.AreEqual("#mul(#mul(n24,n60),n60)", constant.Code);
+        }
+
+        [TestCase("2 + 4 * 8", "#add(n2,#mul(n4,n8))")]
+        [TestCase("(2 + 4) * 8", "#mul(#add(n2,n4),n8)")]
+        [TestCase("2 * (4 + 8)", "#mul(n2,#add(n4,n8))")]
+        [TestCase("1 * 2 + 3", "#add(#mul(n1,n2),n3)")]
+        [TestCase("1 * 2 + 3 - 4", "#sub(#add(#mul(n1,n2),n3),n4)")]
+        [TestCase("(10 - 5) * 6 + 3", "#add(#mul(#sub(n10,n5),n6),n3)")]
+        [TestCase("2 * (4 + 8) + (10 - 5) * 6 + 3", "#add(#add(#mul(n2,#add(n4,n8)),#mul(#sub(n10,n5),n6)),n3)")]
+        public async Task PrecedenceChain(string initializer, string codeOut)
+        {
+            var app = CreateAppContext();
+            var obj = await SetupCodeSuccess(app, @"
+class Test
+{
+    public const int Precedence = " + initializer + @";
+}
+");
+
+            Assert.AreEqual("Test", obj.ClassName);
+            Assert.IsNull(obj.FileDependencies);
+            Assert.IsNull(obj.TableDependencies);
+            Assert.IsNull(obj.Properties);
+
+            Assert.IsNull(obj.Methods);
+            Assert.IsNull(obj.Properties);
+            Assert.IsNull(obj.MemberVariables);
+
+            Assert.IsNotNull(obj.Constants);
+            Assert.AreEqual(1, obj.Constants.Length);
+
+            var constant = obj.Constants[0];
+            Assert.AreEqual("Precedence", constant.Name);
+            Assert.AreEqual("int", constant.DataType);
+            Assert.AreEqual(codeOut, constant.Code);
         }
 
         [Test]
