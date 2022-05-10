@@ -88,6 +88,22 @@ namespace DKX.Compilation.Nodes
             if (_vars == null) _vars = new Dictionary<string, Variable>();
             _vars[variable.Name] = variable;
         }
+
+        public IEnumerable<Variable> Variables
+        {
+            get
+            {
+                if (_parent != null)
+                {
+                    foreach (var v in _parent.Variables) yield return v;
+                }
+
+                if (_vars != null)
+                {
+                    foreach (var v in _vars.Values) yield return v;
+                }
+            }
+        }
         #endregion
 
         #region Children

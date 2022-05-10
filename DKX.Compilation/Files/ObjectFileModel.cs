@@ -20,6 +20,8 @@ namespace DKX.Compilation.Files
         public ObjectMethod[] Methods { get; set; }
 
         public ObjectProperty[] Properties { get; set; }
+
+        public ObjectMemberVariable[] MemberVariables { get; set; }
     }
 
     public class ObjectMethod
@@ -42,6 +44,7 @@ namespace DKX.Compilation.Files
         public Privacy Privacy { get; set; }
 
         public string DataType { get; set; }
+
         public bool ReadOnly { get; set; }
     }
 
@@ -53,6 +56,13 @@ namespace DKX.Compilation.Files
 
         [JsonConverter(typeof(StringEnumConverter))]
         public ArgumentPassType PassType { get; set; }
+    }
+
+    public class ObjectMemberVariable
+    {
+        public string Name { get; set; }
+
+        public string DataType { get; set; }
     }
 
     public class ObjectFileDependency

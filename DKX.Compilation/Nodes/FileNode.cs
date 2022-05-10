@@ -208,7 +208,7 @@ namespace DKX.Compilation.Nodes
                 }
                 else
                 {
-                    // This is a global variable
+                    // This is a member variable
                     while (true)
                     {
                         if (CompileConstants.AllKeywords.Contains(word)) ReportError(wordSpan, ErrorCode.InvalidVariableName, word);

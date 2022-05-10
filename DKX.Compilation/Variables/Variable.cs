@@ -33,5 +33,11 @@ namespace DKX.Compilation.Variables
             DataType = _dataType.ToCode(),
             PassType = _passType ?? ArgumentPassType.ByReference
         };
+
+        public ObjectMemberVariable ToObjectMemberVariable() => new ObjectMemberVariable
+        {
+            Name = _name,
+            DataType = _dataType.ToCode()
+        };
     }
 }

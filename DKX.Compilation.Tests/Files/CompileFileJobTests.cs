@@ -200,6 +200,43 @@ class Test
             Assert.True(queue.ReportItems.Any(i => i.Code == ErrorCode.PropertyHasNoGetterOrSetter));
         }
 
-        // TODO: member variables
+        [Test]
+        public async Task MemberVariables()
+        {
+            var app = CreateAppContext();
+            var obj = await SetupCodeSuccess(app, @"
+class Test
+{
+    private int _id;
+    private string _name;
+    public unsigned(9) Rowno;
+}
+");
+
+            Assert.AreEqual("Test", obj.ClassName);
+            Assert.IsNull(obj.FileDependencies);
+            Assert.IsNull(obj.TableDependencies);
+            Assert.IsNull(obj.Properties);
+
+            Assert.IsNull(obj.Methods);
+            Assert.IsNull(obj.Properties);
+
+            Assert.IsNotNull(obj.MemberVariables);
+            Assert.AreEqual(3, obj.MemberVariables.Length);
+
+            var mv = obj.MemberVariables[0];
+            Assert.AreEqual("_id", mv.Name);
+            Assert.AreEqual("int", mv.DataType);
+
+            mv = obj.MemberVariables[1];
+            Assert.AreEqual("_name", mv.Name);
+            Assert.AreEqual("string", mv.DataType);
+
+            mv = obj.MemberVariables[2];
+            Assert.AreEqual("Rowno", mv.Name);
+            Assert.AreEqual("unsigned(9)", mv.DataType);
+        }
+
+        // TODO: constants
     }
 }
