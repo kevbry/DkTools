@@ -43,6 +43,9 @@ namespace DKX.Compilation
         #region Methods (1200-1299)
         [Description("Expected method name.")]
         ExpectedMethodName = 1200,
+
+        [Description("Methods cannot be constant.")]
+        MethodsCannotBeConst = 1201,
         #endregion
 
         #region Properties (1300-1399)
@@ -51,6 +54,9 @@ namespace DKX.Compilation
 
         [Description("Property has no getter.")]
         PropertyHasNoGetter = 1301,
+
+        [Description("Properties cannot be constant.")]
+        PropertiesCannotBeConst = 1302,
         #endregion
 
         #region Variables/Arguments (1400-1499)
@@ -63,7 +69,7 @@ namespace DKX.Compilation
         /// <summary>
         /// {0} = variable name
         /// </summary>
-        [Description("Duplicate variable '{0}'.")]
+        [Description("Duplicate '{0}'.")]
         DuplicateVariable = 1401,
 
         [Description("Expected variable name.")]
@@ -77,6 +83,20 @@ namespace DKX.Compilation
 
         [Description("Member variables must be private.")]
         MemberVariableMustBePrivate = 1405,
+        #endregion
+
+        #region Expressions (1500-1599)
+        [Description("Expected expression.")]
+        ExpectedExpression = 1500,
+
+        /// <summary>
+        /// {0} = operator text
+        /// </summary>
+        [Description("Operator '{0}' expects a value on right.")]
+        OperatorExpectsValueOnRight = 1501,
+
+        [Description("Constants must have an initial value.")]
+        ConstantsMustHaveInitializer = 1502,    
         #endregion
     }
 

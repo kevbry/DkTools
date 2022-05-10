@@ -51,6 +51,14 @@
     <Compile Include="ErrorCode.cs" />
     <Compile Include="CompileQueue.cs" />
     <Compile Include="Compiler.cs" />
+    <Compile Include="Expressions\Chain.cs" />
+    <Compile Include="Expressions\ErrorChain.cs" />
+    <Compile Include="Expressions\ExpressionParser.cs" />
+    <Compile Include="Expressions\IdentifierChain.cs" />
+    <Compile Include="Expressions\NumberChain.cs" />
+    <Compile Include="Expressions\Operator.cs" />
+    <Compile Include="Expressions\OperatorChain.cs" />
+    <Compile Include="Expressions\StringLiteralChain.cs" />
     <Compile Include="Files\CompileFileJob.cs" />
     <Compile Include="Files\CompileFileJobFactory.cs" />
     <Compile Include="Files\DkxFileUtil.cs" />
@@ -74,6 +82,7 @@
     <Compile Include="Files\ScanForCompileJob.cs" />
     <Compile Include="Nodes\FileNode.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
+    <Compile Include="Variables\Constant.cs" />
     <Compile Include="Variables\Variable.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReader.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReaderFactory.cs" />

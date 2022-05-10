@@ -54,6 +54,9 @@ namespace DKX.Compilation.Files
                 var memberVariables = fileNode.Variables.Select(v => v.ToObjectMemberVariable()).ToArray();
                 if (memberVariables.Length == 0) memberVariables = null;
 
+                var constants = fileNode.Constants.Select(c => c.ToObjectConstant()).ToArray();
+                if (constants.Length == 0) constants = null;
+
                 var obj = new ObjectFileModel
                 {
                     SourcePathName = _dkxPathName,
@@ -63,7 +66,8 @@ namespace DKX.Compilation.Files
                     TableDependencies = null,   // TODO
                     Methods = methods,
                     Properties = properties,
-                    MemberVariables = memberVariables
+                    MemberVariables = memberVariables,
+                    Constants = constants
                 };
 
                 _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj));

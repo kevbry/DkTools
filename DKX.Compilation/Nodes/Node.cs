@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace DKX.Compilation.Nodes
 {
-    public abstract class Node
+    public abstract class Node : IReporter
     {
         private Node _parent;
         private CodeParser _code;
@@ -32,17 +32,18 @@ namespace DKX.Compilation.Nodes
 
         public virtual string PathName => _parent.PathName;
 
-        protected void ReportError(int pos, ErrorCode code, params object[] args)
+        #region Report Items
+        public void ReportItem(int pos, ErrorCode code, params object[] args)
         {
             if (!_code.GetLineNumberAndOffset(pos, out var lineNumber, out var lineOffset))
             {
                 lineNumber = -1;
                 lineOffset = -1;
             }
-            OnError(new ReportItem(PathName, lineNumber, lineOffset, -1, -1, code, args));
+            OnReportItem(new ReportItem(PathName, lineNumber, lineOffset, -1, -1, code, args));
         }
 
-        protected void ReportError(CodeSpan span, ErrorCode code, params object[] args)
+        public void ReportItem(CodeSpan span, ErrorCode code, params object[] args)
         {
             int startLine, startOff, endLine, endOff;
             if (!_code.GetLineNumberAndOffset(span.Start, out startLine, out startOff))
@@ -58,13 +59,14 @@ namespace DKX.Compilation.Nodes
                 endOff = -1;
             }
 
-            OnError(new ReportItem(PathName, startLine, startOff, endLine, endOff, code, args));
+            OnReportItem(new ReportItem(PathName, startLine, startOff, endLine, endOff, code, args));
         }
 
-        protected virtual void OnError(ReportItem error)
+        protected virtual void OnReportItem(ReportItem error)
         {
-            _parent.OnError(error);
+            _parent.OnReportItem(error);
         }
+        #endregion
 
         #region Variables
         public bool HasVariable(string name)

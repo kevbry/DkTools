@@ -2,6 +2,7 @@
 using DK.AppEnvironment;
 using DK.Code;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
 using DKX.Compilation.Variables;
 using System;
@@ -15,6 +16,7 @@ namespace DKX.Compilation.Nodes
         private string _pathName;
         private List<ReportItem> _reportItems = new List<ReportItem>();
         private string _className;
+        private Dictionary<string, Constant> _constants = new Dictionary<string, Constant>();
 
         public FileNode(string pathName, CodeParser code)
             : base(code)
@@ -26,7 +28,6 @@ namespace DKX.Compilation.Nodes
         public string ClassName => _className;
         public bool HasErrors => _reportItems.Any(i => i.Severity == ErrorSeverity.Error);
         public IEnumerable<MethodNode> Methods => ChildNodes.Where(n => n is MethodNode).Cast<MethodNode>();
-        public IEnumerable<PropertyNode> Properties => ChildNodes.Where(n => n is PropertyNode).Cast<PropertyNode>();
         public IEnumerable<ReportItem> ReportItems => _reportItems;
 
         public override string PathName => _pathName;
@@ -41,7 +42,7 @@ namespace DKX.Compilation.Nodes
                 {
                     if (!Code.ReadWord())
                     {
-                        ReportError(Code.Position, ErrorCode.ExpectedClassName);
+                        ReportItem(Code.Position, ErrorCode.ExpectedClassName);
                     }
                     else
                     {
@@ -49,7 +50,7 @@ namespace DKX.Compilation.Nodes
                         var fileName = PathUtil.GetFileNameWithoutExtension(_pathName);
                         if (!className.EqualsI(fileName))
                         {
-                            ReportError(Code.Position, ErrorCode.ClassNameDoesNotMatchFileName);
+                            ReportItem(Code.Position, ErrorCode.ClassNameDoesNotMatchFileName);
                         }
                         else
                         {
@@ -59,7 +60,7 @@ namespace DKX.Compilation.Nodes
 
                     if (!Code.ReadExact('{'))
                     {
-                        ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                        ReportItem(Code.Position, ErrorCode.ExpectedToken, '{');
                         continue;
                     }
 
@@ -67,7 +68,7 @@ namespace DKX.Compilation.Nodes
                 }
                 else if (Code.Read())
                 {
-                    ReportError(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
+                    ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
                 }
                 else break;
             }
@@ -84,28 +85,45 @@ namespace DKX.Compilation.Nodes
                 if (Code.ReadExactWholeWord("public")) AfterPrivacy(Privacy.Public);
                 else if (Code.ReadExactWholeWord("protected")) AfterPrivacy(Privacy.Protected);
                 else if (Code.ReadExactWholeWord("private")) AfterPrivacy(Privacy.Private);
-                else if ((dataType = DataType.Parse(Code)) != null) AfterDataType(dataType.Value, Privacy.Private);
-                else if (Code.Read()) ReportError(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
+                else if (Code.ReadExactWholeWord("const")) AfterConst(Privacy.Private, Code.Span);
+                else if ((dataType = DataType.Parse(Code)) != null) AfterDataType(dataType.Value, Privacy.Private, isConst: false, CodeSpan.Empty);
+                else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
                 else break;
             }
         }
 
         private void AfterPrivacy(Privacy privacy)
         {
+            if (Code.ReadExactWholeWord("const"))
+            {
+                AfterConst(privacy, Code.Span);
+                return;
+            }
+
             var dataType = DataType.Parse(Code);
-            if (dataType != null) AfterDataType(dataType.Value, privacy);
-            else if (Code.Read()) ReportError(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
+            if (dataType != null) AfterDataType(dataType.Value, privacy, isConst: false, CodeSpan.Empty);
+            else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
         }
 
-        private void AfterDataType(DataType dataType, Privacy privacy)
+        private void AfterConst(Privacy privacy, CodeSpan constSpan)
+        {
+            var dataType = DataType.Parse(Code);
+            if (dataType != null) AfterDataType(dataType.Value, privacy, isConst: true, constSpan);
+            else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
+        }
+
+        private void AfterDataType(DataType dataType, Privacy privacy, bool isConst, CodeSpan constKeywordSpan)
         {
             if (Code.ReadWord())
             {
-                var word = Code.Text;
-                var wordSpan = Code.Span;
+                var name = Code.Text;
+                var nameSpan = Code.Span;
+
                 if (Code.ReadExact('('))
                 {
                     // This is a method declaration
+                    if (isConst) ReportItem(constKeywordSpan, ErrorCode.MethodsCannotBeConst);
+
                     // Read the arguments
                     var args = new List<Variable>();
                     if (!Code.ReadExact(')'))
@@ -120,24 +138,24 @@ namespace DKX.Compilation.Nodes
                             var argDataType = DataType.Parse(Code);
                             if (argDataType == null)
                             {
-                                ReportError(Code.Position, ErrorCode.ExpectedArgumentDataType);
+                                ReportItem(Code.Position, ErrorCode.ExpectedArgumentDataType);
                                 argDataType = DataType.Unsupported;
                             }
 
                             string argName;
                             if (!Code.ReadWord())
                             {
-                                ReportError(Code.Position, ErrorCode.ExpectedArgumentName);
+                                ReportItem(Code.Position, ErrorCode.ExpectedArgumentName);
                                 argName = $"unnamed{++unnamedIndex}";
                             }
                             else argName = Code.Text;
 
-                            args.Add(new Variable(argName, argDataType.Value, argType));
+                            args.Add(new Variable(argName, argDataType.Value, argType, initializer: null));
 
                             if (Code.ReadExact(')')) break;
                             if (Code.ReadExact(',')) continue;
 
-                            ReportError(Code.Position, ErrorCode.ExpectedToken, ',');
+                            ReportItem(Code.Position, ErrorCode.ExpectedToken, ',');
                             Code.SkipToAfterExit();
                             break;
                         }
@@ -145,16 +163,21 @@ namespace DKX.Compilation.Nodes
 
                     if (!Code.ReadExact('{'))
                     {
-                        ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                        ReportItem(Code.Position, ErrorCode.ExpectedToken, '{');
                     }
 
-                    var method = new MethodNode(this, word, dataType, args, privacy);
+                    var method = new MethodNode(this, name, dataType, args, privacy);
                     ReadCodeBody(method);
                 }
                 else if (Code.ReadExact('{'))
                 {
                     // This is a property
-                    var prop = new PropertyNode(this, word, dataType, privacy);
+                    if (isConst) ReportItem(constKeywordSpan, ErrorCode.PropertiesCannotBeConst);
+
+                    if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                    else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+
+                    var prop = new PropertyNode(this, name, dataType, privacy);
                     var gotGetter = false;
                     var gotSetter = false;
                     while (true)
@@ -170,7 +193,7 @@ namespace DKX.Compilation.Nodes
                             }
                             else
                             {
-                                ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                                ReportItem(Code.Position, ErrorCode.ExpectedToken, '{');
                                 break;
                             }
                         }
@@ -184,13 +207,13 @@ namespace DKX.Compilation.Nodes
                             }
                             else
                             {
-                                ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                                ReportItem(Code.Position, ErrorCode.ExpectedToken, '{');
                                 break;
                             }
                         }
                         else if (Code.Read())
                         {
-                            ReportError(Code.Position, ErrorCode.UnexpectedToken, Code.Text);
+                            ReportItem(Code.Position, ErrorCode.UnexpectedToken, Code.Text);
                             Code.SkipToAfterExit();
                             break;
                         }
@@ -199,47 +222,108 @@ namespace DKX.Compilation.Nodes
 
                     if (!gotGetter && !gotSetter)
                     {
-                        ReportError(wordSpan, ErrorCode.PropertyHasNoGetterOrSetter);
+                        ReportItem(nameSpan, ErrorCode.PropertyHasNoGetterOrSetter);
                     }
                     else if (!gotGetter)
                     {
-                        ReportError(wordSpan, ErrorCode.PropertyHasNoGetter);
+                        ReportItem(nameSpan, ErrorCode.PropertyHasNoGetter);
                     }
                 }
                 else
                 {
-                    // This is a member variable
-                    while (true)
+                    // This is a member variable or constant
+                    if (isConst)
                     {
-                        if (CompileConstants.AllKeywords.Contains(word)) ReportError(wordSpan, ErrorCode.InvalidVariableName, word);
-                        else if (HasVariable(word)) ReportError(wordSpan, ErrorCode.DuplicateVariable, word);
-                        else AddVariable(new Variable(word, dataType, passType: null));
-
-                        if (privacy != Privacy.Private)
+                        // This is a constant
+                        while (true)
                         {
-                            ReportError(wordSpan, ErrorCode.MemberVariableMustBePrivate);
+                            Chain initializer = null;
+                            if (Code.ReadExact('='))
+                            {
+                                var eqSpan = Code.Span;
+                                initializer = ExpressionParser.ReadExpressionOrNull(Code);
+                                if (initializer == null)
+                                {
+                                    ReportItem(eqSpan, ErrorCode.ExpectedExpression);
+                                }
+                                else
+                                {
+                                    initializer.Report(this);
+                                }
+                            }
+                            else
+                            {
+                                ReportItem(nameSpan, ErrorCode.ConstantsMustHaveInitializer);
+                            }
+
+                            if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                            else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                            else AddConstant(new Constant(name, dataType, initializer));
+
+                            if (Code.ReadExact(';')) break;
+
+                            if (!Code.ReadExact(','))
+                            {
+                                ReportItem(Code.Position, ErrorCode.ExpectedToken, ',');
+                                break;
+                            }
+
+                            if (!Code.ReadWord())
+                            {
+                                ReportItem(Code.Position, ErrorCode.ExpectedVariableName);
+                                break;
+                            }
+                            name = Code.Text;
                         }
-
-                        if (Code.ReadExact(';')) break;
-
-                        // TODO: In the future, add initializer statement
-
-                        if (!Code.ReadExact(','))
+                    }
+                    else
+                    {
+                        // This is a member variable
+                        while (true)
                         {
-                            ReportError(Code.Position, ErrorCode.ExpectedToken, ',');
-                            break;
-                        }
+                            if (privacy != Privacy.Private)
+                            {
+                                ReportItem(nameSpan, ErrorCode.MemberVariableMustBePrivate);
+                            }
 
-                        if (!Code.ReadWord())
-                        {
-                            ReportError(Code.Position, ErrorCode.ExpectedVariableName);
-                            break;
+                            Chain initializer = null;
+                            if (Code.ReadExact('='))
+                            {
+                                var eqSpan = Code.Span;
+                                initializer = ExpressionParser.ReadExpressionOrNull(Code);
+                                if (initializer == null)
+                                {
+                                    ReportItem(eqSpan, ErrorCode.ExpectedExpression);
+                                }
+                                else
+                                {
+                                    initializer.Report(this);
+                                }
+                            }
+
+                            if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                            else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                            else AddVariable(new Variable(name, dataType, passType: null, initializer));
+
+                            if (Code.ReadExact(';')) break;
+
+                            if (!Code.ReadExact(','))
+                            {
+                                ReportItem(Code.Position, ErrorCode.ExpectedToken, ',');
+                                break;
+                            }
+
+                            if (!Code.ReadWord())
+                            {
+                                ReportItem(Code.Position, ErrorCode.ExpectedVariableName);
+                                break;
+                            }
+                            name = Code.Text;
                         }
-                        word = Code.Text;
                     }
                 }
             }
-            else if (Code.Read()) ReportError(Code.Span, ErrorCode.ExpectedMethodName, Code.Text);
+            else if (Code.Read()) ReportItem(Code.Span, ErrorCode.ExpectedMethodName, Code.Text);
         }
 
         private void ReadCodeBody(Node parentMethodOrProperty)
@@ -249,9 +333,38 @@ namespace DKX.Compilation.Nodes
             // TODO
         }
 
-        protected override void OnError(ReportItem error)
+        protected override void OnReportItem(ReportItem error)
         {
             _reportItems.Add(error);
         }
+
+        #region Constants
+        public bool HasConstant(string name) => _constants.ContainsKey(name);
+
+        public void AddConstant(Constant constant)
+        {
+            if (_constants.ContainsKey(constant.Name)) throw new ArgumentException("Duplicate constant name.");
+            _constants[constant.Name] = constant;
+        }
+
+        public IEnumerable<Constant> Constants => _constants.Values;
+        #endregion
+
+        #region Properties
+        public bool HasProperty(string name)
+        {
+            foreach (var node in ChildNodes)
+            {
+                if (node is PropertyNode prop)
+                {
+                    if (prop.Name == name) return true;
+                }
+            }
+
+            return false;
+        }
+
+        public IEnumerable<PropertyNode> Properties => ChildNodes.Where(n => n is PropertyNode).Cast<PropertyNode>();
+        #endregion
     }
 }

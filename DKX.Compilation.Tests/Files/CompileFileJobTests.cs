@@ -31,12 +31,13 @@ namespace DKX.Compilation.Tests.Files
             {
                 TestContext.Out.WriteLine($"> {item}");
             }
-            Assert.IsFalse(queue.ReportItems.Any(i => i.Severity == ErrorSeverity.Error));
+            Assert.IsFalse(queue.ReportItems.Any(i => i.Severity == ErrorSeverity.Error), "Compiler returned errors.");
 
             Assert.IsTrue(fs.FileExists(objPathName), "Object file was not created.");
             Assert.IsFalse(fs.FileExists(wbdkPathName), "WBDK file should not have been created.");
 
             var objContent = fs.GetFileText(objPathName);
+            TestContext.Out.WriteLine($"Object File:\n{objContent}");
             var obj = JsonConvert.DeserializeObject<ObjectFileModel>(objContent);
             Assert.IsNotNull(obj);
 
@@ -308,6 +309,62 @@ class Test
             Assert.True(queue.ReportItems.Any(i => i.Code == ErrorCode.MemberVariableMustBePrivate));
         }
 
-        // TODO: constants
+        [Test]
+        public async Task Constants()
+        {
+            var app = CreateAppContext();
+            var obj = await SetupCodeSuccess(app, @"
+class Test
+{
+    public const string InstitutionName = ""Credit Union"";
+    public const unsigned(3) InstitutionRouteNumber = 899;
+    public const int SecondsPerDay = 24 * 60 * 60;
+}
+");
+
+            Assert.AreEqual("Test", obj.ClassName);
+            Assert.IsNull(obj.FileDependencies);
+            Assert.IsNull(obj.TableDependencies);
+            Assert.IsNull(obj.Properties);
+
+            Assert.IsNull(obj.Methods);
+            Assert.IsNull(obj.Properties);
+            Assert.IsNull(obj.MemberVariables);
+
+            Assert.IsNotNull(obj.Constants);
+            Assert.AreEqual(3, obj.Constants.Length);
+
+            var constant = obj.Constants[0];
+            Assert.AreEqual("InstitutionName", constant.Name);
+            Assert.AreEqual("string", constant.DataType);
+            Assert.AreEqual("s\"Credit Union\"", constant.Code);
+
+            constant = obj.Constants[1];
+            Assert.AreEqual("InstitutionRouteNumber", constant.Name);
+            Assert.AreEqual("unsigned(3)", constant.DataType);
+            Assert.AreEqual("n899", constant.Code);
+
+            constant = obj.Constants[2];
+            Assert.AreEqual("SecondsPerDay", constant.Name);
+            Assert.AreEqual("int", constant.DataType);
+            Assert.AreEqual("#mul(#mul(n24,n60),n60)", constant.Code);
+        }
+
+        [Test]
+        public async Task DuplicateVariableNames()
+        {
+            var app = CreateAppContext();
+            var queue = await SetupCodeError(app, @"
+class Test
+{
+    int Temp;
+    string Temp { get { return """"; } }
+    const int Temp = 0;
+}
+");
+            Assert.True(queue.ReportItems.Any(i => i.Code == ErrorCode.DuplicateVariable));
+        }
+
+        // TODO: Member variables, properties, and constants with conflicting names.
     }
 }

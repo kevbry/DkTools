@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using DK.Code;
+using System.Text;
 
 namespace DKX.Compilation
 {
@@ -11,6 +12,8 @@ namespace DKX.Compilation
         private int _endCh;
         private ErrorCode _code;
         private object[] _args;
+
+        public static readonly ReportItem[] EmptyArray = new ReportItem[0];
 
         public ReportItem(string pathName, int startLine, int startCh, int endLine, int endCh, ErrorCode code, params object[] args)
         {
@@ -68,5 +71,12 @@ namespace DKX.Compilation
     {
         Error,
         Warning
+    }
+
+    public interface IReporter
+    {
+        void ReportItem(int pos, ErrorCode code, params object[] args);
+
+        void ReportItem(CodeSpan span, ErrorCode code, params object[] args);
     }
 }

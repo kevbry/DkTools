@@ -3,6 +3,19 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 
+/*
+Code Strings:
+
+Op  Description         Example
+i   Identifier          icust
+n   Number literal      n-123.45
+s   String literal      s"hello"
+c   Char literal        c'x'
+t   Boolean true        t
+f   Boolean false       f
+#   Operator            #add(n1,n2)
+*/
+
 namespace DKX.Compilation.Files
 {
     public class ObjectFileModel
@@ -22,6 +35,8 @@ namespace DKX.Compilation.Files
         public ObjectProperty[] Properties { get; set; }
 
         public ObjectMemberVariable[] MemberVariables { get; set; }
+
+        public ObjectConstant[] Constants { get; set; }
     }
 
     public class ObjectMethod
@@ -63,6 +78,15 @@ namespace DKX.Compilation.Files
         public string Name { get; set; }
 
         public string DataType { get; set; }
+    }
+
+    public class ObjectConstant
+    {
+        public string Name { get; set; }
+
+        public string DataType { get; set; }
+
+        public string Code { get; set; }
     }
 
     public class ObjectFileDependency
