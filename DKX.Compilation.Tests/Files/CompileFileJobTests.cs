@@ -1,6 +1,7 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
 using DKX.Compilation.Files;
+using DKX.Compilation.Variables;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System.Linq;
@@ -96,7 +97,63 @@ class Test
             Assert.IsNull(method.Arguments);
         }
 
-        // TODO: method with arguments
+        [Test]
+        public async Task MethodWithArguments()
+        {
+            var app = CreateAppContext();
+            var obj = await SetupCodeSuccess(app, @"
+class Test
+{
+    public int GetSomeRecord(int id, string(38) name, ref uint counter, out date dateNew, out time timeNew)
+    {
+        counter++;
+        dateNew = 0;
+        timeNew = 0;
+        return 0;
+    }
+}
+");
+
+            Assert.AreEqual("Test", obj.ClassName);
+            Assert.IsNull(obj.FileDependencies);
+            Assert.IsNull(obj.TableDependencies);
+            Assert.IsNull(obj.Properties);
+
+            Assert.IsNotNull(obj.Methods);
+            Assert.AreEqual(1, obj.Methods.Length);
+
+            var method = obj.Methods[0];
+            Assert.AreEqual("GetSomeRecord", method.Name);
+            Assert.AreEqual(Privacy.Public, method.Privacy);
+            Assert.AreEqual("int", method.ReturnDataType);
+            Assert.IsNotNull(method.Arguments);
+            Assert.AreEqual(5, method.Arguments.Length);
+
+            var arg = method.Arguments[0];
+            Assert.AreEqual("id", arg.Name);
+            Assert.AreEqual("int", arg.DataType);
+            Assert.AreEqual(ArgumentPassType.ByValue, arg.PassType);
+
+            arg = method.Arguments[1];
+            Assert.AreEqual("name", arg.Name);
+            Assert.AreEqual("string(38)", arg.DataType);
+            Assert.AreEqual(ArgumentPassType.ByValue, arg.PassType);
+
+            arg = method.Arguments[2];
+            Assert.AreEqual("counter", arg.Name);
+            Assert.AreEqual("uint", arg.DataType);
+            Assert.AreEqual(ArgumentPassType.ByReference, arg.PassType);
+
+            arg = method.Arguments[3];
+            Assert.AreEqual("dateNew", arg.Name);
+            Assert.AreEqual("date", arg.DataType);
+            Assert.AreEqual(ArgumentPassType.Out, arg.PassType);
+
+            arg = method.Arguments[4];
+            Assert.AreEqual("timeNew", arg.Name);
+            Assert.AreEqual("time", arg.DataType);
+            Assert.AreEqual(ArgumentPassType.Out, arg.PassType);
+        }
 
         [Test]
         public async Task SimpleReadOnlyProperty()
@@ -235,6 +292,20 @@ class Test
             mv = obj.MemberVariables[2];
             Assert.AreEqual("Rowno", mv.Name);
             Assert.AreEqual("unsigned(9)", mv.DataType);
+        }
+
+        [TestCase("public")]
+        [TestCase("protected")]
+        public async Task MemberVariablesCanOnlyBePrivate(string privacy)
+        {
+            var app = CreateAppContext();
+            var queue = await SetupCodeError(app, @"
+class Test
+{
+    " + privacy + @" int Id;
+}
+");
+            Assert.True(queue.ReportItems.Any(i => i.Code == ErrorCode.MemberVariableMustBePrivate));
         }
 
         // TODO: constants

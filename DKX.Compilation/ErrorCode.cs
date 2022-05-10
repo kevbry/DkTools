@@ -74,6 +74,9 @@ namespace DKX.Compilation
 
         [Description("Expected argument name.")]
         ExpectedArgumentName = 1404,
+
+        [Description("Member variables must be private.")]
+        MemberVariableMustBePrivate = 1405,
         #endregion
     }
 

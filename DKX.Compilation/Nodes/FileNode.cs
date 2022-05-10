@@ -215,6 +215,11 @@ namespace DKX.Compilation.Nodes
                         else if (HasVariable(word)) ReportError(wordSpan, ErrorCode.DuplicateVariable, word);
                         else AddVariable(new Variable(word, dataType, passType: null));
 
+                        if (privacy != Privacy.Private)
+                        {
+                            ReportError(wordSpan, ErrorCode.MemberVariableMustBePrivate);
+                        }
+
                         if (Code.ReadExact(';')) break;
 
                         // TODO: In the future, add initializer statement
