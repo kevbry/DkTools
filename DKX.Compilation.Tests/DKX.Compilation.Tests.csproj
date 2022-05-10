@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />
+    <Compile Include="Files\CompileFileJobTests.cs" />
     <Compile Include="Files\ScanForCompileJobTests.cs" />
     <Compile Include="Files\TestCompileFileJob.cs" />
     <Compile Include="Files\TestCompileFileJobFactory.cs" />

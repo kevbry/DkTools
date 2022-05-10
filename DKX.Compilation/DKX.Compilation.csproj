@@ -60,6 +60,7 @@
     <Compile Include="Files\ObjectFileModel.cs" />
     <Compile Include="Files\ObjectFileReader.cs" />
     <Compile Include="Files\ObjectFileReaderFactory.cs" />
+    <Compile Include="Files\Privacy.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
     <Compile Include="Nodes\MethodNode.cs" />
     <Compile Include="Nodes\Node.cs" />
@@ -70,7 +71,7 @@
     <Compile Include="Schema\TableHashProvider.cs" />
     <Compile Include="Files\ScanForCompileJob.cs" />
     <Compile Include="Nodes\FileNode.cs" />
-    <Compile Include="Variables\ArgumentType.cs" />
+    <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Variable.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReader.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReaderFactory.cs" />

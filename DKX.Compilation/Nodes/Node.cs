@@ -2,9 +2,6 @@
 using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Nodes
 {
@@ -78,6 +75,8 @@ namespace DKX.Compilation.Nodes
             if (_childNodes == null) _childNodes = new List<Node>();
             _childNodes.Add(node ?? throw new ArgumentNullException(nameof(node)));
         }
+
+        public IEnumerable<Node> ChildNodes => _childNodes;
         #endregion
 
         #region Code Parsing

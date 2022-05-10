@@ -1,10 +1,7 @@
 ﻿using DK;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Files;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Variables
 {
@@ -12,20 +9,29 @@ namespace DKX.Compilation.Variables
     {
         private string _name;
         private DataType _dataType;
-        private ArgumentType? _argType;
+        private ArgumentPassType? _passType;
 
-        public Variable(string name, DataType dataType, ArgumentType? argType)
+        public static readonly Variable[] EmptyArray = new Variable[0];
+
+        public Variable(string name, DataType dataType, ArgumentPassType? passType)
         {
             _name = name ?? throw new ArgumentNullException();
             if (!_name.IsWord()) throw new ArgumentException("Variable name must be a single word identifier.");
 
             _dataType = dataType;
-            _argType = argType;
+            _passType = passType;
         }
 
-        public ArgumentType? ArgumentType => _argType;
+        public ArgumentPassType? ArgumentType => _passType;
         public DataType DataType => _dataType;
-        public bool IsArgument => _argType != null;
+        public bool IsArgument => _passType != null;
         public string Name => _name;
+
+        public ObjectMethodArgument ToObjectMethodArgument() => new ObjectMethodArgument
+        {
+            Name = _name,
+            DataType = _dataType.ToCode(),
+            PassType = _passType ?? ArgumentPassType.ByReference
+        };
     }
 }

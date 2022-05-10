@@ -15,7 +15,7 @@ namespace DKX.Compilation
         DKX0001_CompileJobFailed = 1,
         #endregion
 
-        #region General Code Errors
+        #region General Code Errors (1000-1099)
         [Description("Syntax Error")]
         SyntaxError = 1000,
 
@@ -32,27 +32,43 @@ namespace DKX.Compilation
         UnexpectedToken = 1002,
         #endregion
 
-        #region Variables (1100-1199)
+        #region Classes (1100-1199)
+        [Description("Expected class name.")]
+        ExpectedClassName = 1100,
+
+        [Description("Class name must match the file name (not case sensitive).")]
+        ClassNameDoesNotMatchFileName = 1101,
+        #endregion
+
+        #region Methods (1200-1299)
+        [Description("Expected method name.")]
+        ExpectedMethodName = 1200,
+        #endregion
+
+        #region Properties (1300-1399)
+        #endregion
+
+        #region Variables/Arguments (1400-1499)
         /// <summary>
         /// {0} = variable name
         /// </summary>
         [Description("Invalid variable name '{0}'.")]
-        InvalidVariableName = 1100,
+        InvalidVariableName = 1400,
 
         /// <summary>
         /// {0} = variable name
         /// </summary>
         [Description("Duplicate variable '{0}'.")]
-        DuplicateVariable = 1101,
+        DuplicateVariable = 1401,
 
         [Description("Expected variable name.")]
-        ExpectedVariableName = 1102,
+        ExpectedVariableName = 1402,
 
         [Description("Expected argument data type.")]
-        ExpectedArgumentDataType = 1103,
+        ExpectedArgumentDataType = 1403,
 
         [Description("Expected argument name.")]
-        ExpectedArgumentName = 1104,
+        ExpectedArgumentName = 1404,
         #endregion
     }
 

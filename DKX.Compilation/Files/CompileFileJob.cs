@@ -3,16 +3,15 @@ using DK.Code;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.Nodes;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Files
 {
-    class CompileFileJob : ICompileJob
+    public class CompileFileJob : ICompileJob
     {
         private DkAppContext _app;
         private string _dkxPathName;
@@ -39,6 +38,19 @@ namespace DKX.Compilation.Files
             var code = new CodeParser(source);
             var fileNode = new FileNode(_dkxPathName, code);
             fileNode.Parse();
+
+            var obj = new ObjectFileModel
+            {
+                SourcePathName = _dkxPathName,
+                DestinationPathName = _wbdkPathName,
+                ClassName = fileNode.ClassName,
+                FileDependencies = null,    // TODO
+                TableDependencies = null,   // TODO
+                Methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray()
+                // TODO: properties
+            };
+
+            _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj));
 
             return Task.CompletedTask;
         }

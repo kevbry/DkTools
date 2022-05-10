@@ -1,11 +1,12 @@
-﻿using DK.Code;
+﻿using DK;
+using DK.AppEnvironment;
+using DK.Code;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Files;
 using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Nodes
 {
@@ -13,21 +14,51 @@ namespace DKX.Compilation.Nodes
     {
         private string _pathName;
         private List<ReportItem> _reportItems = new List<ReportItem>();
+        private string _className;
 
         public FileNode(string pathName, CodeParser code)
             : base(code)
         {
             _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
+            _className = PathUtil.GetFileNameWithoutExtension(_pathName);
         }
+
+        public string ClassName => _className;
+        public IEnumerable<MethodNode> Methods => ChildNodes.Where(n => n is MethodNode).Cast<MethodNode>();
 
         public void Parse()
         {
-            while (!Code.EndOfFile)
+            var className = null as string;
+
+            while (true)
             {
-                var dataType = DataType.Parse(Code);
-                if (dataType != null)
+                if (className == null && Code.ReadExactWholeWord("class"))
                 {
-                    AfterDataType(dataType.Value);
+                    if (!Code.ReadWord())
+                    {
+                        ReportError(Code.Position, ErrorCode.ExpectedClassName);
+                    }
+                    else
+                    {
+                        className = Code.Text;
+                        var fileName = PathUtil.GetFileNameWithoutExtension(_pathName);
+                        if (!className.EqualsI(fileName))
+                        {
+                            ReportError(Code.Position, ErrorCode.ClassNameDoesNotMatchFileName);
+                        }
+                        else
+                        {
+                            _className = className;
+                        }
+                    }
+
+                    if (!Code.ReadExact('{'))
+                    {
+                        ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                        continue;
+                    }
+
+                    InsideClass();
                 }
                 else if (Code.Read())
                 {
@@ -37,7 +68,31 @@ namespace DKX.Compilation.Nodes
             }
         }
 
-        private void AfterDataType(DataType dataType)
+        private void InsideClass()
+        {
+            DataType? dataType;
+
+            while (true)
+            {
+                if (Code.ReadExact('}')) break; // End of class
+
+                if (Code.ReadExactWholeWord("public")) AfterPrivacy(Privacy.Public);
+                else if (Code.ReadExactWholeWord("protected")) AfterPrivacy(Privacy.Protected);
+                else if (Code.ReadExactWholeWord("private")) AfterPrivacy(Privacy.Private);
+                else if ((dataType = DataType.Parse(Code)) != null) AfterDataType(dataType.Value, Privacy.Private);
+                else if (Code.Read()) ReportError(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
+                else break;
+            }
+        }
+
+        private void AfterPrivacy(Privacy privacy)
+        {
+            var dataType = DataType.Parse(Code);
+            if (dataType != null) AfterDataType(dataType.Value, privacy);
+            else if (Code.Read()) ReportError(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
+        }
+
+        private void AfterDataType(DataType dataType, Privacy privacy)
         {
             if (Code.ReadWord())
             {
@@ -53,9 +108,9 @@ namespace DKX.Compilation.Nodes
                         var unnamedIndex = 0;
                         while (true)
                         {
-                            var argType = ArgumentType.ByValue;
-                            if (Code.ReadExactWholeWord("ref")) argType = ArgumentType.ByReference;
-                            else if (Code.ReadExactWholeWord("out")) argType = ArgumentType.Out;
+                            var argType = ArgumentPassType.ByValue;
+                            if (Code.ReadExactWholeWord("ref")) argType = ArgumentPassType.ByReference;
+                            else if (Code.ReadExactWholeWord("out")) argType = ArgumentPassType.Out;
 
                             var argDataType = DataType.Parse(Code);
                             if (argDataType == null)
@@ -91,7 +146,7 @@ namespace DKX.Compilation.Nodes
                     // TODO: Read the statements
                     SkipToAfterExit();
 
-                    var method = new MethodNode(this, word, dataType, args);
+                    var method = new MethodNode(this, word, dataType, args, privacy);
                 }
                 else
                 {
@@ -100,7 +155,7 @@ namespace DKX.Compilation.Nodes
                     {
                         if (CompileConstants.AllKeywords.Contains(word)) ReportError(wordSpan, ErrorCode.InvalidVariableName, word);
                         else if (HasVariable(word)) ReportError(wordSpan, ErrorCode.DuplicateVariable, word);
-                        else AddVariable(new Variable(word, dataType, argType: null));
+                        else AddVariable(new Variable(word, dataType, passType: null));
 
                         if (Code.ReadExact(';')) break;
 
@@ -121,13 +176,12 @@ namespace DKX.Compilation.Nodes
                     }
                 }
             }
+            else if (Code.Read()) ReportError(Code.Span, ErrorCode.ExpectedMethodName, Code.Text);
         }
 
         protected override void OnError(ReportItem error)
         {
             _reportItems.Add(error);
         }
-
-        public override string PathName => _pathName;
     }
 }
