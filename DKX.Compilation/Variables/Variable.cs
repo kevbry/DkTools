@@ -43,5 +43,12 @@ namespace DKX.Compilation.Variables
             Name = _name,
             DataType = _dataType.ToCode()
         };
+
+        public ObjectVariable ToObjectVariable() => new ObjectVariable
+        {
+            Name = _name,
+            DataType = _dataType.ToCode(),
+            InitializerCode = _initializer?.ToCode()
+        };
     }
 }

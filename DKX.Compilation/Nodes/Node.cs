@@ -1,13 +1,19 @@
-﻿using DK.Code;
+﻿using DK.AppEnvironment;
+using DK.Code;
+using DKX.Compilation.DataTypes;
+using DKX.Compilation.Expressions;
+using DKX.Compilation.Files;
 using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DKX.Compilation.Nodes
 {
     public abstract class Node : IReporter
     {
         private Node _parent;
+        private DkAppContext _app;
         private CodeParser _code;
         private Dictionary<string, Variable> _vars;
         private List<Node> _childNodes;
@@ -17,17 +23,20 @@ namespace DKX.Compilation.Nodes
         public Node(Node parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            _app = _parent._app;
             _code = _parent._code;
 
             _parent.AddChildNode(this);
         }
 
-        protected Node(CodeParser code)
+        protected Node(DkAppContext app, CodeParser code)
         {
             _parent = null;
-            _code = code;
+            _app = app ?? throw new ArgumentNullException(nameof(app));
+            _code = code ?? throw new ArgumentNullException(nameof(code));
         }
 
+        public DkAppContext App => _app;
         public CodeParser Code => _code;
 
         public virtual string PathName => _parent.PathName;
@@ -75,6 +84,10 @@ namespace DKX.Compilation.Nodes
             return _parent?.HasVariable(name) ?? false;
         }
 
+        public virtual bool HasConstant(string name) => _parent.HasConstant(name);
+
+        public virtual bool HasProperty(string name) => _parent.HasProperty(name);
+
         public Variable GetVariable(string name)
         {
             if (_vars != null)
@@ -116,6 +129,107 @@ namespace DKX.Compilation.Nodes
         }
 
         public IEnumerable<Node> ChildNodes => (IEnumerable<Node>)_childNodes ?? EmptyArray;
+
+        public T GetContainerOrNull<T>() where T : class
+        {
+            if (this is T me) return me;
+            if (_parent != null) return _parent.GetContainerOrNull<T>();
+            return null;
+        }
+        #endregion
+
+        #region Statements
+        internal void ReadCodeBody()
+        {
+            while (true)
+            {
+                if (Code.ReadExact('}')) return;
+                if (!ParseStatement())
+                {
+                    Code.SkipToAfterExit();
+                    return;
+                }
+            }
+        }
+
+        internal bool ParseStatement()
+        {
+            if (Code.ReadExact("return"))
+            {
+                new ReturnStatement(this, Code.Span);
+                return true;
+            }
+
+            // Try for variable declaration
+            var dataType = ReadDataTypeOrNull();
+            if (dataType != null)
+            {
+                if (Code.ReadWord())
+                {
+                    var name = Code.Text;
+                    var nameSpan = Code.Span;
+                    Chain initializer = null;
+
+                    if (Code.ReadExact('='))
+                    {
+                        var eqSpan = Code.Span;
+                        initializer = ExpressionParser.ReadExpressionOrNull(Code);
+                        if (initializer == null) ReportItem(eqSpan, ErrorCode.ExpectedExpression);
+                    }
+
+                    if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                    else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                    else
+                    {
+                        var variable = new Variable(name, dataType.Value, passType: null, initializer: null);
+                        AddVariable(variable);
+                        if (initializer != null) new VariableInitializationStatement(this, variable, initializer);
+                    }
+                }
+            }
+
+            var exp = ExpressionParser.ReadExpressionOrNull(Code);
+            if (exp != null)
+            {
+                new ExpressionStatement(this, exp);
+                if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
+                return true;
+            }
+
+            return false;
+        }
+
+        protected DataType? ReadDataTypeOrNull()
+        {
+            var dataType = DataType.Parse(Code);
+            if (dataType != null) return dataType;
+
+            if (Code.ReadWord())
+            {
+                dataType = GetTypedefDataType(Code.Text);
+                if (dataType == null) Code.Position = Code.Span.Start;
+                return dataType;
+            }
+
+            return null;
+        }
+
+        protected virtual DataType? GetTypedefDataType(string typedefName) => _parent.GetTypedefDataType(typedefName);
+
+        protected ObjectBody GenerateObjectBody()
+        {
+            var variables = Variables.Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
+            if (variables.Length == 0) variables = null;
+
+            var statements = ChildNodes.Where(n => n is Statement).Select(n => (n as Statement).ToCode()).ToArray();
+            if (statements.Length == 0) statements = null;
+
+            return new ObjectBody
+            {
+                Variables = variables,
+                Statements = statements
+            };
+        }
         #endregion
     }
 }

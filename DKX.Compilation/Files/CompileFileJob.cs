@@ -38,7 +38,7 @@ namespace DKX.Compilation.Files
 
             var source = _app.FileSystem.GetFileText(_dkxPathName);
             var code = new CodeParser(source);
-            var fileNode = new FileNode(_dkxPathName, code);
+            var fileNode = new FileNode(_app, _dkxPathName, code);
             fileNode.Parse();
 
             var reportItems = fileNode.ReportItems.ToList();

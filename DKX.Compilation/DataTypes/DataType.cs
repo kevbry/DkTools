@@ -95,6 +95,7 @@ namespace DKX.Compilation.DataTypes
         public short Width => _width;
         public short Scale => _scale;
         public string[] Options => _options ?? Constants.EmptyStringArray;
+        public bool IsVoid => _baseType == BaseType.Void;
 
         public override string ToString() => ToCode();
 

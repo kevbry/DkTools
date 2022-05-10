@@ -107,10 +107,6 @@ class Test
 {
     public int GetSomeRecord(int id, string(38) name, ref uint counter, out date dateNew, out time timeNew)
     {
-        counter++;
-        dateNew = 0;
-        timeNew = 0;
-        return 0;
     }
 }
 ");
@@ -400,6 +396,46 @@ class Test
             Assert.True(queue.ReportItems.Any(i => i.Code == ErrorCode.DuplicateVariable));
         }
 
-        // TODO: Member variables, properties, and constants with conflicting names.
+        [Test]
+        public async Task VariableDeclaration()
+        {
+            var app = CreateAppContext();
+            var obj = await SetupCodeSuccess(app, @"
+class Test
+{
+    void DoTest()
+    {
+        int x = 0;
+    }
+}
+");
+
+            Assert.AreEqual("Test", obj.ClassName);
+            Assert.IsNull(obj.FileDependencies);
+            Assert.IsNull(obj.TableDependencies);
+            Assert.IsNull(obj.Properties);
+
+            Assert.IsNull(obj.Properties);
+            Assert.IsNull(obj.MemberVariables);
+            Assert.IsNull(obj.Constants);
+
+            Assert.IsNotNull(obj.Methods);
+            Assert.AreEqual(1, obj.Methods.Length);
+            var method = obj.Methods[0];
+
+            Assert.IsNotNull(method.Body);
+            Assert.IsNotNull(method.Body.Variables);
+            Assert.AreEqual(1, method.Body.Variables.Length);
+
+            var v = method.Body.Variables[0];
+            Assert.AreEqual("x", v.Name);
+            Assert.AreEqual("int", v.DataType);
+            Assert.IsNull(v.InitializerCode);
+
+            Assert.IsNotNull(method.Body.Statements);
+            Assert.AreEqual(1, method.Body.Statements.Length);
+            Assert.AreEqual("#asn(ix,n0)", method.Body.Statements[0]);
+        }
+
     }
 }

@@ -39,7 +39,7 @@ namespace DKX.Compilation.Nodes
         Setter
     }
 
-    class PropertyAccessorNode : Node
+    class PropertyAccessorNode : Node, IReturnTargetNode
     {
         private PropertyAccessorType _accessorType;
 
@@ -50,5 +50,7 @@ namespace DKX.Compilation.Nodes
         }
 
         public PropertyAccessorType AccessorType => _accessorType;
+
+        public DataType ReturnDataType => _accessorType == PropertyAccessorType.Getter ? GetContainerOrNull<PropertyNode>().DataType : DataType.Void;
     }
 }

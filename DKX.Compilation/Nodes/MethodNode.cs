@@ -30,7 +30,8 @@ namespace DKX.Compilation.Nodes
             Name = _name,
             Privacy = _privacy,
             ReturnDataType = _returnDataType.ToCode(),
-            Arguments = (_args ?? Variable.EmptyArray).Length != 0 ? _args.Select(a => a.ToObjectMethodArgument()).ToArray() : null
+            Arguments = (_args ?? Variable.EmptyArray).Length != 0 ? _args.Select(a => a.ToObjectMethodArgument()).ToArray() : null,
+            Body = GenerateObjectBody()
         };
     }
 }

@@ -71,9 +71,11 @@
     <Compile Include="Files\Privacy.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
     <Compile Include="Nodes\INamedNode.cs" />
+    <Compile Include="Nodes\IReturnTargetNode.cs" />
     <Compile Include="Nodes\MethodNode.cs" />
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\PropertyNode.cs" />
+    <Compile Include="Nodes\VariableInitializationStatement.cs" />
     <Compile Include="ReportItem.cs" />
     <Compile Include="Jobs\ICompileJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -81,6 +83,9 @@
     <Compile Include="Schema\TableHashProvider.cs" />
     <Compile Include="Files\ScanForCompileJob.cs" />
     <Compile Include="Nodes\FileNode.cs" />
+    <Compile Include="Nodes\ExpressionStatement.cs" />
+    <Compile Include="Nodes\ReturnStatement.cs" />
+    <Compile Include="Nodes\Statement.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
     <Compile Include="Variables\Variable.cs" />

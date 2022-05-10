@@ -16,10 +16,9 @@ namespace DKX.Compilation.Nodes
         private string _pathName;
         private List<ReportItem> _reportItems = new List<ReportItem>();
         private string _className;
-        private Dictionary<string, Constant> _constants = new Dictionary<string, Constant>();
 
-        public FileNode(string pathName, CodeParser code)
-            : base(code)
+        public FileNode(DkAppContext app, string pathName, CodeParser code)
+            : base(app, code)
         {
             _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
             _className = PathUtil.GetFileNameWithoutExtension(_pathName);
@@ -167,7 +166,7 @@ namespace DKX.Compilation.Nodes
                     }
 
                     var method = new MethodNode(this, name, dataType, args, privacy);
-                    ReadCodeBody(method);
+                    method.ReadCodeBody();
                 }
                 else if (Code.ReadExact('{'))
                 {
@@ -189,7 +188,7 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExact('{'))
                             {
                                 var getter = new PropertyAccessorNode(prop, PropertyAccessorType.Getter);
-                                ReadCodeBody(getter);
+                                getter.ReadCodeBody();
                             }
                             else
                             {
@@ -203,7 +202,7 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExact('{'))
                             {
                                 var setter = new PropertyAccessorNode(prop, PropertyAccessorType.Setter);
-                                ReadCodeBody(setter);
+                                setter.ReadCodeBody();
                             }
                             else
                             {
@@ -326,20 +325,15 @@ namespace DKX.Compilation.Nodes
             else if (Code.Read()) ReportItem(Code.Span, ErrorCode.ExpectedMethodName, Code.Text);
         }
 
-        private void ReadCodeBody(Node parentMethodOrProperty)
-        {
-            Code.SkipToAfterExit();
-
-            // TODO
-        }
-
         protected override void OnReportItem(ReportItem error)
         {
             _reportItems.Add(error);
         }
 
         #region Constants
-        public bool HasConstant(string name) => _constants.ContainsKey(name);
+        private Dictionary<string, Constant> _constants = new Dictionary<string, Constant>();
+
+        public override bool HasConstant(string name) => _constants.ContainsKey(name);
 
         public void AddConstant(Constant constant)
         {
@@ -351,7 +345,7 @@ namespace DKX.Compilation.Nodes
         #endregion
 
         #region Properties
-        public bool HasProperty(string name)
+        public override bool HasProperty(string name)
         {
             foreach (var node in ChildNodes)
             {
@@ -365,6 +359,26 @@ namespace DKX.Compilation.Nodes
         }
 
         public IEnumerable<PropertyNode> Properties => ChildNodes.Where(n => n is PropertyNode).Cast<PropertyNode>();
+        #endregion
+
+        #region Typedefs
+        private Dictionary<string, DataType?> _typedefs = new Dictionary<string, DataType?>();
+
+        protected override DataType? GetTypedefDataType(string typedefName)
+        {
+            if (_typedefs.TryGetValue(typedefName, out var dataType)) return dataType;
+
+            var typedef = App.Settings.Dict.GetTypedef(typedefName);
+            if (typedef != null)
+            {
+                dataType = DkDataTypeParser.Parse(new CodeParser(typedef.DataType.Source.ToString()));
+                _typedefs[typedefName] = dataType;
+                return dataType;
+            }
+
+            _typedefs[typedefName] = null;
+            return null;
+        }
         #endregion
     }
 }
