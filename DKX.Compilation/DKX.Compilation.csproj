@@ -62,8 +62,10 @@
     <Compile Include="Files\ObjectFileReaderFactory.cs" />
     <Compile Include="Files\Privacy.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
+    <Compile Include="Nodes\INamedNode.cs" />
     <Compile Include="Nodes\MethodNode.cs" />
     <Compile Include="Nodes\Node.cs" />
+    <Compile Include="Nodes\PropertyNode.cs" />
     <Compile Include="ReportItem.cs" />
     <Compile Include="Jobs\ICompileJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -12,6 +12,8 @@ namespace DKX.Compilation.Nodes
         private Dictionary<string, Variable> _vars;
         private List<Node> _childNodes;
 
+        public static readonly Node[] EmptyArray = new Node[0];
+
         public Node(Node parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
@@ -32,12 +34,31 @@ namespace DKX.Compilation.Nodes
 
         protected void ReportError(int pos, ErrorCode code, params object[] args)
         {
-            OnError(new ReportItem(PathName, new CodeSpan(pos, pos), code, args));
+            if (!_code.GetLineNumberAndOffset(pos, out var lineNumber, out var lineOffset))
+            {
+                lineNumber = -1;
+                lineOffset = -1;
+            }
+            OnError(new ReportItem(PathName, lineNumber, lineOffset, -1, -1, code, args));
         }
 
         protected void ReportError(CodeSpan span, ErrorCode code, params object[] args)
         {
-            OnError(new ReportItem(PathName, span, code, args));
+            int startLine, startOff, endLine, endOff;
+            if (!_code.GetLineNumberAndOffset(span.Start, out startLine, out startOff))
+            {
+                startLine = -1;
+                startOff = -1;
+                endLine = -1;
+                endOff = -1;
+            }
+            else if (!_code.GetLineNumberAndOffset(span.End, out endLine, out endOff))
+            {
+                endLine = -1;
+                endOff = -1;
+            }
+
+            OnError(new ReportItem(PathName, startLine, startOff, endLine, endOff, code, args));
         }
 
         protected virtual void OnError(ReportItem error)
@@ -76,17 +97,7 @@ namespace DKX.Compilation.Nodes
             _childNodes.Add(node ?? throw new ArgumentNullException(nameof(node)));
         }
 
-        public IEnumerable<Node> ChildNodes => _childNodes;
-        #endregion
-
-        #region Code Parsing
-        protected void SkipToAfterExit()
-        {
-            while (Code.ReadNestable())
-            {
-                if (Code.Type == CodeType.Operator && (Code.Text == "}" || Code.Text == ")" || Code.Text == "]")) break;
-            }
-        }
+        public IEnumerable<Node> ChildNodes => (IEnumerable<Node>)_childNodes ?? EmptyArray;
         #endregion
     }
 }

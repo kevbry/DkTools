@@ -41,7 +41,8 @@ namespace DKX.Compilation.Files
         [JsonConverter(typeof(StringEnumConverter))]
         public Privacy Privacy { get; set; }
 
-        public string ReturnDataType { get; set; }
+        public string DataType { get; set; }
+        public bool ReadOnly { get; set; }
     }
 
     public class ObjectMethodArgument

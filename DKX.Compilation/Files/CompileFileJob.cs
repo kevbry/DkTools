@@ -14,14 +14,16 @@ namespace DKX.Compilation.Files
     public class CompileFileJob : ICompileJob
     {
         private DkAppContext _app;
+        private ICompileJobQueue _compileQueue;
         private string _dkxPathName;
         private string _wbdkPathName;
         private string _objPathName;
         private FileContext _fileContext;
 
-        public CompileFileJob(DkAppContext app, string dkxPathName, string wbdkPathName, string objPathName, FileContext fileContext)
+        public CompileFileJob(DkAppContext app, ICompileJobQueue compileQueue, string dkxPathName, string wbdkPathName, string objPathName, FileContext fileContext)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
+            _compileQueue = compileQueue ?? throw new ArgumentNullException(nameof(compileQueue));
             _dkxPathName = dkxPathName ?? throw new ArgumentNullException(nameof(dkxPathName));
             _wbdkPathName = wbdkPathName ?? throw new ArgumentNullException(nameof(wbdkPathName));
             _objPathName = objPathName ?? throw new ArgumentNullException(nameof(objPathName));
@@ -39,18 +41,29 @@ namespace DKX.Compilation.Files
             var fileNode = new FileNode(_dkxPathName, code);
             fileNode.Parse();
 
-            var obj = new ObjectFileModel
+            var reportItems = fileNode.ReportItems.ToList();
+            _compileQueue.AddReports(reportItems);
+            if (!reportItems.Any(e => e.Severity == ErrorSeverity.Error))
             {
-                SourcePathName = _dkxPathName,
-                DestinationPathName = _wbdkPathName,
-                ClassName = fileNode.ClassName,
-                FileDependencies = null,    // TODO
-                TableDependencies = null,   // TODO
-                Methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray()
-                // TODO: properties
-            };
+                var methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray();
+                if (methods.Length == 0) methods = null;
 
-            _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj));
+                var properties = fileNode.Properties.Select(p => p.ToObjectProperty()).ToArray();
+                if (properties.Length == 0) properties = null;
+
+                var obj = new ObjectFileModel
+                {
+                    SourcePathName = _dkxPathName,
+                    DestinationPathName = _wbdkPathName,
+                    ClassName = fileNode.ClassName,
+                    FileDependencies = null,    // TODO
+                    TableDependencies = null,   // TODO
+                    Methods = methods,
+                    Properties = properties
+                };
+
+                _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj));
+            }
 
             return Task.CompletedTask;
         }

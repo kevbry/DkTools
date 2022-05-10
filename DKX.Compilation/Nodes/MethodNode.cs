@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace DKX.Compilation.Nodes
 {
-    class MethodNode : Node
+    class MethodNode : Node, INamedNode
     {
         private string _name;
         private DataType _returnDataType;
@@ -22,6 +22,8 @@ namespace DKX.Compilation.Nodes
             _args = args.ToArray();
             _privacy = privacy;
         }
+
+        public string Name => _name;
 
         public ObjectMethod ToObjectFile() => new ObjectMethod
         {

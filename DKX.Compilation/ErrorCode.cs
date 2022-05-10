@@ -46,6 +46,11 @@ namespace DKX.Compilation
         #endregion
 
         #region Properties (1300-1399)
+        [Description("Property has no getter or setter.")]
+        PropertyHasNoGetterOrSetter = 1300,
+
+        [Description("Property has no getter.")]
+        PropertyHasNoGetter = 1301,
         #endregion
 
         #region Variables/Arguments (1400-1499)

@@ -98,7 +98,7 @@ namespace DKX.Compilation
                         }
                         catch (Exception ex)
                         {
-                            _reportItems.Add(new ReportItem(null, CodeSpan.Empty, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, ex));
+                            _reportItems.Add(new ReportItem(null, -1, -1, -1, -1, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, ex));
                             _haltErrors = true;
                         }
                     }
@@ -140,6 +140,15 @@ namespace DKX.Compilation
         {
             _reportItems.Add(reportItem);
             if (reportItem.Severity == ErrorSeverity.Error) _haltErrors = true;
+        }
+
+        public void AddReports(IEnumerable<ReportItem> reportItems)
+        {
+            foreach (var item in reportItems)
+            {
+                if (item.Severity == ErrorSeverity.Error) _haltErrors = true;
+                _reportItems.Add(item);
+            }
         }
 
         public bool HasErrors => _haltErrors;

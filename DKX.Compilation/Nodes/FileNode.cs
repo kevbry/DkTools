@@ -24,7 +24,12 @@ namespace DKX.Compilation.Nodes
         }
 
         public string ClassName => _className;
+        public bool HasErrors => _reportItems.Any(i => i.Severity == ErrorSeverity.Error);
         public IEnumerable<MethodNode> Methods => ChildNodes.Where(n => n is MethodNode).Cast<MethodNode>();
+        public IEnumerable<PropertyNode> Properties => ChildNodes.Where(n => n is PropertyNode).Cast<PropertyNode>();
+        public IEnumerable<ReportItem> ReportItems => _reportItems;
+
+        public override string PathName => _pathName;
 
         public void Parse()
         {
@@ -133,7 +138,7 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExact(',')) continue;
 
                             ReportError(Code.Position, ErrorCode.ExpectedToken, ',');
-                            SkipToAfterExit();
+                            Code.SkipToAfterExit();
                             break;
                         }
                     }
@@ -143,10 +148,63 @@ namespace DKX.Compilation.Nodes
                         ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
                     }
 
-                    // TODO: Read the statements
-                    SkipToAfterExit();
-
                     var method = new MethodNode(this, word, dataType, args, privacy);
+                    ReadCodeBody(method);
+                }
+                else if (Code.ReadExact('{'))
+                {
+                    // This is a property
+                    var prop = new PropertyNode(this, word, dataType, privacy);
+                    var gotGetter = false;
+                    var gotSetter = false;
+                    while (true)
+                    {
+                        if (Code.ReadExact('}')) break;
+                        else if (!gotGetter && Code.ReadExactWholeWord("get"))
+                        {
+                            gotGetter = true;
+                            if (Code.ReadExact('{'))
+                            {
+                                var getter = new PropertyAccessorNode(prop, PropertyAccessorType.Getter);
+                                ReadCodeBody(getter);
+                            }
+                            else
+                            {
+                                ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                                break;
+                            }
+                        }
+                        else if (!gotSetter && Code.ReadExactWholeWord("set"))
+                        {
+                            gotSetter = true;
+                            if (Code.ReadExact('{'))
+                            {
+                                var setter = new PropertyAccessorNode(prop, PropertyAccessorType.Setter);
+                                ReadCodeBody(setter);
+                            }
+                            else
+                            {
+                                ReportError(Code.Position, ErrorCode.ExpectedToken, '{');
+                                break;
+                            }
+                        }
+                        else if (Code.Read())
+                        {
+                            ReportError(Code.Position, ErrorCode.UnexpectedToken, Code.Text);
+                            Code.SkipToAfterExit();
+                            break;
+                        }
+                        else break;
+                    }
+
+                    if (!gotGetter && !gotSetter)
+                    {
+                        ReportError(wordSpan, ErrorCode.PropertyHasNoGetterOrSetter);
+                    }
+                    else if (!gotGetter)
+                    {
+                        ReportError(wordSpan, ErrorCode.PropertyHasNoGetter);
+                    }
                 }
                 else
                 {
@@ -177,6 +235,13 @@ namespace DKX.Compilation.Nodes
                 }
             }
             else if (Code.Read()) ReportError(Code.Span, ErrorCode.ExpectedMethodName, Code.Text);
+        }
+
+        private void ReadCodeBody(Node parentMethodOrProperty)
+        {
+            Code.SkipToAfterExit();
+
+            // TODO
         }
 
         protected override void OnError(ReportItem error)
