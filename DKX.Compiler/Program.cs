@@ -2,6 +2,7 @@
 using DK.Diagnostics;
 using DK.Implementation.Windows;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,6 +24,15 @@ namespace DKX.Compiler
                 var compiler = new Compilation.Compiler(app);
 
                 await compiler.CompileAsync(CancellationToken.None);
+
+#if DEBUG
+                if (Debugger.IsAttached)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                }
+#endif
             }
             catch (Exception ex)
             {
