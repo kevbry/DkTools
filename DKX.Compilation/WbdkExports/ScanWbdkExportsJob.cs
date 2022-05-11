@@ -61,7 +61,7 @@ namespace DKX.Compilation.WbdkExports
             // The remaining files in allExports will be the ones where the source file was deleted.
             foreach (var exportPathName in allExports)
             {
-                await _app.Log.DebugAsync("Delete Detected: {0}", exportPathName);
+                await _app.Log.DebugAsync("WBDK deletion detected; removing exports file: {0}", exportPathName);
                 _app.FileSystem.DeleteFile(exportPathName);
             }
         }

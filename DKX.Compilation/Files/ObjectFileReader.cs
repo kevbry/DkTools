@@ -38,5 +38,17 @@ namespace DKX.Compilation.Files
             EnsureModelLoaded();
             return _model.TableDependencies ?? ObjectTableDependency.EmptyArray;
         }
+
+        public string GetWbdkPathName()
+        {
+            EnsureModelLoaded();
+            return _model.DestinationPathName;
+        }
+
+        public string GetDkxPathName()
+        {
+            EnsureModelLoaded();
+            return _model.SourcePathName;
+        }
     }
 }

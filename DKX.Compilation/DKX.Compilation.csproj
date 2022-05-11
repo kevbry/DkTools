@@ -44,6 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CodeGeneration\GenerateCodeJob.cs" />
+    <Compile Include="CodeGeneration\GenerateCodeJobFactory.cs" />
+    <Compile Include="CodeGeneration\IGenerateCodeJobFactory.cs" />
+    <Compile Include="CodeGeneration\ScanForGenerateCodeJob.cs" />
     <Compile Include="CompileConstants.cs" />
     <Compile Include="DataTypes\DkDataTypeParser.cs" />
     <Compile Include="DataTypes\BaseType.cs" />

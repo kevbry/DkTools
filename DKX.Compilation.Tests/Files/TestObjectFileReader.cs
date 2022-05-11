@@ -18,5 +18,9 @@ namespace DKX.Compilation.Tests.Files
         public IEnumerable<ObjectFileDependency> GetFileDependencies() => _fileDepends;
 
         public IEnumerable<ObjectTableDependency> GetTableDependencies() => _tableDepends;
+
+        public string GetWbdkPathName() => null;
+
+        public string GetDkxPathName() => null;
     }
 }

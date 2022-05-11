@@ -60,7 +60,7 @@ namespace DKX.Compilation.Files
             // Everything left in allExportFiles will be just those where the DKX source file was deleted.
             foreach (var exportPathName in allExportFiles)
             {
-                await _app.Log.DebugAsync("Delete Detected: {0}", exportPathName);
+                await _app.Log.DebugAsync("DKX deletion detected; removing object file: {0}", exportPathName);
                 _app.FileSystem.DeleteFile(exportPathName);
             }
         }

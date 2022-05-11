@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Files;
 using DKX.Compilation.Schema;
 using DKX.Compilation.WbdkExports;
@@ -52,6 +53,23 @@ namespace DKX.Compilation
                 compileFileJobFactory: new CompileFileJobFactory(_app, queue),
                 objectFileReaderFactory: new ObjectFileReaderFactory(_app),
                 tableHashProvider: tableHashProvider));
+
+            await queue.ProcessQueueToCompletionAsync(cancel);
+
+            ImportReportItems(queue.ReportItems);
+            if (HasErrors)
+            {
+                await ReportAsync();
+                return;
+            }
+
+            queue = new CompileQueue(_app, "WBDK Code Generator Queue");
+            await queue.EnqueueCompileJobAsync(new ScanForGenerateCodeJob(
+                app: _app,
+                workDir: _workDir,
+                compileQueue: queue,
+                generateCodeJobFactory: new GenerateCodeJobFactory(_app, queue),
+                objectFileReaderFactory: new ObjectFileReaderFactory(_app)));
 
             await queue.ProcessQueueToCompletionAsync(cancel);
 

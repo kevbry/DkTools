@@ -4,6 +4,10 @@ namespace DKX.Compilation.Files
 {
     public interface IObjectFileReader
     {
+        string GetWbdkPathName();
+
+        string GetDkxPathName();
+
         IEnumerable<ObjectFileDependency> GetFileDependencies();
 
         IEnumerable<ObjectTableDependency> GetTableDependencies();
