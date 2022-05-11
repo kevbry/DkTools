@@ -16,6 +16,6 @@ namespace DKX.Compilation.Nodes
             _exp = exp ?? throw new ArgumentNullException(nameof(exp));
         }
 
-        public override string ToCode() => $"#asn(i{_variable.Name},{_exp.ToCode()})";
+        public override string ToCode() => $"asn(@{_variable.Name},{_exp.ToCode()})";
     }
 }

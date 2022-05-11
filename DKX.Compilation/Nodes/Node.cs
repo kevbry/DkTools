@@ -7,6 +7,7 @@ using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace DKX.Compilation.Nodes
 {
@@ -221,13 +222,20 @@ namespace DKX.Compilation.Nodes
             var variables = Variables.Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
             if (variables.Length == 0) variables = null;
 
-            var statements = ChildNodes.Where(n => n is Statement).Select(n => (n as Statement).ToCode()).ToArray();
-            if (statements.Length == 0) statements = null;
+            var bodyCode = new StringBuilder();
+            foreach (var stmt in ChildNodes.Where(n => n is Statement).Cast<Statement>())
+            {
+                var stmtCode = stmt.ToCode();
+                if (string.IsNullOrEmpty(stmtCode)) continue;
+
+                if (bodyCode.Length > 0) bodyCode.Append(';');
+                bodyCode.Append(stmtCode);
+            }
 
             return new ObjectBody
             {
                 Variables = variables,
-                Statements = statements
+                Code = bodyCode.ToString()
             };
         }
         #endregion

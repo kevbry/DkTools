@@ -2,6 +2,7 @@
 using DK.Code;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace DKX.Compilation.DataTypes
@@ -11,7 +12,7 @@ namespace DKX.Compilation.DataTypes
         private BaseType _baseType;
         private byte _width;
         private byte _scale;
-        private string[] _options;
+        private string _options;
 
         public const byte MinNumericWidth = 1;
         public const byte MaxNumericWidth = 38;
@@ -80,7 +81,7 @@ namespace DKX.Compilation.DataTypes
             _baseType = baseType;
             _width = 0;
             _scale = 0;
-            _options = options ?? throw new ArgumentNullException(nameof(options));
+            _options = StringListToOptions(options ?? throw new ArgumentNullException(nameof(options)));
         }
 
         private DataType(BaseType baseType, byte width, byte scale, string[] options)
@@ -88,13 +89,13 @@ namespace DKX.Compilation.DataTypes
             _baseType = baseType;
             _width = width;
             _scale = scale;
-            _options = options;
+            _options = options != null ? StringListToOptions(options) : null;
         }
 
         public BaseType BaseType => _baseType;
         public short Width => _width;
         public short Scale => _scale;
-        public string[] Options => _options ?? Constants.EmptyStringArray;
+        public string[] Options => OptionsToStringList(_options ?? string.Empty);
         public bool IsVoid => _baseType == BaseType.Void;
 
         public override string ToString() => ToCode();
@@ -103,19 +104,13 @@ namespace DKX.Compilation.DataTypes
         {
             if (obj == null || obj.GetType() != typeof(DataType)) return false;
             var dt = (DataType)obj;
-            if (dt._baseType != _baseType || dt._width != _width || dt._scale != _scale) return false;
-            if (_options == null) return dt._options == null;
-            if (dt._options.Length != _options.Length) return false;
-
-            for (int i = 0, ii = _options.Length; i < ii; i++)
-            {
-                if (dt._options[i] != _options[i]) return false;
-            }
-
-            return true;
+            return dt._baseType == _baseType && dt._width == _width && dt._scale == _scale && dt._options == _options;
         }
 
         public override int GetHashCode() => _baseType.GetHashCode() + _width.GetHashCode() * 13 + _scale.GetHashCode() * 23 + (_options?.GetHashCode() ?? 0) * 31;
+
+        public static bool operator ==(DataType a, DataType b) => a._baseType == b._baseType && a._width == b._width && a._scale == b._scale && a._options == b._options;
+        public static bool operator !=(DataType a, DataType b) => a._baseType != b._baseType || a._width != b._width || a._scale != b._scale || a._options != b._options;
 
         #region Predefined Data Types
         public static readonly DataType Bool = new DataType(BaseType.Bool);
@@ -175,7 +170,7 @@ namespace DKX.Compilation.DataTypes
                     var sb = new StringBuilder();
                     sb.Append("enum { ");
                     var first = true;
-                    foreach (var option in _options)
+                    foreach (var option in OptionsToStringList(_options))
                     {
                         if (first) first = false;
                         else sb.Append(", ");
@@ -311,6 +306,59 @@ namespace DKX.Compilation.DataTypes
             }
 
             return null;
+        }
+        #endregion
+
+        #region Options
+        private static string StringListToOptions(IEnumerable<string> optionsList) => string.Join("|", optionsList.Select(x => EncodeOption(x)));
+
+        private static string[] OptionsToStringList(string options) => options.Split('|').Select(x => DecodeOption(x)).ToArray();
+
+        private static readonly char[] _optionsEscapeChars = new char[] { '\\', '|' };
+
+        private static string EncodeOption(string optionText)
+        {
+            if (optionText.IndexOfAny(_optionsEscapeChars) < 0) return optionText;
+
+            var sb = new StringBuilder(optionText.Length + optionText.Length >> 1);
+
+            foreach (var ch in optionText)
+            {
+                if (ch == '\\') sb.Append("\\\\");
+                else if (ch == '|') sb.Append("\\!");
+                else sb.Append(ch);
+            }
+
+            return sb.ToString();
+        }
+
+        private static string DecodeOption(string encodedText)
+        {
+            if (encodedText.IndexOf('\\') < 0) return encodedText;
+
+            var sb = new StringBuilder(encodedText.Length);
+
+            var afterEscape = false;
+            foreach (var ch in encodedText)
+            {
+                if (afterEscape)
+                {
+                    afterEscape = false;
+                    if (ch == '\\') sb.Append('\\');
+                    else if (ch == '!') sb.Append('|');
+                    else throw new ArgumentException($"Invalid escape sequence '\\{ch}' in encoded option string.");
+                }
+                else if (ch == '\\')
+                {
+                    afterEscape = true;
+                }
+                else
+                {
+                    sb.Append(ch);
+                }
+            }
+
+            return sb.ToString();
         }
         #endregion
     }

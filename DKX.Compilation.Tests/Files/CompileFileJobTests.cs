@@ -333,26 +333,26 @@ class Test
             var constant = obj.Constants[0];
             Assert.AreEqual("InstitutionName", constant.Name);
             Assert.AreEqual("string", constant.DataType);
-            Assert.AreEqual("s\"Credit Union\"", constant.Code);
+            Assert.AreEqual("\"Credit Union\"", constant.Code);
 
             constant = obj.Constants[1];
             Assert.AreEqual("InstitutionRouteNumber", constant.Name);
             Assert.AreEqual("unsigned(3)", constant.DataType);
-            Assert.AreEqual("n899", constant.Code);
+            Assert.AreEqual("899", constant.Code);
 
             constant = obj.Constants[2];
             Assert.AreEqual("SecondsPerDay", constant.Name);
             Assert.AreEqual("int", constant.DataType);
-            Assert.AreEqual("#mul(#mul(n24,n60),n60)", constant.Code);
+            Assert.AreEqual("mul(mul(24,60),60)", constant.Code);
         }
 
-        [TestCase("2 + 4 * 8", "#add(n2,#mul(n4,n8))")]
-        [TestCase("(2 + 4) * 8", "#mul(#add(n2,n4),n8)")]
-        [TestCase("2 * (4 + 8)", "#mul(n2,#add(n4,n8))")]
-        [TestCase("1 * 2 + 3", "#add(#mul(n1,n2),n3)")]
-        [TestCase("1 * 2 + 3 - 4", "#sub(#add(#mul(n1,n2),n3),n4)")]
-        [TestCase("(10 - 5) * 6 + 3", "#add(#mul(#sub(n10,n5),n6),n3)")]
-        [TestCase("2 * (4 + 8) + (10 - 5) * 6 + 3", "#add(#add(#mul(n2,#add(n4,n8)),#mul(#sub(n10,n5),n6)),n3)")]
+        [TestCase("2 + 4 * 8", "add(2,mul(4,8))")]
+        [TestCase("(2 + 4) * 8", "mul(add(2,4),8)")]
+        [TestCase("2 * (4 + 8)", "mul(2,add(4,8))")]
+        [TestCase("1 * 2 + 3", "add(mul(1,2),3)")]
+        [TestCase("1 * 2 + 3 - 4", "sub(add(mul(1,2),3),4)")]
+        [TestCase("(10 - 5) * 6 + 3", "add(mul(sub(10,5),6),3)")]
+        [TestCase("2 * (4 + 8) + (10 - 5) * 6 + 3", "add(add(mul(2,add(4,8)),mul(sub(10,5),6)),3)")]
         public async Task PrecedenceChain(string initializer, string codeOut)
         {
             var app = CreateAppContext();
@@ -432,10 +432,7 @@ class Test
             Assert.AreEqual("int", v.DataType);
             Assert.IsNull(v.InitializerCode);
 
-            Assert.IsNotNull(method.Body.Statements);
-            Assert.AreEqual(1, method.Body.Statements.Length);
-            Assert.AreEqual("#asn(ix,n0)", method.Body.Statements[0]);
+            Assert.AreEqual("asn(@x,0)", method.Body.Code);
         }
-
     }
 }

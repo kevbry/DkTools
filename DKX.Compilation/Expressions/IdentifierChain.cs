@@ -17,7 +17,7 @@ namespace DKX.Compilation.Expressions
 #endif
         }
 
-        public override string ToCode() => "i" + _name;
+        public override string ToCode() => "@" + _name;
 
         public override void Report(IReporter reporter) { }
     }

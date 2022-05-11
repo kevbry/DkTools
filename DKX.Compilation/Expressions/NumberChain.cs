@@ -39,7 +39,7 @@ namespace DKX.Compilation.Expressions
             _dataType = new DataType(signed ? BaseType.Numeric : BaseType.UNumeric, width: width, scale: scale);
         }
 
-        public override string ToCode() => "n" + _text;
+        public override string ToCode() => _text;
 
         public override void Report(IReporter reporter) { }
     }

@@ -16,7 +16,7 @@ namespace DKX.Compilation.Expressions
             _right = right ?? throw new ArgumentNullException(nameof(right));
         }
 
-        public override string ToCode() => $"#{_op.GetOpCode()}({_left.ToCode()},{_right.ToCode()})";
+        public override string ToCode() => $"{_op.GetOpCode()}({_left.ToCode()},{_right.ToCode()})";
 
         public override void Report(IReporter reporter)
         {
