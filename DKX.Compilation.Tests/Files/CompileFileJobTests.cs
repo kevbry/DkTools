@@ -29,7 +29,7 @@ namespace DKX.Compilation.Tests.Files
 
             foreach (var item in queue.ReportItems)
             {
-                TestContext.Out.WriteLine($"> {item}");
+                await TestContext.Out.WriteLineAsync($"> {item}");
             }
             Assert.IsFalse(queue.ReportItems.Any(i => i.Severity == ErrorSeverity.Error), "Compiler returned errors.");
 
@@ -37,7 +37,7 @@ namespace DKX.Compilation.Tests.Files
             Assert.IsFalse(fs.FileExists(wbdkPathName), "WBDK file should not have been created.");
 
             var objContent = fs.GetFileText(objPathName);
-            TestContext.Out.WriteLine($"Object File:\n{objContent}");
+            await TestContext.Out.WriteLineAsync($"Object File:\n{objContent}");
             var obj = JsonConvert.DeserializeObject<ObjectFileModel>(objContent);
             Assert.IsNotNull(obj);
 
@@ -64,7 +64,7 @@ namespace DKX.Compilation.Tests.Files
 
             foreach (var item in queue.ReportItems)
             {
-                TestContext.Out.WriteLine($"> {item}");
+                await TestContext.Out.WriteLineAsync($"> {item}");
             }
 
             return queue;

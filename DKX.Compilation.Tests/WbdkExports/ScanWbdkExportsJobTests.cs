@@ -29,13 +29,13 @@ namespace DKX.Compilation.Tests.WbdkExports
             var job = new ScanWbdkExportsJob(app, jobQueue, @"x:\bin\.dkx", new TestExportsFileReaderFactory(), new TestTableHashProvider());
             await job.ExecuteAsync(cancel: default);
 
-            TestContext.Out.WriteLine("Applicable files:");
+            await TestContext.Out.WriteLineAsync("Applicable files:");
             var applicablePathNames = new List<string>();
             foreach (var pathName in app.FileSystem.GetFilesInDirectoryRecursive(@"x:\src"))
             {
                 if (_hasWbdkExportsRegex.IsMatch(pathName))
                 {
-                    TestContext.Out.WriteLine($"- {pathName}");
+                    await TestContext.Out.WriteLineAsync($"- {pathName}");
                     applicablePathNames.Add(pathName);
                 }
             }
@@ -69,7 +69,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             await job.ExecuteAsync(cancel: default);
 
             // Pick the files we're going to touch
-            TestContext.Out.WriteLine("Touched files:");
+            await TestContext.Out.WriteLineAsync("Touched files:");
             var applicablePathNames = new List<string>();
             var touchedPathNames = new List<string>();
             var index = 0;
@@ -80,7 +80,7 @@ namespace DKX.Compilation.Tests.WbdkExports
                     applicablePathNames.Add(pathName);
                     if ((index++ % 2) == 0)
                     {
-                        TestContext.Out.WriteLine($"- {pathName}");
+                        await TestContext.Out.WriteLineAsync($"- {pathName}");
                         touchedPathNames.Add(pathName);
                     }
                 }
@@ -140,7 +140,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             await job.ExecuteAsync(cancel: default);
 
             // Pick the files we're going to touch
-            TestContext.Out.WriteLine("Touched files:");
+            await TestContext.Out.WriteLineAsync("Touched files:");
             var applicablePathNames = new List<string>();
             var touchedPathNames = new List<string>();
             var index = 0;
@@ -151,13 +151,13 @@ namespace DKX.Compilation.Tests.WbdkExports
                     applicablePathNames.Add(pathName);
                     if ((index++ % 2) == 1)
                     {
-                        TestContext.Out.WriteLine($"- {pathName}");
+                        await TestContext.Out.WriteLineAsync($"- {pathName}");
                         touchedPathNames.Add(pathName);
                     }
                 }
             }
 
-            TestContext.Out.WriteLine("Exports with include dependency:");
+            await TestContext.Out.WriteLineAsync("Exports with include dependency:");
             foreach (var pathName in applicablePathNames)
             {
                 var scanJob = jobQueue.Jobs.Cast<ScanWbdkExportFileJob>().Where(x => x.PathName.EqualsI(pathName)).FirstOrDefault();
@@ -167,7 +167,7 @@ namespace DKX.Compilation.Tests.WbdkExports
 
                 if (touchedPathNames.Any(x => x.EqualsI(pathName)))
                 {
-                    TestContext.Out.WriteLine($"- {scanJob.ExportsPathName}");
+                    await TestContext.Out.WriteLineAsync($"- {scanJob.ExportsPathName}");
                     exportsReaderFactory.SetIncludeDependencies(scanJob.ExportsPathName, new string[] { @"x:\src\include\all.i" });
                 }
             }
@@ -253,8 +253,8 @@ namespace DKX.Compilation.Tests.WbdkExports
                 exportsReaderFactory.SetTableDependency(scanJob.ExportsPathName, "cust", tableHashProvider.GetTableHash("cust"));
             }
 
-            TestContext.Out.WriteLine("Files to be dependent on table:");
-            foreach (var df in dependentFiles) TestContext.Out.WriteLine($"- {df}");
+            await TestContext.Out.WriteLineAsync("Files to be dependent on table:");
+            foreach (var df in dependentFiles) await TestContext.Out.WriteLineAsync($"- {df}");
 
             // Change the table signature
             tableHashProvider.SetTableHash("cust", "hash2");

@@ -1,4 +1,6 @@
-﻿namespace DK.Diagnostics
+﻿using System.Threading.Tasks;
+
+namespace DK.Diagnostics
 {
     public interface ILogger
     {
@@ -7,5 +9,9 @@
         void Write(LogLevel level, string message);
 
         void Write(LogLevel level, string format, params object[] args);
+
+        Task WriteAsync(LogLevel level, string message);
+
+        Task WriteAsync(LogLevel level, string format, params object[] args);
     }
 }

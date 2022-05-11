@@ -41,7 +41,7 @@ namespace DKX.Compilation.Files
 
         public async Task ExecuteAsync(CancellationToken cancel)
         {
-            _app.Log.Debug("Scanning for compiles");
+            await _app.Log.DebugAsync("Scanning for compiles");
 
             var allDkxFiles = ScanForDkxFiles().ToList();
             var allExportFiles = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + CompileConstants.DkxExportsExtension).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -49,7 +49,7 @@ namespace DKX.Compilation.Files
             // Process all the known DKX files.
             foreach (var dkxFile in allDkxFiles)
             {
-                if (ShouldCompileFile(dkxFile))
+                if (await ShouldCompileFileAsync(dkxFile))
                 {
                     var compileFileJob = _compileFileJobFactory.CreateCompileFileJob(dkxFile.dkxPathName, dkxFile.wbdkPathName, dkxFile.objectPathName, dkxFile.fileContext);
                     await _compileQueue.EnqueueCompileJobAsync(compileFileJob);
@@ -60,7 +60,7 @@ namespace DKX.Compilation.Files
             // Everything left in allExportFiles will be just those where the DKX source file was deleted.
             foreach (var exportPathName in allExportFiles)
             {
-                _app.Log.Debug("Delete Detected: {0}", exportPathName);
+                await _app.Log.DebugAsync("Delete Detected: {0}", exportPathName);
                 _app.FileSystem.DeleteFile(exportPathName);
             }
         }
@@ -117,26 +117,8 @@ namespace DKX.Compilation.Files
             public FileContext fileContext;
         }
 
-        private bool ShouldCompileFile(ScanResultFile file)
+        private async Task<bool> ShouldCompileFileAsync(ScanResultFile file)
         {
-            // TODO: remove
-            //// Check if the DKX file is newer than the WBDK file.
-            //if (_app.FileSystem.FileExists(file.wbdkPathName))
-            //{
-            //    var dkxDate = GetFileDate(file.dkxPathName);
-            //    var wbdkDate = GetFileDate(file.wbdkPathName);
-            //    if (dkxDate > wbdkDate)
-            //    {
-            //        _app.Log.Debug("DKX file is newer than WBDK file: {0}", file.dkxPathName);
-            //        return true;
-            //    }
-            //}
-            //else
-            //{
-            //    _app.Log.Debug("WBDK file does not yet exist: {0}", file.dkxPathName);
-            //    return true;
-            //}
-
             // Check if the file is newer than the export file.
             if (_app.FileSystem.FileExists(file.objectPathName))
             {
@@ -144,7 +126,7 @@ namespace DKX.Compilation.Files
                 var objectDate = GetFileDate(file.objectPathName);
                 if (dkxDate > objectDate)
                 {
-                    _app.Log.Debug("DKX file is newer than the object file: {0}", file.dkxPathName);
+                    await _app.Log.DebugAsync("DKX file is newer than the object file: {0}", file.dkxPathName);
                     return true;
                 }
 
@@ -157,13 +139,13 @@ namespace DKX.Compilation.Files
                         var depDate = GetFileDate(fileDep.PathName);
                         if (dkxDate > depDate)
                         {
-                            _app.Log.Debug("DKX file is newer than a file dependency: {0}, {1}", file.dkxPathName, fileDep.PathName);
+                            await _app.Log.DebugAsync("DKX file is newer than a file dependency: {0}, {1}", file.dkxPathName, fileDep.PathName);
                             return true;
                         }
                     }
                     else
                     {
-                        _app.Log.Debug("DKX file is dependent on deleted file: {0}, {1}", file.dkxPathName, fileDep.PathName);
+                        await _app.Log.DebugAsync("DKX file is dependent on deleted file: {0}, {1}", file.dkxPathName, fileDep.PathName);
                         return true;
                     }
                 }
@@ -175,20 +157,20 @@ namespace DKX.Compilation.Files
                     {
                         if (tableDep.Hash != _tableHashProvider.GetTableHash(tableDep.TableName))
                         {
-                            _app.Log.Debug("DKX file is dependent on changed table '{1}': {0}", file.dkxPathName, tableDep.TableName);
+                            await _app.Log.DebugAsync("DKX file is dependent on changed table '{1}': {0}", file.dkxPathName, tableDep.TableName);
                             return true;
                         }
                     }
                     else
                     {
-                        _app.Log.Debug("DKX file is dependent on deleted table '{1}': {0}", file.dkxPathName, tableDep.TableName);
+                        await _app.Log.DebugAsync("DKX file is dependent on deleted table '{1}': {0}", file.dkxPathName, tableDep.TableName);
                         return true;
                     }
                 }
             }
             else
             {
-                _app.Log.Debug("Exports file does not yet exist: {0}", file.dkxPathName);
+                await _app.Log.DebugAsync("Exports file does not yet exist: {0}", file.dkxPathName);
                 return true;
             }
 

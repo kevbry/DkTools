@@ -39,7 +39,7 @@ namespace DKX.Compilation.WbdkExports
 
         public async Task ExecuteAsync(CancellationToken cancel)
         {
-            _app.Log.Debug("Scanning for WBDK exports.");
+            await _app.Log.DebugAsync("Scanning for WBDK exports.");
 
             var existingExports = GetFullListOfLinkedExportFiles().ToList();
             var allExports = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + CompileConstants.WbdkExportsExtension).ToList();
@@ -48,7 +48,7 @@ namespace DKX.Compilation.WbdkExports
             {
                 cancel.ThrowIfCancellationRequested();
 
-                if (ShouldFileBeRescanned(result.pathName, result.exportsPathName))
+                if (await ShouldFileBeRescannedAsync(result.pathName, result.exportsPathName))
                 {
                     await _queue.EnqueueCompileJobAsync(new ScanWbdkExportFileJob(_app, result.pathName, result.exportsPathName, result.fileContext, _tableHashProvider));
                 }
@@ -61,7 +61,7 @@ namespace DKX.Compilation.WbdkExports
             // The remaining files in allExports will be the ones where the source file was deleted.
             foreach (var exportPathName in allExports)
             {
-                _app.Log.Debug("Delete Detected: {0}", exportPathName);
+                await _app.Log.DebugAsync("Delete Detected: {0}", exportPathName);
                 _app.FileSystem.DeleteFile(exportPathName);
             }
         }
@@ -136,20 +136,20 @@ namespace DKX.Compilation.WbdkExports
             return date;
         }
 
-        private bool ShouldFileBeRescanned(string sourcePathName, string exportsPathName)
+        private async Task<bool> ShouldFileBeRescannedAsync(string sourcePathName, string exportsPathName)
         {
             // Check the modified date of the source file.
             if (_app.FileSystem.FileExists(exportsPathName))
             {
                 if (GetFileDate(sourcePathName) > GetFileDate(exportsPathName))
                 {
-                    _app.Log.Debug("Exports file is older than its source file: {0}", sourcePathName);
+                    await _app.Log.DebugAsync("Exports file is older than its source file: {0}", sourcePathName);
                     return true;
                 }
             }
             else
             {
-                _app.Log.Debug("Exports file does not yet exist: {0}", sourcePathName);
+                await _app.Log.DebugAsync("Exports file does not yet exist: {0}", sourcePathName);
                 return true;
             }
 
@@ -160,7 +160,7 @@ namespace DKX.Compilation.WbdkExports
             {
                 if (GetFileDate(includePathName) > exportsDate)
                 {
-                    _app.Log.Debug("Exports file is older than include dependency: {0}, {1}", sourcePathName, includePathName);
+                    await _app.Log.DebugAsync("Exports file is older than include dependency: {0}, {1}", sourcePathName, includePathName);
                     return true;
                 }
             }
@@ -172,13 +172,13 @@ namespace DKX.Compilation.WbdkExports
                     var currentHash = _tableHashProvider.GetTableHash(td.TableName);
                     if (currentHash != td.Hash)
                     {
-                        _app.Log.Debug("Exports file is dependent on changed table '{1}': {0}", sourcePathName, td.TableName);
+                        await _app.Log.DebugAsync("Exports file is dependent on changed table '{1}': {0}", sourcePathName, td.TableName);
                         return true;
                     }
                 }
                 else
                 {
-                    _app.Log.Debug("Exports file is dependent on deleted table '{1}': {0}", sourcePathName, td.TableName);
+                    await _app.Log.DebugAsync("Exports file is dependent on deleted table '{1}': {0}", sourcePathName, td.TableName);
                     return true;
                 }
             }

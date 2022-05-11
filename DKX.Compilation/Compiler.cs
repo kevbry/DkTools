@@ -25,10 +25,10 @@ namespace DKX.Compilation
 
         public async Task CompileAsync(CancellationToken cancel)
         {
-            DetermineWorkDir();
+            await DetermineWorkDirAsync();
 
             // Scan legacy files for exports
-            _app.Log.Info("Checking WBDK exports");
+            await _app.Log.InfoAsync("Checking WBDK exports");
             var queue = new CompileQueue(_app, "WBDK Exports Scan Queue");
             var tableHashProvider = new TableHashProvider(_app);
             await queue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, queue, _workDir,
@@ -40,7 +40,7 @@ namespace DKX.Compilation
             ImportReportItems(queue.ReportItems);
             if (HasErrors)
             {
-                Report();
+                await ReportAsync();
                 return;
             }
 
@@ -58,24 +58,24 @@ namespace DKX.Compilation
             ImportReportItems(queue.ReportItems);
             if (HasErrors)
             {
-                Report();
+                await ReportAsync();
                 return;
             }
         }
 
-        private void DetermineWorkDir()
+        private async Task DetermineWorkDirAsync()
         {
             _workDir = _app.Settings.ExeDirs.FirstOrDefault();
             if (_workDir == null) throw new InvalidAppSettingsException("No executable directory is configured.");
             if (!_app.FileSystem.DirectoryExists(_workDir))
             {
-                _app.Log.Info("Creating directory: {0}", _workDir);
+                await _app.Log.InfoAsync("Creating directory: {0}", _workDir);
                 _app.FileSystem.CreateDirectory(_workDir);
             }
             _workDir = _app.FileSystem.CombinePath(_workDir, CompileConstants.WorkDirectoryName);
             if (!_app.FileSystem.DirectoryExists(_workDir))
             {
-                _app.Log.Info("Creating directory: {0}", _workDir);
+                await _app.Log.InfoAsync("Creating directory: {0}", _workDir);
                 _app.FileSystem.CreateDirectory(_workDir);
             }
         }
@@ -91,17 +91,17 @@ namespace DKX.Compilation
 
         public bool HasErrors => _haltErrors;
 
-        public void Report()
+        public async Task ReportAsync()
         {
             foreach (var item in _reportItems)
             {
                 switch (item.Severity)
                 {
                     case ErrorSeverity.Error:
-                        _app.Log.Error(item.ToString());
+                        await _app.Log.ErrorAsync(item.ToString());
                         break;
                     case ErrorSeverity.Warning:
-                        _app.Log.Warning(item.ToString());
+                        await _app.Log.WarningAsync(item.ToString());
                         break;
                 }
             }

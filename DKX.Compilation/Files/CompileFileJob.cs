@@ -32,9 +32,9 @@ namespace DKX.Compilation.Files
 
         public string Description => $"Compile File: {_dkxPathName}";
 
-        public Task ExecuteAsync(CancellationToken cancel)
+        public async Task ExecuteAsync(CancellationToken cancel)
         {
-            _app.Log.Info("Compiling: {0}", _dkxPathName);
+            await _app.Log.InfoAsync("Compiling: {0}", _dkxPathName);
 
             var source = _app.FileSystem.GetFileText(_dkxPathName);
             var code = new CodeParser(source);
@@ -72,8 +72,6 @@ namespace DKX.Compilation.Files
 
                 _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj));
             }
-
-            return Task.CompletedTask;
         }
     }
 }

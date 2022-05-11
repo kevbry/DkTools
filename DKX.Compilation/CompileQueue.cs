@@ -36,7 +36,7 @@ namespace DKX.Compilation
 
             try
             {
-                _app.Log.Debug("Compile queue '{0}' is starting.", _name);
+                await _app.Log.DebugAsync("Compile queue '{0}' is starting.", _name);
 
                 while (_haltErrors == false)
                 {
@@ -69,7 +69,7 @@ namespace DKX.Compilation
                             else if (_runningJobs.Count == 0)
                             {
                                 // All work complete
-                                _app.Log.Debug("All jobs complete in queue '{0}'.", _name);
+                                await _app.Log.DebugAsync("All jobs complete in queue '{0}'.", _name);
                                 break;
                             }
                         }
@@ -109,15 +109,15 @@ namespace DKX.Compilation
                     }
                 }
 
-                _app.Log.Debug("Compile queue '{0}' has finished normally.", _name);
+                await _app.Log.DebugAsync("Compile queue '{0}' has finished normally.", _name);
             }
             catch (OperationCanceledException)
             {
-                _app.Log.Debug("Compile queue '{0}' has been cancelled.", _name);
+                await _app.Log.DebugAsync("Compile queue '{0}' has been cancelled.", _name);
             }
             catch (Exception ex)
             {
-                _app.Log.Error(ex, "Fatal error in compile queue '{0}'.", _name);
+                await _app.Log.ErrorAsync(ex, "Fatal error in compile queue '{0}'.", _name);
             }
         }
 

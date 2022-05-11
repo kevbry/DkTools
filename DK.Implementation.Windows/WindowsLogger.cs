@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DK.Implementation.Windows
 {
@@ -10,7 +12,7 @@ namespace DK.Implementation.Windows
     {
         private static StreamWriter _writer;
         private static StringBuilder _sb = new StringBuilder();
-        private static object _lock = new object();
+        private static SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
         private static string _logDir;
         private static string _logFileNameFormat;
 
@@ -29,9 +31,14 @@ namespace DK.Implementation.Windows
                 _logDir = logDir ?? throw new ArgumentNullException(nameof(logDir));
                 _logFileNameFormat = logFileNameFormat ?? throw new ArgumentNullException(nameof(logFileNameFormat));
 
-                lock (_lock)
+                _lock.Wait();
+                try
                 {
                     CheckStream();
+                }
+                finally
+                {
+                    _lock.Release();
                 }
 
                 PurgeOldLogFiles();
@@ -46,20 +53,14 @@ namespace DK.Implementation.Windows
         {
             get
             {
-                lock (_lock)
-                {
-                    return _level;
-                }
+                return _level;
             }
             set
             {
-                lock (_lock)
+                if (_level != value)
                 {
-                    if (_level != value)
-                    {
-                        _level = value;
-                        this.Info("Log level changed to {0}.", _level);
-                    }
+                    _level = value;
+                    this.Info("Log level changed to {0}.", _level);
                 }
             }
         }
@@ -83,7 +84,8 @@ namespace DK.Implementation.Windows
         {
             try
             {
-                lock (_lock)
+                _lock.Wait();
+                try
                 {
                     if (_writer != null)
                     {
@@ -91,6 +93,10 @@ namespace DK.Implementation.Windows
                         _writer.Close();
                         _writer = null;
                     }
+                }
+                finally
+                {
+                    _lock.Release();
                 }
             }
             catch (Exception ex)
@@ -142,45 +148,55 @@ namespace DK.Implementation.Windows
             }
         }
 
-        public void Write(LogLevel level, string message)
+        public async Task WriteAsync(LogLevel level, string message)
         {
+            if (level < _level) return;
+
+            await _lock.WaitAsync();
             try
             {
-                if (level < _level) return;
-
-                lock (_lock)
-                {
-                    _sb.Clear();
-                    _sb.Append("[");
-                    _sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                    _sb.Append("] (");
-                    _sb.Append(level.ToString());
-                    _sb.Append(") {");
-                    _sb.Append(System.Threading.Thread.CurrentThread.ManagedThreadId);
-                    _sb.Append("} ");
-                    _sb.Append(message);
-                    var msg = _sb.ToString();
+                _sb.Clear();
+                _sb.Append("[");
+                _sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                _sb.Append("] (");
+                _sb.Append(level.ToString());
+                _sb.Append(") {");
+                _sb.Append(System.Threading.Thread.CurrentThread.ManagedThreadId);
+                _sb.Append("} ");
+                _sb.Append(message);
+                var msg = _sb.ToString();
 #if DEBUG
-                    System.Diagnostics.Debug.WriteLine(msg);
+                System.Diagnostics.Debug.WriteLine(msg);
 #endif
-                    if (!CheckStream()) return;
-                    if (_writer != null) _writer.WriteLine(msg);
-                }
+                if (!CheckStream()) return;
+                if (_writer != null) await _writer.WriteLineAsync(msg);
             }
             catch (Exception ex)
             {
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 try
                 {
-                    if (_writer != null)
-                    {
-                        _writer.Close();
-                        _writer = null;
-                    }
+                    _writer?.Close();
+                    _writer = null;
                 }
                 catch (Exception)
-                { }
+                {
+                    _writer = null;
+                }
             }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
+        public void Write(LogLevel level, string message)
+        {
+            if (level < _level) return;
+
+            WriteAsync(level, message).GetAwaiter().GetResult();
         }
 
         public void Write(LogLevel level, string format, params object[] args)
@@ -188,6 +204,13 @@ namespace DK.Implementation.Windows
             if (level < _level) return;
 
             Write(level, string.Format(format, args));
+        }
+
+        public async Task WriteAsync(LogLevel level, string format, params object[] args)
+        {
+            if (level < _level) return;
+
+            await WriteAsync(level, string.Format(format, args));
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using DK.Diagnostics;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests
 {
@@ -17,6 +18,16 @@ namespace DKX.Compilation.Tests
         public void Write(LogLevel level, string format, params object[] args)
         {
             TestContext.Out.WriteLine($"({level}) {string.Format(format, args)}");
+        }
+
+        public async Task WriteAsync(LogLevel level, string message)
+        {
+            await TestContext.Out.WriteLineAsync($"({level}) {message}");
+        }
+
+        public async Task WriteAsync(LogLevel level, string format, params object[] args)
+        {
+            await TestContext.Out.WriteLineAsync($"({level}) {string.Format(format, args)}");
         }
     }
 }

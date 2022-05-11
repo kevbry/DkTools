@@ -40,9 +40,9 @@ namespace DKX.Compilation.WbdkExports
         public string ExportsPathName => _exportsPathName;
         public FileContext FileContext => _fileContext;
 
-        public Task ExecuteAsync(CancellationToken cancel)
+        public async Task ExecuteAsync(CancellationToken cancel)
         {
-            _app.Log.Info("Scan: {0} -> {1}", _pathName, _exportsPathName);
+            await _app.Log.InfoAsync("Scan: {0} -> {1}", _pathName, _exportsPathName);
 
             var content = _app.FileSystem.GetFileText(_pathName);
 
@@ -92,8 +92,6 @@ namespace DKX.Compilation.WbdkExports
                     .Select(x => x.Definition);
                 CreateExportsFile(funcDefs, model.PreprocessorModel.IncludeDependencies, tableDepends);
             }
-
-            return Task.CompletedTask;
         }
 
         private void CreateExportsFile(IEnumerable<FunctionDefinition> funcDefs, IEnumerable<IncludeDependency> includeDependencies, WbdkExportTableDependency[] tableDependencies)
