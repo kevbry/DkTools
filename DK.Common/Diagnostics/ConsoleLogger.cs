@@ -12,8 +12,22 @@ namespace DK.Diagnostics
 
         public LogLevel Level { get => _level; set => _level = value; }
 
-        public void Write(LogLevel level, string message) => Console.WriteLine($"({level}) {message}");
+        public void Write(LogLevel level, string message)
+        {
+            Console.WriteLine($"({level}) {message}");
 
-        public void Write(LogLevel level, string format, params object[] args) => Console.WriteLine($"({level}) {string.Format(format, args)}");
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"({level}) {message}");
+#endif
+        }
+
+        public void Write(LogLevel level, string format, params object[] args)
+        {
+            Console.WriteLine($"({level}) {string.Format(format, args)}");
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"({level}) {string.Format(format, args)}");
+#endif
+        }
     }
 }
