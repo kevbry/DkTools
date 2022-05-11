@@ -96,7 +96,7 @@ namespace DK.Diagnostics
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         break;
                     case LogLevel.Debug:
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        Console.ForegroundColor = ConsoleColor.DarkCyan;
                         break;
                     default:
                         Console.ForegroundColor = ConsoleColor.Gray;

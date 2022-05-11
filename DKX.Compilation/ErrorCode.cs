@@ -96,7 +96,10 @@ namespace DKX.Compilation
         OperatorExpectsValueOnRight = 1501,
 
         [Description("Constants must have an initial value.")]
-        ConstantsMustHaveInitializer = 1502,    
+        ConstantsMustHaveInitializer = 1502,
+
+        [Description("Expected statement.")]
+        ExpectedStatement = 1503,
         #endregion
     }
 

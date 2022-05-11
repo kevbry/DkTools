@@ -70,7 +70,7 @@ namespace DKX.Compilation.Files
                     Constants = constants
                 };
 
-                _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj));
+                _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj, Formatting.Indented));
             }
         }
     }

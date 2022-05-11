@@ -162,11 +162,16 @@ namespace DKX.Compilation.Nodes
             }
 
             // Try for variable declaration
-            var dataType = ReadDataTypeOrNull();
+            var dataType = ReadDataTypeOrNull(out var dataTypeSpan);
             if (dataType != null)
             {
-                if (Code.ReadWord())
+                while (true)
                 {
+                    if (!Code.ReadWord())
+                    {
+                        ReportItem(dataTypeSpan, ErrorCode.ExpectedVariableName);
+                        return true;
+                    }
                     var name = Code.Text;
                     var nameSpan = Code.Span;
                     Chain initializer = null;
@@ -186,6 +191,12 @@ namespace DKX.Compilation.Nodes
                         AddVariable(variable);
                         if (initializer != null) new VariableInitializationStatement(this, variable, initializer);
                     }
+
+                    if (Code.ReadExact(';')) return true;
+                    if (Code.ReadExact(',')) continue;
+
+                    ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
+                    return true;
                 }
             }
 
@@ -197,21 +208,28 @@ namespace DKX.Compilation.Nodes
                 return true;
             }
 
+            ReportItem(Code.Position, ErrorCode.ExpectedStatement);
             return false;
         }
 
-        protected DataType? ReadDataTypeOrNull()
+        protected DataType? ReadDataTypeOrNull(out CodeSpan spanOut)
         {
-            var dataType = DataType.Parse(Code);
-            if (dataType != null) return dataType;
+            var dataType = DataType.Parse(Code, out var dataTypeSpan);
+            if (dataType != null)
+            {
+                spanOut = dataTypeSpan;
+                return dataType;
+            }
 
             if (Code.ReadWord())
             {
                 dataType = GetTypedefDataType(Code.Text);
                 if (dataType == null) Code.Position = Code.Span.Start;
+                spanOut = Code.Span;
                 return dataType;
             }
 
+            spanOut = CodeSpan.Empty;
             return null;
         }
 

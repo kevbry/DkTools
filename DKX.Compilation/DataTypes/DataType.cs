@@ -202,13 +202,13 @@ namespace DKX.Compilation.DataTypes
         #endregion
 
         #region Code Parsing
-        public static DataType? Parse(CodeParser code)
+        public static DataType? Parse(CodeParser code, out CodeSpan spanOut)
         {
             var startPos = code.Position;
 
             if (code.ReadWord())
             {
-                var dataType = ParseWord(code, code.Text);
+                var dataType = ParseWord(code, code.Text, code.Span, out spanOut);
                 if (dataType == null)
                 {
                     code.Position = startPos;
@@ -218,93 +218,197 @@ namespace DKX.Compilation.DataTypes
                 return dataType;
             }
 
+            spanOut = CodeSpan.Empty;
             return null;
         }
 
-        private static DataType? ParseWord(CodeParser code, string word)
+        private static DataType? ParseWord(CodeParser code, string word, CodeSpan wordSpan, out CodeSpan spanOut)
         {
             switch (word)
             {
                 case "unsupported":
+                    spanOut = wordSpan;
                     return Unsupported;
+
                 case "void":
+                    spanOut = wordSpan;
                     return Void;
+
                 case "bool":
+                    spanOut = wordSpan;
                     return Bool;
+
                 case "short":
+                    spanOut = wordSpan;
                     return Short;
+
                 case "ushort":
+                    spanOut = wordSpan;
                     return UShort;
+
                 case "int":
+                    spanOut = wordSpan;
                     return Int;
+
                 case "uint":
+                    spanOut = wordSpan;
                     return UInt;
+
                 case "numeric":
-                    if (!code.ReadExact('(')) return null;
-                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
+                    if (!code.ReadExact('('))
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
+                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < MinNumericWidth || width > MaxNumericWidth)
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
                     byte scale = 0;
                     if (code.ReadExact(','))
                     {
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale)
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
                     }
-                    if (!code.ReadExact(')')) return null;
+                    if (!code.ReadExact(')'))
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
+                    spanOut = wordSpan.Envelope(code.Span);
                     return new DataType(BaseType.Numeric, width: width, scale: scale);
+
                 case "unsigned":
-                    if (!code.ReadExact('(')) return null;
-                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth) return null;
+                    if (!code.ReadExact('('))
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
+                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth)
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
                     scale = 0;
                     if (code.ReadExact(','))
                     {
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale) return null;
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale)
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
                     }
-                    if (!code.ReadExact(')')) return null;
+                    if (!code.ReadExact(')'))
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
+                    spanOut = wordSpan.Envelope(code.Span);
                     return new DataType(BaseType.UNumeric, width: width, scale: scale);
+
                 case "char":
+                    spanOut = wordSpan;
                     return Char;
+
                 case "uchar":
+                    spanOut = wordSpan;
                     return UChar;
+
                 case "string":
                     if (code.ReadExact('('))
                     {
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinStringLength || width > MaxStringLength) return null;
-                        if (!code.ReadExact(')')) return null;
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinStringLength || width > MaxStringLength)
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
+                        if (!code.ReadExact(')'))
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
+                        spanOut = wordSpan.Envelope(code.Span);
                         return new DataType(BaseType.String, width: width);
                     }
+                    spanOut = wordSpan;
                     return String255;
+
                 case "date":
+                    spanOut = wordSpan;
                     return Date;
+
                 case "time":
+                    spanOut = wordSpan;
                     return Time;
+
                 case "enum":
-                    if (!code.ReadExact('{')) return null;
+                    if (!code.ReadExact('{'))
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
                     var options = new List<string>();
                     while (true)
                     {
                         if (code.ReadWord()) options.Add(code.Text);
                         else if (code.ReadStringLiteral()) options.Add(CodeParser.StringLiteralToString(code.Text));
-                        else return null;
+                        else
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
 
-                        if (code.ReadExact('}')) return new DataType(BaseType.Enum, options.ToArray());
+                        if (code.ReadExact('}'))
+                        {
+                            spanOut = wordSpan.Envelope(code.Span);
+                            return new DataType(BaseType.Enum, options.ToArray());
+                        }
+
                         if (code.ReadExact(',')) continue;
+
+                        spanOut = CodeSpan.Empty;
                         return null;
                     }
+
                 case "table":
+                    spanOut = wordSpan;
                     return Table;
+
                 case "indrel":
+                    spanOut = wordSpan;
                     return Indrel;
+
                 case "variant":
+                    spanOut = wordSpan;
                     return Variant;
+
                 case "like":
-                    if (!code.ReadWord()) return null;
+                    if (!code.ReadWord())
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
                     var word1 = code.Text;
+                    var word1Span = code.Span;
                     if (code.ReadExact('.'))
                     {
-                        if (!code.ReadWord()) return null;
+                        if (!code.ReadWord())
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
+                        spanOut = wordSpan.Envelope(code.Span);
                         return new DataType(BaseType.Like2, new string[] { word1, code.Text });
                     }
+                    spanOut = wordSpan.Envelope(word1Span);
                     return new DataType(BaseType.Like1, new string[] { word1 });
             }
 
+            spanOut = CodeSpan.Empty;
             return null;
         }
         #endregion

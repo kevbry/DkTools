@@ -85,7 +85,7 @@ namespace DKX.Compilation.Nodes
                 else if (Code.ReadExactWholeWord("protected")) AfterPrivacy(Privacy.Protected);
                 else if (Code.ReadExactWholeWord("private")) AfterPrivacy(Privacy.Private);
                 else if (Code.ReadExactWholeWord("const")) AfterConst(Privacy.Private, Code.Span);
-                else if ((dataType = DataType.Parse(Code)) != null) AfterDataType(dataType.Value, Privacy.Private, isConst: false, CodeSpan.Empty);
+                else if ((dataType = DataType.Parse(Code, out _)) != null) AfterDataType(dataType.Value, Privacy.Private, isConst: false, CodeSpan.Empty);
                 else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
                 else break;
             }
@@ -99,14 +99,14 @@ namespace DKX.Compilation.Nodes
                 return;
             }
 
-            var dataType = DataType.Parse(Code);
+            var dataType = DataType.Parse(Code, out _);
             if (dataType != null) AfterDataType(dataType.Value, privacy, isConst: false, CodeSpan.Empty);
             else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
         }
 
         private void AfterConst(Privacy privacy, CodeSpan constSpan)
         {
-            var dataType = DataType.Parse(Code);
+            var dataType = DataType.Parse(Code, out _);
             if (dataType != null) AfterDataType(dataType.Value, privacy, isConst: true, constSpan);
             else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
         }
@@ -134,7 +134,7 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExactWholeWord("ref")) argType = ArgumentPassType.ByReference;
                             else if (Code.ReadExactWholeWord("out")) argType = ArgumentPassType.Out;
 
-                            var argDataType = DataType.Parse(Code);
+                            var argDataType = DataType.Parse(Code, out _);
                             if (argDataType == null)
                             {
                                 ReportItem(Code.Position, ErrorCode.ExpectedArgumentDataType);

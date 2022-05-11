@@ -55,16 +55,24 @@ namespace DKX.Compilation.Expressions
                     return chain;
                 }
 
-                var right = ReadValueOrNull(code, opPrec);
-                if (right == null)
+                if (op.Value.op.IsUnaryPost())
                 {
-                    code.Position = startPos;
-                    return new ErrorChain(chain, chain.Span.Envelope(op.Value.span), ErrorCode.OperatorExpectsValueOnRight, op.Value.op.GetText());
+                    var newChain = new OperatorChain(op.Value.op, chain, right: null);
+                    return ReadAfterValue(code, newChain, leftPrec);
                 }
                 else
                 {
-                    var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(code, right, opPrec));
-                    return ReadAfterValue(code, newChain, leftPrec);
+                    var right = ReadValueOrNull(code, opPrec);
+                    if (right == null)
+                    {
+                        code.Position = startPos;
+                        return new ErrorChain(chain, chain.Span.Envelope(op.Value.span), ErrorCode.OperatorExpectsValueOnRight, op.Value.op.GetText());
+                    }
+                    else
+                    {
+                        var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(code, right, opPrec));
+                        return ReadAfterValue(code, newChain, leftPrec);
+                    }
                 }
             }
             else
@@ -75,6 +83,8 @@ namespace DKX.Compilation.Expressions
 
         private static OpReadResult? ReadOperatorOrNull(CodeParser code)
         {
+            // Unary-pre (not, negative) operators will not be read here because this method is only called after a value.
+
             if (code.ReadExact('.')) return new OpReadResult(Operator.Dot, code.Span);
 
             if (code.ReadExact("+=")) return new OpReadResult(Operator.AssignAdd, code.Span);

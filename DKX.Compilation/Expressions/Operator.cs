@@ -17,6 +17,9 @@ namespace DKX.Compilation.Expressions
         Divide,
         Modulus,
 
+        Not,
+        Negative,
+
         Increment,
         Decrement,
 
@@ -37,9 +40,13 @@ namespace DKX.Compilation.Expressions
             switch (op)
             {
                 case Operator.Dot:
-                    return 100;
+                    return 80;
                 case Operator.Increment:
                 case Operator.Decrement:
+                    return 70;
+                case Operator.Negative:
+                    return 60;
+                case Operator.Not:
                     return 50;
                 case Operator.Multiply:
                 case Operator.Divide:
@@ -91,6 +98,8 @@ namespace DKX.Compilation.Expressions
                 case Operator.LessEqual: return "<=";
                 case Operator.GreaterThan: return ">";
                 case Operator.GreaterEqual: return ">=";
+                case Operator.Negative: return "-";
+                case Operator.Not: return "!";
                 default: throw new InvalidOperatorException();
             }
         }
@@ -119,7 +128,45 @@ namespace DKX.Compilation.Expressions
                 case Operator.LessEqual: return "le";
                 case Operator.GreaterThan: return "gt";
                 case Operator.GreaterEqual: return "ge";
+                case Operator.Negative: return "neg";
+                case Operator.Not: return "not";
                 default: throw new InvalidOperatorException();
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the operator occurs before a single item (!, -)
+        /// </summary>
+        /// <param name="op"></param>
+        /// <returns></returns>
+        public static bool IsUnaryPre(this Operator op)
+        {
+            switch (op)
+            {
+                case Operator.Not:
+                case Operator.Negative:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the operator occurs after a single item (++, --)
+        /// </summary>
+        /// <param name="op"></param>
+        /// <returns></returns>
+        public static bool IsUnaryPost(this Operator op)
+        {
+            switch (op)
+            {
+                case Operator.Increment:
+                case Operator.Decrement:
+                    return true;
+
+                default:
+                    return false;
             }
         }
     }

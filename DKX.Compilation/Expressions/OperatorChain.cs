@@ -9,19 +9,25 @@ namespace DKX.Compilation.Expressions
         private Chain _right;
 
         public OperatorChain(Operator op, Chain left, Chain right)
-            : base(left.Span.Envelope(right.Span))
+            : base(right != null ? left.Span.Envelope(right.Span) : left.Span)
         {
             _op = op;
             _left = left ?? throw new ArgumentNullException(nameof(left));
-            _right = right ?? throw new ArgumentNullException(nameof(right));
+            _right = right;
+
+            if (_right == null && !_op.IsUnaryPost()) throw new ArgumentNullException(nameof(right));
         }
 
-        public override string ToCode() => $"{_op.GetOpCode()}({_left.ToCode()},{_right.ToCode()})";
+        public override string ToCode()
+        {
+            if (_right != null) return $"{_op.GetOpCode()}({_left.ToCode()},{_right.ToCode()})";
+            return $"{_op.GetOpCode()}({_left.ToCode()})";
+        }
 
         public override void Report(IReporter reporter)
         {
             _left.Report(reporter);
-            _right.Report(reporter);
+            _right?.Report(reporter);
         }
     }
 }
