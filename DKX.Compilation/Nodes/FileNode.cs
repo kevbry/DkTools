@@ -4,6 +4,7 @@ using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
+using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
@@ -165,8 +166,10 @@ namespace DKX.Compilation.Nodes
                         ReportItem(Code.Position, ErrorCode.ExpectedToken, '{');
                     }
 
-                    var method = new MethodNode(this, name, dataType, args, privacy);
-                    method.ReadCodeBody();
+                    var bodyStartPos = Code.Span.End;
+
+                    var method = new MethodNode(this, name, dataType, args, privacy, new CodeSpan(bodyStartPos, bodyStartPos));
+                    method.ReadCodeBody(bodyStartPos);
                 }
                 else if (Code.ReadExact('{'))
                 {
@@ -187,8 +190,8 @@ namespace DKX.Compilation.Nodes
                             gotGetter = true;
                             if (Code.ReadExact('{'))
                             {
-                                var getter = new PropertyAccessorNode(prop, PropertyAccessorType.Getter);
-                                getter.ReadCodeBody();
+                                var getter = new PropertyAccessorNode(prop, PropertyAccessorType.Getter, Code.Span.Start);
+                                getter.ReadCodeBody(Code.Span.End);
                             }
                             else
                             {
@@ -201,8 +204,8 @@ namespace DKX.Compilation.Nodes
                             gotSetter = true;
                             if (Code.ReadExact('{'))
                             {
-                                var setter = new PropertyAccessorNode(prop, PropertyAccessorType.Setter);
-                                setter.ReadCodeBody();
+                                var setter = new PropertyAccessorNode(prop, PropertyAccessorType.Setter, Code.Span.Start);
+                                setter.ReadCodeBody(Code.Span.End);
                             }
                             else
                             {

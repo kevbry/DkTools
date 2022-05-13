@@ -1,5 +1,7 @@
 ﻿using DK;
 using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.ReportItems;
 using System;
 
 namespace DKX.Compilation.Expressions
@@ -17,8 +19,8 @@ namespace DKX.Compilation.Expressions
 #endif
         }
 
-        public override string ToCode() => "@" + _name;
+        public override string ToCode(int parentOffset) => OpCodeGenerator.GenerateIdentifier(_name, parentOffset, Span);
 
-        public override void Report(IReporter reporter) { }
+        public override void Report(ISourceCodeReporter reporter) { }
     }
 }

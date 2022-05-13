@@ -33,42 +33,57 @@ namespace DKX.Compilation.Expressions
         GreaterEqual
     }
 
+    enum OpPrec
+    {
+        // Lowest
+        None,
+        Compare,
+        Assign,
+        AddSub,
+        MulDiv,
+        Not,
+        Negative,
+        IncDec,
+        Dot
+        // Highest
+    }
+
     static class OperatorUtil
     {
-        public static int GetPrecedence(this Operator op)
+        public static OpPrec GetPrecedence(this Operator op)
         {
             switch (op)
             {
                 case Operator.Dot:
-                    return 80;
+                    return OpPrec.Dot;
                 case Operator.Increment:
                 case Operator.Decrement:
-                    return 70;
+                    return OpPrec.IncDec;
                 case Operator.Negative:
-                    return 60;
+                    return OpPrec.Negative;
                 case Operator.Not:
-                    return 50;
+                    return OpPrec.Not;
                 case Operator.Multiply:
                 case Operator.Divide:
                 case Operator.Modulus:
-                    return 40;
+                    return OpPrec.MulDiv;
                 case Operator.Add:
                 case Operator.Subtract:
-                    return 30;
+                    return OpPrec.AddSub;
                 case Operator.Assign:
                 case Operator.AssignAdd:
                 case Operator.AssignSubtract:
                 case Operator.AssignMultiply:
                 case Operator.AssignDivide:
                 case Operator.AssignModulus:
-                    return 20;
+                    return OpPrec.Assign;
                 case Operator.Equal:
                 case Operator.NotEqual:
                 case Operator.LessThan:
                 case Operator.LessEqual:
                 case Operator.GreaterThan:
                 case Operator.GreaterEqual:
-                    return 10;
+                    return OpPrec.Compare;
                 default:
                     throw new InvalidOperatorException();
             }

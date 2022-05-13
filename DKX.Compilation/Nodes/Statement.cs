@@ -1,12 +1,19 @@
-﻿namespace DKX.Compilation.Nodes
+﻿using DK.Code;
+
+namespace DKX.Compilation.Nodes
 {
     abstract class Statement : Node
     {
-        public abstract string ToCode();
+        private CodeSpan _span;
 
-        public Statement(Node parent)
+        public abstract string ToCode(int offset);
+
+        public Statement(Node parent, CodeSpan span)
             : base(parent)
         {
+            _span = span;
         }
+
+        public CodeSpan Span { get => _span; protected set => _span = value; }
     }
 }

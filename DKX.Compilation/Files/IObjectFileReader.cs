@@ -4,6 +4,8 @@ namespace DKX.Compilation.Files
 {
     public interface IObjectFileReader
     {
+        ObjectFileModel GetModel();
+
         string GetWbdkPathName();
 
         string GetDkxPathName();

@@ -1,6 +1,8 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
 using DKX.Compilation.Files;
+using DKX.Compilation.ReportItems;
+using DKX.Compilation.Tests.CodeGeneration;
 using DKX.Compilation.Variables;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -24,7 +26,7 @@ namespace DKX.Compilation.Tests.Files
             fs.WriteFileText(dkxPathName, source);
 
             var queue = new TestJobQueue();
-            var compileJob = new CompileFileJob(app, queue, dkxPathName, wbdkPathName, objPathName, fileContext);
+            var compileJob = new CompileFileJob(app, queue, dkxPathName, wbdkPathName, objPathName, fileContext, queue);
             await compileJob.ExecuteAsync(cancel: default);
 
             foreach (var item in queue.ReportItems)
@@ -59,7 +61,7 @@ namespace DKX.Compilation.Tests.Files
             fs.WriteFileText(dkxPathName, source);
 
             var queue = new TestJobQueue();
-            var compileJob = new CompileFileJob(app, queue, dkxPathName, wbdkPathName, objPathName, fileContext);
+            var compileJob = new CompileFileJob(app, queue, dkxPathName, wbdkPathName, objPathName, fileContext, queue);
             await compileJob.ExecuteAsync(cancel: default);
 
             foreach (var item in queue.ReportItems)
@@ -333,17 +335,20 @@ class Test
             var constant = obj.Constants[0];
             Assert.AreEqual("InstitutionName", constant.Name);
             Assert.AreEqual("string", constant.DataType);
-            Assert.AreEqual("\"Credit Union\"", constant.Code);
+            Assert.AreEqual("\"Credit Union\":14", constant.Code);
+            Assert.AreEqual(59, constant.CodeStartPosition);
 
             constant = obj.Constants[1];
             Assert.AreEqual("InstitutionRouteNumber", constant.Name);
             Assert.AreEqual("unsigned(3)", constant.DataType);
-            Assert.AreEqual("899", constant.Code);
+            Assert.AreEqual("899:3", constant.Code);
+            Assert.AreEqual(130, constant.CodeStartPosition);
 
             constant = obj.Constants[2];
             Assert.AreEqual("SecondsPerDay", constant.Name);
             Assert.AreEqual("int", constant.DataType);
-            Assert.AreEqual("mul(mul(24,60),60)", constant.Code);
+            Assert.AreEqual("mul:12(mul:7(24:2,60:502),60:1002)", constant.Code);
+            Assert.AreEqual(173, constant.CodeStartPosition);
         }
 
         [TestCase("2 + 4 * 8", "add(2,mul(4,8))")]
@@ -378,7 +383,8 @@ class Test
             var constant = obj.Constants[0];
             Assert.AreEqual("Precedence", constant.Name);
             Assert.AreEqual("int", constant.DataType);
-            Assert.AreEqual(codeOut, constant.Code);
+
+            OpCodeStringValidator.Validate(codeOut, constant.Code);
         }
 
         [Test]
@@ -432,7 +438,7 @@ class Test
             Assert.AreEqual("int", v.DataType);
             Assert.IsNull(v.InitializerCode);
 
-            Assert.AreEqual("asn(@x,0)", method.Body.Code);
+            Assert.AreEqual("asn:1405(@x:5,0:401)", method.Body.Code);
         }
     }
 }

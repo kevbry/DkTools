@@ -3,6 +3,7 @@ using DK.Code;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.Nodes;
+using DKX.Compilation.ReportItems;
 using Newtonsoft.Json;
 using System;
 using System.Linq;
@@ -19,8 +20,16 @@ namespace DKX.Compilation.Files
         private string _wbdkPathName;
         private string _objPathName;
         private FileContext _fileContext;
+        private IReportItemCollector _reportCollector;
 
-        public CompileFileJob(DkAppContext app, ICompileJobQueue compileQueue, string dkxPathName, string wbdkPathName, string objPathName, FileContext fileContext)
+        public CompileFileJob(
+            DkAppContext app,
+            ICompileJobQueue compileQueue,
+            string dkxPathName,
+            string wbdkPathName,
+            string objPathName,
+            FileContext fileContext,
+            IReportItemCollector reportCollector)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _compileQueue = compileQueue ?? throw new ArgumentNullException(nameof(compileQueue));
@@ -28,6 +37,7 @@ namespace DKX.Compilation.Files
             _wbdkPathName = wbdkPathName ?? throw new ArgumentNullException(nameof(wbdkPathName));
             _objPathName = objPathName ?? throw new ArgumentNullException(nameof(objPathName));
             _fileContext = fileContext;
+            _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
         }
 
         public string Description => $"Compile File: {_dkxPathName}";
@@ -42,7 +52,7 @@ namespace DKX.Compilation.Files
             fileNode.Parse();
 
             var reportItems = fileNode.ReportItems.ToList();
-            _compileQueue.AddReports(reportItems);
+            _reportCollector.AddReportItems(reportItems);
             if (!reportItems.Any(e => e.Severity == ErrorSeverity.Error))
             {
                 var methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray();

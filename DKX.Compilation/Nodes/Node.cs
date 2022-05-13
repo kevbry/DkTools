@@ -3,6 +3,7 @@ using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
+using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Text;
 
 namespace DKX.Compilation.Nodes
 {
-    public abstract class Node : IReporter
+    public abstract class Node : ISourceCodeReporter
     {
         private Node _parent;
         private DkAppContext _app;
@@ -45,31 +46,12 @@ namespace DKX.Compilation.Nodes
         #region Report Items
         public void ReportItem(int pos, ErrorCode code, params object[] args)
         {
-            if (!_code.GetLineNumberAndOffset(pos, out var lineNumber, out var lineOffset))
-            {
-                lineNumber = -1;
-                lineOffset = -1;
-            }
-            OnReportItem(new ReportItem(PathName, lineNumber, lineOffset, -1, -1, code, args));
+            OnReportItem(new ReportItem(PathName, _code.DocumentText, pos, code, args));
         }
 
         public void ReportItem(CodeSpan span, ErrorCode code, params object[] args)
         {
-            int startLine, startOff, endLine, endOff;
-            if (!_code.GetLineNumberAndOffset(span.Start, out startLine, out startOff))
-            {
-                startLine = -1;
-                startOff = -1;
-                endLine = -1;
-                endOff = -1;
-            }
-            else if (!_code.GetLineNumberAndOffset(span.End, out endLine, out endOff))
-            {
-                endLine = -1;
-                endOff = -1;
-            }
-
-            OnReportItem(new ReportItem(PathName, startLine, startOff, endLine, endOff, code, args));
+            OnReportItem(new ReportItem(PathName, _code.DocumentText, span, code, args));
         }
 
         protected virtual void OnReportItem(ReportItem error)
@@ -140,14 +122,21 @@ namespace DKX.Compilation.Nodes
         #endregion
 
         #region Statements
-        internal void ReadCodeBody()
+        internal void ReadCodeBody(int bodyStartPos)
         {
+            if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called by IBodyNode implementations.");
+
             while (true)
             {
-                if (Code.ReadExact('}')) return;
+                if (Code.ReadExact('}'))
+                {
+                    bodyNode.BodySpan = new CodeSpan(bodyStartPos, Code.Span.Start);
+                    return;
+                }
                 if (!ParseStatement())
                 {
-                    Code.SkipToAfterExit();
+                    Code.SkipToAfterExit(out var bodyEndPos);
+                    bodyNode.BodySpan = new CodeSpan(bodyStartPos, bodyEndPos);
                     return;
                 }
             }
@@ -175,12 +164,14 @@ namespace DKX.Compilation.Nodes
                     var name = Code.Text;
                     var nameSpan = Code.Span;
                     Chain initializer = null;
+                    var initializerSpan = nameSpan;
 
                     if (Code.ReadExact('='))
                     {
                         var eqSpan = Code.Span;
                         initializer = ExpressionParser.ReadExpressionOrNull(Code);
                         if (initializer == null) ReportItem(eqSpan, ErrorCode.ExpectedExpression);
+                        initializerSpan = nameSpan.Envelope(initializer.Span);
                     }
 
                     if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
@@ -189,7 +180,7 @@ namespace DKX.Compilation.Nodes
                     {
                         var variable = new Variable(name, dataType.Value, passType: null, initializer: null);
                         AddVariable(variable);
-                        if (initializer != null) new VariableInitializationStatement(this, variable, initializer);
+                        if (initializer != null) new VariableInitializationStatement(this, variable, initializer, initializerSpan);
                     }
 
                     if (Code.ReadExact(';')) return true;
@@ -235,15 +226,17 @@ namespace DKX.Compilation.Nodes
 
         protected virtual DataType? GetTypedefDataType(string typedefName) => _parent.GetTypedefDataType(typedefName);
 
-        protected ObjectBody GenerateObjectBody()
+        protected ObjectBody GenerateObjectBody(int parentOffset)
         {
+            if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called for an IBodyNode implementation.");
+
             var variables = Variables.Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
             if (variables.Length == 0) variables = null;
 
             var bodyCode = new StringBuilder();
             foreach (var stmt in ChildNodes.Where(n => n is Statement).Cast<Statement>())
             {
-                var stmtCode = stmt.ToCode();
+                var stmtCode = stmt.ToCode(parentOffset);
                 if (string.IsNullOrEmpty(stmtCode)) continue;
 
                 if (bodyCode.Length > 0) bodyCode.Append(';');
@@ -253,7 +246,8 @@ namespace DKX.Compilation.Nodes
             return new ObjectBody
             {
                 Variables = variables,
-                Code = bodyCode.ToString()
+                Code = bodyCode.ToString(),
+                StartPosition = bodyNode.BodySpan.Start
             };
         }
         #endregion

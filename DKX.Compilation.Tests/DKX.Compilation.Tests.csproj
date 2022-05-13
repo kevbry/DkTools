@@ -51,6 +51,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CodeGeneration\CodeGenerationTests.cs" />
+    <Compile Include="CodeGeneration\OpCodeStringValidator.cs" />
+    <Compile Include="CodeGeneration\WbdkCodeValidator.cs" />
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />
     <Compile Include="Files\CompileFileJobTests.cs" />

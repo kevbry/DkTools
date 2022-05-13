@@ -634,38 +634,52 @@ namespace DK.Code
 
             foreach (var ch in str)
             {
-                switch (ch)
-                {
-                    case '\t':
-                        sb.Append("\\t");
-                        break;
-                    case '\r':
-                        sb.Append("\\r");
-                        break;
-                    case '\n':
-                        sb.Append("\\n");
-                        break;
-                    case '\"':
-                        sb.Append("\\\"");
-                        break;
-                    case '\'':
-                        sb.Append("\\'");
-                        break;
-                    default:
-                        if (ch >= ' ' && ch <= 0x7f)
-                        {
-                            sb.Append(ch);
-                        }
-                        else
-                        {
-                            sb.AppendFormat("\\x{0:X4}", (int)ch);
-                        }
-                        break;
-                }
+                EscapeChar(ch, sb);
             }
 
             sb.Append('\"');
             return sb.ToString();
+        }
+
+        public static string CharToCharLiteral(char ch)
+        {
+            var sb = new StringBuilder();
+            sb.Append('\'');
+            EscapeChar(ch, sb);
+            sb.Append('\'');
+            return sb.ToString();
+        }
+
+        public static void EscapeChar(char ch, StringBuilder output)
+        {
+            switch (ch)
+            {
+                case '\t':
+                    output.Append("\\t");
+                    break;
+                case '\r':
+                    output.Append("\\r");
+                    break;
+                case '\n':
+                    output.Append("\\n");
+                    break;
+                case '\"':
+                    output.Append("\\\"");
+                    break;
+                case '\'':
+                    output.Append("\\'");
+                    break;
+                default:
+                    if (ch >= ' ' && ch <= 0x7f)
+                    {
+                        output.Append(ch);
+                    }
+                    else
+                    {
+                        output.AppendFormat("\\x{0:X4}", (int)ch);
+                    }
+                    break;
+            }
         }
 
         public string Source
@@ -1406,14 +1420,22 @@ namespace DK.Code
 
         public void SkipToAfterExit()
         {
+            SkipToAfterExit(out _);
+        }
+
+        public void SkipToAfterExit(out int innerEndPosOut)
+        {
             while (ReadNestable())
             {
                 if (_tokenType == CodeType.Operator && _tokenText.Length == 1 &&
                     (_tokenText[0] == '}' || _tokenText[0] == ')' || _tokenText[0] == ']'))
                 {
+                    innerEndPosOut = _tokenStartPos;
                     break;
                 }
             }
+
+            innerEndPosOut = _pos;
         }
 
         public bool GetLineNumberAndOffset(int position, out int lineNumberOut, out int lineOffsetOut)

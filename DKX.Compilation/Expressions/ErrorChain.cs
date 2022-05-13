@@ -1,4 +1,5 @@
 ﻿using DK.Code;
+using DKX.Compilation.ReportItems;
 
 namespace DKX.Compilation.Expressions
 {
@@ -24,8 +25,8 @@ namespace DKX.Compilation.Expressions
             _args = args;
         }
 
-        public override void Report(IReporter reporter) => reporter.ReportItem(Span, _errorCode, _args);
+        public override void Report(ISourceCodeReporter reporter) => reporter.ReportItem(Span, _errorCode, _args);
 
-        public override string ToCode() => _innerChain?.ToCode();
+        public override string ToCode(int offset) => _innerChain?.ToCode(offset);
     }
 }

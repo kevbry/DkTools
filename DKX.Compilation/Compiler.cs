@@ -2,6 +2,7 @@
 using DK.Diagnostics;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Files;
+using DKX.Compilation.ReportItems;
 using DKX.Compilation.Schema;
 using DKX.Compilation.WbdkExports;
 using System;
@@ -50,7 +51,7 @@ namespace DKX.Compilation
                 app: _app,
                 workDir: _workDir,
                 compileQueue: queue,
-                compileFileJobFactory: new CompileFileJobFactory(_app, queue),
+                compileFileJobFactory: new CompileFileJobFactory(_app, queue, queue),
                 objectFileReaderFactory: new ObjectFileReaderFactory(_app),
                 tableHashProvider: tableHashProvider));
 
@@ -64,12 +65,14 @@ namespace DKX.Compilation
             }
 
             queue = new CompileQueue(_app, "WBDK Code Generator Queue");
+            var objectFileReaderFactory = new ObjectFileReaderFactory(_app);
+            var reporterFactory = new SourceCodeReporterFactory(_app, queue);
             await queue.EnqueueCompileJobAsync(new ScanForGenerateCodeJob(
                 app: _app,
                 workDir: _workDir,
                 compileQueue: queue,
-                generateCodeJobFactory: new GenerateCodeJobFactory(_app, queue),
-                objectFileReaderFactory: new ObjectFileReaderFactory(_app)));
+                generateCodeJobFactory: new GenerateCodeJobFactory(_app, queue, objectFileReaderFactory, reporterFactory),
+                objectFileReaderFactory: objectFileReaderFactory));
 
             await queue.ProcessQueueToCompletionAsync(cancel);
 

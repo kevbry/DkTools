@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.ReportItems;
+using System;
 
 namespace DKX.Compilation.Expressions
 {
@@ -18,13 +20,29 @@ namespace DKX.Compilation.Expressions
             if (_right == null && !_op.IsUnaryPost()) throw new ArgumentNullException(nameof(right));
         }
 
-        public override string ToCode()
+        public override string ToCode(int parentOffset)
         {
-            if (_right != null) return $"{_op.GetOpCode()}({_left.ToCode()},{_right.ToCode()})";
-            return $"{_op.GetOpCode()}({_left.ToCode()})";
+            if (_right != null)
+            {
+                return string.Concat(
+                    OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
+                    "(",
+                    _left.ToCode(Span.Start),
+                    ",",
+                    _right.ToCode(Span.Start),
+                    ")");
+            }
+            else
+            {
+                return string.Concat(
+                    OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
+                    "(",
+                    _left.ToCode(Span.Start),
+                    ")");
+            }
         }
 
-        public override void Report(IReporter reporter)
+        public override void Report(ISourceCodeReporter reporter)
         {
             _left.Report(reporter);
             _right?.Report(reporter);

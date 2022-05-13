@@ -1,5 +1,7 @@
 ﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.ReportItems;
 using System;
 
 namespace DKX.Compilation.Expressions
@@ -39,8 +41,8 @@ namespace DKX.Compilation.Expressions
             _dataType = new DataType(signed ? BaseType.Numeric : BaseType.UNumeric, width: width, scale: scale);
         }
 
-        public override string ToCode() => _text;
+        public override string ToCode(int parentOffset) => OpCodeGenerator.GenerateNumber(_text, parentOffset, Span);
 
-        public override void Report(IReporter reporter) { }
+        public override void Report(ISourceCodeReporter reporter) { }
     }
 }

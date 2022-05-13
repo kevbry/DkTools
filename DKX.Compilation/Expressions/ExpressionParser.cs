@@ -1,5 +1,4 @@
 ﻿using DK.Code;
-using System;
 
 namespace DKX.Compilation.Expressions
 {
@@ -10,7 +9,7 @@ namespace DKX.Compilation.Expressions
             return ReadValueOrNull(code, 0);
         }
 
-        private static Chain ReadValueOrNull(CodeParser code, int leftPrec)
+        private static Chain ReadValueOrNull(CodeParser code, OpPrec leftPrec)
         {
             if (code.ReadWord())
             {
@@ -42,7 +41,7 @@ namespace DKX.Compilation.Expressions
             else return null;
         }
 
-        private static Chain ReadAfterValue(CodeParser code, Chain chain, int leftPrec)
+        private static Chain ReadAfterValue(CodeParser code, Chain chain, OpPrec leftPrec)
         {
             var startPos = code.Position;
             var op = ReadOperatorOrNull(code);
@@ -129,30 +128,5 @@ namespace DKX.Compilation.Expressions
                 this.span = span;
             }
         }
-    }
-
-    class CodeException : Exception
-    {
-        private CodeSpan _span;
-        private ErrorCode _errorCode;
-        private object[] _args;
-
-        public CodeException(CodeSpan span, ErrorCode errorCode, params object[] args)
-        {
-            _span = span;
-            _errorCode = errorCode;
-            _args = args;
-        }
-
-        public CodeException(int pos, ErrorCode errorCode, params object[] args)
-        {
-            _span = new CodeSpan(pos, pos);
-            _errorCode = errorCode;
-            _args = args;
-        }
-
-        public CodeSpan Span => _span;
-        public ErrorCode ErrorCode => _errorCode;
-        public object[] Arguments => _args;
     }
 }

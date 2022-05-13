@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DKX.Compilation.ReportItems;
+using System;
 using System.ComponentModel;
 using System.Linq;
 
@@ -92,7 +93,7 @@ namespace DKX.Compilation
         /// <summary>
         /// {0} = operator text
         /// </summary>
-        [Description("Operator '{0}' expects a value on right.")]
+        [Description("Operator '{0}' expects a value on the right.")]
         OperatorExpectsValueOnRight = 1501,
 
         [Description("Constants must have an initial value.")]
@@ -100,6 +101,21 @@ namespace DKX.Compilation
 
         [Description("Expected statement.")]
         ExpectedStatement = 1503,
+
+        [Description("Operator '{0}' expected a writeable value on the left.")]
+        OperatorExpectsWriteableValueOnLeft = 1504,
+
+        /// <summary>
+        /// {0} = identifier name
+        /// </summary>
+        [Description("Unknown identifier '{0}'.")]
+        UnknownIdentifier = 1505,
+
+        /// <summary>
+        /// {0} = operator text
+        /// </summary>
+        [Description("Operator '{0}' cannot be used with this data type.")]
+        OperatorCannotBeUsedWithThisDataType = 1506,
         #endregion
     }
 

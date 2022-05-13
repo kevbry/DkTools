@@ -1,4 +1,6 @@
-﻿using DKX.Compilation.Expressions;
+﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.Expressions;
 using DKX.Compilation.Variables;
 using System;
 
@@ -9,13 +11,22 @@ namespace DKX.Compilation.Nodes
         private Variable _variable;
         private Chain _exp;
 
-        public VariableInitializationStatement(Node parent, Variable variable, Chain exp)
-            : base(parent)
+        public VariableInitializationStatement(Node parent, Variable variable, Chain exp, CodeSpan span)
+            : base(parent, span)
         {
             _variable = variable ?? throw new ArgumentNullException(nameof(variable));
             _exp = exp ?? throw new ArgumentNullException(nameof(exp));
         }
 
-        public override string ToCode() => $"asn(@{_variable.Name},{_exp.ToCode()})";
+        public override string ToCode(int parentOffset)
+        {
+            return string.Concat(
+                OpCodeGenerator.GenerateOpCode("asn", parentOffset, Span),
+                "(",
+                OpCodeGenerator.GenerateIdentifier(_variable.Name, Span.Start, Span),
+                ",",
+                _exp.ToCode(Span.Start),
+                ")");
+        }
     }
 }

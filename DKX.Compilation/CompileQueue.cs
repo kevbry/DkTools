@@ -1,8 +1,8 @@
 ﻿using DK;
 using DK.AppEnvironment;
-using DK.Code;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
+using DKX.Compilation.ReportItems;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace DKX.Compilation
 {
-    internal class CompileQueue : ICompileJobQueue
+    internal class CompileQueue : ICompileJobQueue, IReportItemCollector
     {
         private DkAppContext _app;
         private string _name;
@@ -136,13 +136,13 @@ namespace DKX.Compilation
             }
         }
 
-        public void AddReport(ReportItem reportItem)
+        public void AddReportItem(ReportItem reportItem)
         {
             _reportItems.Add(reportItem);
             if (reportItem.Severity == ErrorSeverity.Error) _haltErrors = true;
         }
 
-        public void AddReports(IEnumerable<ReportItem> reportItems)
+        public void AddReportItems(IEnumerable<ReportItem> reportItems)
         {
             foreach (var item in reportItems)
             {

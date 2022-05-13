@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.DataTypes;
+﻿using DK.Code;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.Files;
 using System;
 using System.Linq;
@@ -39,18 +40,22 @@ namespace DKX.Compilation.Nodes
         Setter
     }
 
-    class PropertyAccessorNode : Node, IReturnTargetNode
+    class PropertyAccessorNode : Node, IReturnTargetNode, IBodyNode
     {
         private PropertyAccessorType _accessorType;
+        private CodeSpan _bodySpan;
 
-        public PropertyAccessorNode(PropertyNode property, PropertyAccessorType accessorType)
+        public PropertyAccessorNode(PropertyNode property, PropertyAccessorType accessorType, int bodyStartPos)
             : base(property)
         {
             _accessorType = accessorType;
+            _bodySpan = new CodeSpan(bodyStartPos, bodyStartPos);
         }
 
         public PropertyAccessorType AccessorType => _accessorType;
 
         public DataType ReturnDataType => _accessorType == PropertyAccessorType.Getter ? GetContainerOrNull<PropertyNode>().DataType : DataType.Void;
+
+        public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
     }
 }

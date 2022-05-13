@@ -1,10 +1,12 @@
-﻿using DKX.Compilation.Jobs;
+﻿using DK.Code;
+using DKX.Compilation.Jobs;
+using DKX.Compilation.ReportItems;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests
 {
-    class TestJobQueue : ICompileJobQueue
+    class TestJobQueue : ICompileJobQueue, IReportItemCollector, ISourceCodeReporter
     {
         public List<ICompileJob> Jobs { get; set; } = new List<ICompileJob>();
         public List<ReportItem> ReportItems { get; set; } = new List<ReportItem>();
@@ -15,8 +17,12 @@ namespace DKX.Compilation.Tests
             return Task.CompletedTask;
         }
 
-        public void AddReport(ReportItem reportItem) => ReportItems.Add(reportItem);
+        public void AddReportItem(ReportItem reportItem) => ReportItems.Add(reportItem);
 
-        public void AddReports(IEnumerable<ReportItem> reportItems) => ReportItems.AddRange(reportItems);
+        public void AddReportItems(IEnumerable<ReportItem> reportItems) => ReportItems.AddRange(reportItems);
+
+        public void ReportItem(int pos, ErrorCode code, params object[] args) => ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
+
+        public void ReportItem(CodeSpan span, ErrorCode code, params object[] args) => ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
     }
 }

@@ -1,5 +1,6 @@
 ﻿using DK;
 using DK.Code;
+using DKX.Compilation.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,8 @@ namespace DKX.Compilation.DataTypes
         public const byte MaxWidth = 255;
         public const byte MinScale = 0;
         public const byte MaxScale = 38;
+
+        public static readonly DataType[] EmptyArray = new DataType[0];
 
         public DataType(BaseType baseType)
         {
@@ -96,6 +99,9 @@ namespace DKX.Compilation.DataTypes
         public short Width => _width;
         public short Scale => _scale;
         public string[] Options => OptionsToStringList(_options ?? string.Empty);
+        public bool IsUnresolved => _baseType == BaseType.Like1 || _baseType == BaseType.Like2;
+        public bool IsUnsupported => _baseType == BaseType.Unsupported;
+        public bool IsValue => _baseType != BaseType.Void && _baseType != BaseType.Unsupported && _baseType != BaseType.Like1 && _baseType != BaseType.Like2;
         public bool IsVoid => _baseType == BaseType.Void;
 
         public override string ToString() => ToCode();
@@ -193,6 +199,68 @@ namespace DKX.Compilation.DataTypes
             }
         }
 
+        public string ToDkCode()
+        {
+            switch (_baseType)
+            {
+                case BaseType.Unsupported:
+                    return "int";
+                case BaseType.Void:
+                    return "void";
+                case BaseType.Bool:
+                    return "Boolean_t";
+                case BaseType.Short:
+                    return "short";
+                case BaseType.UShort:
+                    return "unsigned short";
+                case BaseType.Int:
+                    return "int";
+                case BaseType.UInt:
+                    return "unsigned int";
+                case BaseType.Numeric:
+                    if (_scale != 0) return $"numeric({_width}, {_scale})";
+                    return $"numeric({_width})";
+                case BaseType.UNumeric:
+                    if (_scale != 0) return $"numeric({_width}, {_scale}) unsigned";
+                    return $"numeric({_width}) unsigned";
+                case BaseType.Char:
+                    return "char";
+                case BaseType.UChar:
+                    return "unsigned char";
+                case BaseType.String:
+                    if (_width == MaxStringLength) return "char(255)";
+                    return $"char({_width})";
+                case BaseType.Date:
+                    return "date";
+                case BaseType.Time:
+                    return "time";
+                case BaseType.Enum:
+                    var sb = new StringBuilder();
+                    sb.Append("enum { ");
+                    var first = true;
+                    foreach (var option in OptionsToStringList(_options))
+                    {
+                        if (first) first = false;
+                        else sb.Append(", ");
+                        sb.Append(NormalizeEnumOption(option));
+                    }
+                    sb.Append(" }");
+                    return sb.ToString();
+                case BaseType.Table:
+                    return "table";
+                case BaseType.Indrel:
+                    return "indrel";
+                case BaseType.Variant:
+                    return "variant";
+                case BaseType.Like1:
+                    return $"like {_options[0]}";
+                case BaseType.Like2:
+                    return $"like {_options[0]} {_options[1]}";
+                default:
+                    throw new InvalidBaseTypeException(_baseType);
+            }
+        }
+
         private string NormalizeEnumOption(string option)
         {
             if (string.IsNullOrEmpty(option)) return "\" \"";
@@ -202,6 +270,12 @@ namespace DKX.Compilation.DataTypes
         #endregion
 
         #region Code Parsing
+        public static DataType? Parse(string code)
+        {
+            var parser = new CodeParser(code);
+            return Parse(parser, out _);
+        }
+
         public static DataType? Parse(CodeParser code, out CodeSpan spanOut)
         {
             var startPos = code.Position;
@@ -463,6 +537,32 @@ namespace DKX.Compilation.DataTypes
             }
 
             return sb.ToString();
+        }
+        #endregion
+
+        #region Capabilities
+        public bool IsSuitableForIncDec
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Char:
+                    case BaseType.UChar:
+                    case BaseType.Short:
+                    case BaseType.UShort:
+                    case BaseType.Int:
+                    case BaseType.UInt:
+                    case BaseType.Numeric:
+                    case BaseType.UNumeric:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
         }
         #endregion
     }

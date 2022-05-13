@@ -29,7 +29,8 @@ namespace DKX.Compilation.Variables
         {
             Name = _name,
             DataType = _dataType.ToCode(),
-            Code = _value.ToCode()
+            Code = _value.ToCode(_value.Span.Start),
+            CodeStartPosition = _value.Span.Start
         };
     }
 }

@@ -80,14 +80,17 @@ namespace DKX.Compilation.Files
         public string DataType { get; set; }
 
         public string Code { get; set; }
+
+        public int CodeStartPosition { get; set; }
     }
 
     public class ObjectBody
     {
-
         public ObjectVariable[] Variables { get; set; }
 
         public string Code { get; set; }
+
+        public int StartPosition { get; set; }
     }
 
     public class ObjectVariable
@@ -113,10 +116,5 @@ namespace DKX.Compilation.Files
         public string Hash { get; set; }
 
         public static readonly ObjectTableDependency[] EmptyArray = new ObjectTableDependency[0];
-    }
-
-    class InvalidObjectFileException : Exception
-    {
-        public InvalidObjectFileException(string pathName) : base($"Object file '{pathName}' does not have a correct format.") { }
     }
 }

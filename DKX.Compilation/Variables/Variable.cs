@@ -48,7 +48,7 @@ namespace DKX.Compilation.Variables
         {
             Name = _name,
             DataType = _dataType.ToCode(),
-            InitializerCode = _initializer?.ToCode()
+            InitializerCode = _initializer?.ToCode(0)
         };
     }
 }

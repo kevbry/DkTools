@@ -1,7 +1,8 @@
-﻿using DK.Code;
+﻿using DK;
+using DK.Code;
 using System.Text;
 
-namespace DKX.Compilation
+namespace DKX.Compilation.ReportItems
 {
     public struct ReportItem
     {
@@ -24,6 +25,55 @@ namespace DKX.Compilation
             _endCh = endCh;
             _code = code;
             _args = args;
+        }
+
+        public ReportItem(string pathName, string source, CodeSpan span, ErrorCode code, params object[] args)
+        {
+            _pathName = pathName;
+            _code = code;
+            _args = args;
+
+            if (span.Start > source.Length)
+            {
+                _startLine = -1;
+                _startCh = -1;
+                _endLine = -1;
+                _endCh = -1;
+            }
+            else
+            {
+                StringHelper.CalcLineAndPosFromOffset(source, span.Start, out _startLine, out _startCh);
+                if (span.End > source.Length)
+                {
+                    _endLine = _startLine;
+                    _endCh = _startCh;
+                }
+                else
+                {
+                    StringHelper.CalcLineAndPosFromOffset(source, span.End, out _endLine, out _endCh);
+                }
+            }
+        }
+
+        public ReportItem(string pathName, string source, int pos, ErrorCode code, params object[] args)
+        {
+            _pathName = pathName;
+            _code = code;
+            _args = args;
+
+            if (pos > source.Length)
+            {
+                _startLine = -1;
+                _startCh = -1;
+                _endLine = -1;
+                _endCh = -1;
+            }
+            else
+            {
+                StringHelper.CalcLineAndPosFromOffset(source, pos, out _startLine, out _startCh);
+                _endLine = _startLine;
+                _endCh = _startCh;
+            }
         }
 
         public ErrorCode Code => _code;
@@ -71,12 +121,5 @@ namespace DKX.Compilation
     {
         Error,
         Warning
-    }
-
-    public interface IReporter
-    {
-        void ReportItem(int pos, ErrorCode code, params object[] args);
-
-        void ReportItem(CodeSpan span, ErrorCode code, params object[] args);
     }
 }

@@ -6,21 +6,30 @@ namespace DKX.Compilation.Tests.Files
 {
     class TestObjectFileReader : IObjectFileReader
     {
-        private ObjectFileDependency[] _fileDepends;
-        private ObjectTableDependency[] _tableDepends;
+        private ObjectFileModel _model;
+
+        public TestObjectFileReader(ObjectFileModel model)
+        {
+            _model = model;
+        }
 
         public TestObjectFileReader(IEnumerable<ObjectFileDependency> fileDepends, IEnumerable<ObjectTableDependency> tableDepends)
         {
-            _fileDepends = (fileDepends?.Any() ?? false) ? fileDepends.ToArray() : ObjectFileDependency.EmptyArray;
-            _tableDepends = (tableDepends?.Any() ?? false) ? tableDepends.ToArray() : ObjectTableDependency.EmptyArray;
+            _model = new ObjectFileModel
+            {
+                FileDependencies = (fileDepends?.Any() ?? false) ? fileDepends.ToArray() : null,
+                TableDependencies = (tableDepends?.Any() ?? false) ? tableDepends.ToArray() : null
+            };
         }
 
-        public IEnumerable<ObjectFileDependency> GetFileDependencies() => _fileDepends;
+        public ObjectFileModel GetModel() => _model;
 
-        public IEnumerable<ObjectTableDependency> GetTableDependencies() => _tableDepends;
+        public IEnumerable<ObjectFileDependency> GetFileDependencies() => _model.FileDependencies ?? ObjectFileDependency.EmptyArray;
 
-        public string GetWbdkPathName() => null;
+        public IEnumerable<ObjectTableDependency> GetTableDependencies() => _model.TableDependencies ?? ObjectTableDependency.EmptyArray;
 
-        public string GetDkxPathName() => null;
+        public string GetWbdkPathName() => _model.DestinationPathName;
+
+        public string GetDkxPathName() => _model.SourcePathName;
     }
 }

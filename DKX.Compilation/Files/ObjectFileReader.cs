@@ -1,4 +1,5 @@
 ﻿using DK.AppEnvironment;
+using DKX.Compilation.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,12 @@ namespace DKX.Compilation.Files
                 _model = JsonConvert.DeserializeObject<ObjectFileModel>(json);
                 if (_model == null) throw new InvalidObjectFileException(_objPathName);
             }
+        }
+
+        public ObjectFileModel GetModel()
+        {
+            EnsureModelLoaded();
+            return _model;
         }
 
         public IEnumerable<ObjectFileDependency> GetFileDependencies()

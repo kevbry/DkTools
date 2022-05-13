@@ -1,4 +1,6 @@
 ﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.ReportItems;
 using System;
 
 namespace DKX.Compilation.Expressions
@@ -13,8 +15,8 @@ namespace DKX.Compilation.Expressions
             _text = text ?? throw new ArgumentNullException(nameof(text));
         }
 
-        public override string ToCode() => CodeParser.StringToStringLiteral(_text);
+        public override string ToCode(int parentOffset) => OpCodeGenerator.GenerateStringLiteral(_text, parentOffset, Span);
 
-        public override void Report(IReporter reporter) { }
+        public override void Report(ISourceCodeReporter reporter) { }
     }
 }

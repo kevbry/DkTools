@@ -1,0 +1,54 @@
+﻿using DK.AppEnvironment;
+using DK.Code;
+using DK.Diagnostics;
+using System;
+
+namespace DKX.Compilation.ReportItems
+{
+    /// <summary>
+    /// Implementation of a source code reporter where the original source is not available and
+    /// must be retrieved by reading the file from the file system.
+    /// </summary>
+    class SourceCodeReporter : ISourceCodeReporter
+    {
+        private DkAppContext _app;
+        private string _sourcePathName;
+        private string _source;
+        private IReportItemCollector _reportCollector;
+
+        public SourceCodeReporter(DkAppContext app, string sourcePathName, IReportItemCollector reportCollector)
+        {
+            _app = app ?? throw new ArgumentNullException(nameof(app));
+            _sourcePathName = sourcePathName ?? throw new ArgumentNullException(nameof(sourcePathName));
+            _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
+        }
+
+        private void EnsureFileLoaded()
+        {
+            if (_source == null)
+            {
+                try
+                {
+                    _source = _app.FileSystem.GetFileText(_sourcePathName);
+                }
+                catch (Exception ex)
+                {
+                    _app.Log.Error(ex, "Error when attempting to load DKX source code from '{0}'.", _sourcePathName);
+                    _source = string.Empty;
+                }
+            }
+        }
+
+        public void ReportItem(int pos, ErrorCode code, params object[] args)
+        {
+            EnsureFileLoaded();
+            _reportCollector.AddReportItem(new ReportItem(_sourcePathName, _source, pos, code, args));
+        }
+
+        public void ReportItem(CodeSpan span, ErrorCode code, params object[] args)
+        {
+            EnsureFileLoaded();
+            _reportCollector.AddReportItem(new ReportItem(_sourcePathName, _source, span, code, args));
+        }
+    }
+}

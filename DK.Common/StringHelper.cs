@@ -167,6 +167,10 @@ namespace DK
 		}
 
 		public static bool IsEndOfLineChar(this char ch) => ch == '\r' || ch == '\n';
+
+		public static bool IsDigit(this char ch) => ch >= '0' && ch <= '9';
+
+		public static bool IsWhiteSpace(this char ch) => ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 	}
 
 	public static class StringBuilderUtil
