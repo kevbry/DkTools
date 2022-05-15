@@ -73,13 +73,14 @@
     <Compile Include="Expressions\StringLiteralChain.cs" />
     <Compile Include="Files\CompileFileJob.cs" />
     <Compile Include="Files\CompileFileJobFactory.cs" />
-    <Compile Include="Files\DkxFileUtil.cs" />
+    <Compile Include="Files\DkxFileHelper.cs" />
     <Compile Include="Files\ICompileFileJobFactory.cs" />
     <Compile Include="Files\IObjectFileReader.cs" />
     <Compile Include="Files\IObjectFileReaderFactory.cs" />
     <Compile Include="Files\ObjectFileModel.cs" />
     <Compile Include="Files\ObjectFileReader.cs" />
     <Compile Include="Files\ObjectFileReaderFactory.cs" />
+    <Compile Include="Files\ObjectFileReaderHelper.cs" />
     <Compile Include="Files\Privacy.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
     <Compile Include="Nodes\IBodyNode.cs" />

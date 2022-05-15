@@ -5,6 +5,7 @@ using DKX.Compilation.Files;
 using DKX.Compilation.Jobs;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,16 +41,41 @@ namespace DKX.Compilation.CodeGeneration
             // Process all the known object files.
             foreach (var objFile in allObjectFiles)
             {
-                if (!_app.FileSystem.FileExists(objFile.dkxPathName))
+                if (!_app.FileSystem.FileExists(objFile.DkxPathName))
                 {
-                    await _app.Log.DebugAsync("DKX deletion detected; removing WBDK and object files: {0}, {1}", objFile.wbdkPathName, objFile.objectPathName);
-                    //_app.FileSystem.DeleteFile(objFile.wbdkPathName);
-                    //_app.FileSystem.DeleteFile(objFile.objectPathName);
+                    foreach (var fileContext in objFile.FileContexts)
+                    {
+                        var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(objFile.DkxPathName, fileContext);
+                        if (_app.FileSystem.FileExists(wbdkPathName))
+                        {
+                            await _app.Log.DebugAsync("DKX deletion detected; removing WBDK file(s): {0}", wbdkPathName);
+                            _app.FileSystem.DeleteFile(wbdkPathName);
+                        }
+                    }
+
+                    await _app.Log.DebugAsync("DKX deletion detected; removing object file: {0}", objFile.ObjectPathName);
+                    _app.FileSystem.DeleteFile(objFile.ObjectPathName);
+                }
+                else
+                {
+                    // Check for file contexts no longer included in the source.
+                    // For example, where changing a trigger from neutral to server would no longer produce a .nc file.
+                    var remainingContexts = new List<FileContext>(DkxFileHelper.ApplicableFileContexts);
+                    foreach (var fileContext in objFile.ObjectFileReader.GetFileContexts()) remainingContexts.Remove(fileContext);
+                    foreach (var fileContext in remainingContexts)
+                    {
+                        var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(objFile.DkxPathName, fileContext);
+                        if (_app.FileSystem.FileExists(wbdkPathName))
+                        {
+                            await _app.Log.DebugAsync("DKX deletion detected; removing WBDK file(s): {0}", wbdkPathName);
+                            _app.FileSystem.DeleteFile(wbdkPathName);
+                        }
+                    }
                 }
 
                 if (await ShouldProcessFileAsync(objFile))
                 {
-                    var genFileJob = _generateCodeJobFactory.CreateGenerateCodeJob(objFile.dkxPathName, objFile.wbdkPathName, objFile.objectPathName, objFile.fileContext);
+                    var genFileJob = _generateCodeJobFactory.CreateGenerateCodeJob(objFile.DkxPathName, objFile.ObjectPathName);
                     await _compileQueue.EnqueueCompileJobAsync(genFileJob);
                 }
             }
@@ -64,8 +90,8 @@ namespace DKX.Compilation.CodeGeneration
             {
                 foreach (var result in await ScanForObjectFilesAsync(_workDir, string.Empty))
                 {
-                    if (foundFiles.Contains(result.dkxPathName)) continue;
-                    foundFiles.Add(result.dkxPathName);
+                    if (foundFiles.Contains(result.DkxPathName)) continue;
+                    foundFiles.Add(result.DkxPathName);
                     results.Add(result);
                 }
             }
@@ -77,7 +103,7 @@ namespace DKX.Compilation.CodeGeneration
         {
             var results = new List<ScanResultFile>();
 
-            foreach (var pathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + CompileConstants.DkxExportsExtension))
+            foreach (var pathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + CompileConstants.DkxObjectExtension))
             {
                 var objectFileReader = _objectFileReaderFactory.CreateObjectFileReader(pathName);
 
@@ -88,24 +114,7 @@ namespace DKX.Compilation.CodeGeneration
                     continue;
                 }
 
-                var wbdkPathName = objectFileReader.GetWbdkPathName();
-                if (string.IsNullOrEmpty(wbdkPathName))
-                {
-                    await _app.Log.WarningAsync("Object file has no WBDK path name: {0}", pathName);
-                    continue;
-                }
-
-                var fileContext = DkxFileUtil.GetFileContext(dkxPathName);
-                if (fileContext == null) continue;
-
-                results.Add(new ScanResultFile
-                {
-                    dkxPathName = dkxPathName,
-                    wbdkPathName = wbdkPathName,
-                    objectPathName = pathName,
-                    relPath = relPath,
-                    fileContext = fileContext.Value
-                });
+                results.Add(new ScanResultFile(dkxPathName, pathName, relPath, objectFileReader.GetFileContexts(), objectFileReader));
             }
 
             foreach (var path in _app.FileSystem.GetDirectoriesInDirectory(sourceDir))
@@ -116,32 +125,46 @@ namespace DKX.Compilation.CodeGeneration
             return results;
         }
 
-        private struct ScanResultFile
+        private class ScanResultFile
         {
-            public string dkxPathName;
-            public string wbdkPathName;
-            public string objectPathName;
-            public string relPath;
-            public FileContext fileContext;
+            public string DkxPathName { get; private set; }
+            public string ObjectPathName { get; private set; }
+            public string RelPath { get; private set; }
+            public List<FileContext> FileContexts { get; private set; }
+            public IObjectFileReader ObjectFileReader { get; private set; }
+
+            public ScanResultFile(string dkxPathName, string objPathName, string relPath, IEnumerable<FileContext> fileContexts, IObjectFileReader objectFileReader)
+            {
+                DkxPathName = dkxPathName;
+                ObjectPathName = objPathName;
+                RelPath = relPath;
+                FileContexts = fileContexts.ToList();
+                ObjectFileReader = objectFileReader;
+            }
         }
 
         private async Task<bool> ShouldProcessFileAsync(ScanResultFile file)
         {
             // Check if the object file is newer than the WBDK file.
-            if (_app.FileSystem.FileExists(file.wbdkPathName))
+            foreach (var fileContext in file.FileContexts)
             {
-                var objectDate = GetFileDate(file.objectPathName);
-                var wbdkDate = GetFileDate(file.wbdkPathName);
-                if (objectDate > wbdkDate)
+                var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(file.DkxPathName, fileContext);
+
+                if (_app.FileSystem.FileExists(wbdkPathName))
                 {
-                    await _app.Log.DebugAsync("DKX object file is newer than the WBDK file: {0}", file.wbdkPathName);
+                    var objectDate = GetFileDate(file.ObjectPathName);
+                    var wbdkDate = GetFileDate(wbdkPathName);
+                    if (objectDate > wbdkDate)
+                    {
+                        await _app.Log.DebugAsync("DKX object file is newer than the WBDK file: {0}", wbdkPathName);
+                        return true;
+                    }
+                }
+                else
+                {
+                    await _app.Log.DebugAsync("WBDK file does not yet exist: {0}", wbdkPathName);
                     return true;
                 }
-            }
-            else
-            {
-                await _app.Log.DebugAsync("WBDK file does not yet exist: {0}", file.wbdkPathName);
-                return true;
             }
 
             return false;

@@ -178,7 +178,13 @@ namespace DKX.Compilation.Nodes
                     else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
                     else
                     {
-                        var variable = new Variable(name, dataType.Value, passType: null, initializer: null);
+                        var variable = new Variable(
+                            name: name,
+                            dataType: dataType.Value,
+                            fileContext: FileContext.NeutralClass,  // Variables don't use a file context as that's up to the parent method / property accessor.
+                            passType: null,                         // Variables don't use a pass type; that's only for arguments.
+                            initializer: null);                     // Variables don't use an initializer; they add the initialization statement into the code directly where they are declared.
+
                         AddVariable(variable);
                         if (initializer != null) new VariableInitializationStatement(this, variable, initializer, initializerSpan);
                     }
@@ -239,7 +245,7 @@ namespace DKX.Compilation.Nodes
                 var stmtCode = stmt.ToCode(parentOffset);
                 if (string.IsNullOrEmpty(stmtCode)) continue;
 
-                if (bodyCode.Length > 0) bodyCode.Append(';');
+                if (bodyCode.Length > 0) bodyCode.Append(',');
                 bodyCode.Append(stmtCode);
             }
 

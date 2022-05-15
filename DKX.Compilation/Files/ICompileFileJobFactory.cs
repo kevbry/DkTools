@@ -1,10 +1,9 @@
-﻿using DK.Code;
-using DKX.Compilation.Jobs;
+﻿using DKX.Compilation.Jobs;
 
 namespace DKX.Compilation.Files
 {
     public interface ICompileFileJobFactory
     {
-        ICompileJob CreateCompileFileJob(string dkxPathName, string wbdkPathName, string objPathName, FileContext fileContext);
+        ICompileJob CreateCompileFileJob(string dkxPathName, string objPathName);
     }
 }

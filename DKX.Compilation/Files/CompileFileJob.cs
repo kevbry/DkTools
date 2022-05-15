@@ -15,28 +15,19 @@ namespace DKX.Compilation.Files
     public class CompileFileJob : ICompileJob
     {
         private DkAppContext _app;
-        private ICompileJobQueue _compileQueue;
         private string _dkxPathName;
-        private string _wbdkPathName;
         private string _objPathName;
-        private FileContext _fileContext;
         private IReportItemCollector _reportCollector;
 
         public CompileFileJob(
             DkAppContext app,
-            ICompileJobQueue compileQueue,
             string dkxPathName,
-            string wbdkPathName,
             string objPathName,
-            FileContext fileContext,
             IReportItemCollector reportCollector)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
-            _compileQueue = compileQueue ?? throw new ArgumentNullException(nameof(compileQueue));
             _dkxPathName = dkxPathName ?? throw new ArgumentNullException(nameof(dkxPathName));
-            _wbdkPathName = wbdkPathName ?? throw new ArgumentNullException(nameof(wbdkPathName));
             _objPathName = objPathName ?? throw new ArgumentNullException(nameof(objPathName));
-            _fileContext = fileContext;
             _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
         }
 
@@ -70,7 +61,6 @@ namespace DKX.Compilation.Files
                 var obj = new ObjectFileModel
                 {
                     SourcePathName = _dkxPathName,
-                    DestinationPathName = _wbdkPathName,
                     ClassName = fileNode.ClassName,
                     FileDependencies = null,    // TODO
                     TableDependencies = null,   // TODO
@@ -80,6 +70,7 @@ namespace DKX.Compilation.Files
                     Constants = constants
                 };
 
+                _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(_objPathName));
                 _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj, Formatting.Indented));
             }
         }

@@ -19,6 +19,8 @@ namespace DK.Code
 
     public static class FileContextHelper
     {
+        public static readonly FileContext[] EmptyArray = new FileContext[0];
+
         public static FileContext GetFileContextFromFileName(string fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return FileContext.Include;
@@ -177,6 +179,23 @@ namespace DK.Code
 
                 default:
                     return ServerContext.Neutral;
+            }
+        }
+
+        public static string GetExtension(this FileContext fc)
+        {
+            switch (fc)
+            {
+                case FileContext.ServerTrigger: return ".st";
+                case FileContext.ServerClass: return ".sc";
+                case FileContext.ServerProgram: return ".sp";
+                case FileContext.ClientTrigger: return ".ct";
+                case FileContext.ClientClass: return ".cc";
+                case FileContext.GatewayProgram: return ".gp";
+                case FileContext.NeutralClass: return ".nc";
+                case FileContext.Function: return ".f";
+                case FileContext.Include: return ".i";
+                default: return string.Empty;
             }
         }
     }

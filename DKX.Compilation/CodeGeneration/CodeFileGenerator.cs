@@ -1,4 +1,5 @@
 ﻿using DK.AppEnvironment;
+using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Files;
@@ -22,7 +23,7 @@ namespace DKX.Compilation.CodeGeneration
             _report = reporter ?? throw new ArgumentNullException(nameof(reporter));
         }
 
-        public Task<string> GenerateCodeAsync()
+        public Task<string> GenerateCodeAsync(FileContext fileContext, string wbdkPathName)
         {
             _code = new CodeWriter();
 
@@ -33,6 +34,8 @@ namespace DKX.Compilation.CodeGeneration
             {
                 foreach (var method in _obj.Methods)
                 {
+                    if (method.FileContext != fileContext) continue;
+
                     if (!GenerateMethod(method)) return Task.FromResult<string>(null);
                 }
             }
@@ -55,6 +58,15 @@ namespace DKX.Compilation.CodeGeneration
                     if (first) first = false;
                     else _code.Write(", ");
                     _code.Write(arg.DataType);
+                    _code.Write(' ');
+                    switch (arg.PassType)
+                    {
+                        case Variables.ArgumentPassType.ByReference:
+                        case Variables.ArgumentPassType.Out:
+                            _code.Write('&');
+                            break;
+                    }
+                    _code.Write(arg.Name);
                 }
             }
 

@@ -74,7 +74,7 @@ namespace DK.Implementation.Windows
                 var logFileName = Path.Combine(_logDir, string.Format(_logFileNameFormat, DateTime.Now));
                 _writer = new StreamWriter(logFileName);
 
-                Write(LogLevel.Info, "Created log file: {0}", logFileName);
+                //Write(LogLevel.Info, "Created log file: {0}", logFileName);
             }
 
             return true;
@@ -89,7 +89,7 @@ namespace DK.Implementation.Windows
                 {
                     if (_writer != null)
                     {
-                        Write(LogLevel.Info, "Closing log file.");
+                        //Write(LogLevel.Info, "Closing log file.");
                         _writer.Close();
                         _writer = null;
                     }
@@ -196,7 +196,7 @@ namespace DK.Implementation.Windows
         {
             if (level < _level) return;
 
-            WriteAsync(level, message).GetAwaiter().GetResult();
+            Task.Run(() => WriteAsync(level, message)).Wait();
         }
 
         public void Write(LogLevel level, string format, params object[] args)

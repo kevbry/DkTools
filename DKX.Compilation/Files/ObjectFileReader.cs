@@ -1,4 +1,5 @@
 ﻿using DK.AppEnvironment;
+using DK.Code;
 using DKX.Compilation.Exceptions;
 using Newtonsoft.Json;
 using System;
@@ -44,12 +45,6 @@ namespace DKX.Compilation.Files
         {
             EnsureModelLoaded();
             return _model.TableDependencies ?? ObjectTableDependency.EmptyArray;
-        }
-
-        public string GetWbdkPathName()
-        {
-            EnsureModelLoaded();
-            return _model.DestinationPathName;
         }
 
         public string GetDkxPathName()

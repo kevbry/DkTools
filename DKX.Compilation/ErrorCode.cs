@@ -39,14 +39,35 @@ namespace DKX.Compilation
 
         [Description("Class name must match the file name (not case sensitive).")]
         ClassNameDoesNotMatchFileName = 1101,
+
+        [Description("Duplicate privacy modifier.")]
+        DuplicatePrivacyModifier = 1102,
+
+        [Description("Duplicate context modifier.")]
+        DuplicateFileContextModifier = 1103,
+
+        [Description("Invalid server context for this item.")]
+        InvalidFileContext = 1104,
+
+        [Description("Duplicate const modifier.")]
+        DuplicateConstModifier = 1105,
+
+        [Description("'const' is not valid on this item.")]
+        InvalidConst = 1106,
+
+        [Description("Duplicate static modifier.")]
+        DuplicateStaticModifier = 1107,
+
+        [Description("'static' is not valid on this item.")]
+        InvalidStatic = 1108,
+
+        [Description("Classes must be declared 'static'.")]
+        ClassMustBeStatic = 1109,
         #endregion
 
         #region Methods (1200-1299)
         [Description("Expected method name.")]
         ExpectedMethodName = 1200,
-
-        [Description("Methods cannot be constant.")]
-        MethodsCannotBeConst = 1201,
         #endregion
 
         #region Properties (1300-1399)
@@ -56,8 +77,8 @@ namespace DKX.Compilation
         [Description("Property has no getter.")]
         PropertyHasNoGetter = 1301,
 
-        [Description("Properties cannot be constant.")]
-        PropertiesCannotBeConst = 1302,
+        [Description("Property accessor is more accessible than the property.")]
+        PropertyAccessorMoreAccessibleThanProperty = 1302,
         #endregion
 
         #region Variables/Arguments (1400-1499)

@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.Files;
+﻿using DK.Code;
+using DKX.Compilation.Files;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,8 +28,6 @@ namespace DKX.Compilation.Tests.Files
         public IEnumerable<ObjectFileDependency> GetFileDependencies() => _model.FileDependencies ?? ObjectFileDependency.EmptyArray;
 
         public IEnumerable<ObjectTableDependency> GetTableDependencies() => _model.TableDependencies ?? ObjectTableDependency.EmptyArray;
-
-        public string GetWbdkPathName() => _model.DestinationPathName;
 
         public string GetDkxPathName() => _model.SourcePathName;
     }

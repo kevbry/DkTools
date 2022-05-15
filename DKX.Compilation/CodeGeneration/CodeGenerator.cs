@@ -28,7 +28,11 @@ namespace DKX.Compilation.CodeGeneration
 
         public void GenerateBody(bool mustEndWithClose)
         {
-            while (GenerateStatement()) ;
+            do
+            {
+                if (!GenerateStatement()) break;
+            }
+            while (_ops.ReadDelim(throwOnError: false));
         }
 
         public bool GenerateStatement()

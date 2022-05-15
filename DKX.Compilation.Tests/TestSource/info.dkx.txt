@@ -1,0 +1,19 @@
+﻿static class Info
+{
+    like info.inst_name GetInstitutionName()
+    {
+        if (find(info, physical, FIRST) != 0) { return ""; }
+        return info.inst_name;
+    }
+
+    like info.inst_name GetInstitutionName()
+    {
+        qinit();
+        qfind(info, physical, FIRST);
+        qbufreq();
+        if (qsend() != 0) return "";
+
+        return info.inst_name;
+    }
+
+}

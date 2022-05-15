@@ -18,7 +18,7 @@ namespace DKX.Compiler
                 var log = new ConsoleLogger();
                 var config = new WindowsAppConfigSource(log);
                 
-                var app = new DkAppContext(fileSystem, log, config);
+                var app = new DkAppContext(fileSystem, log, config, loadRepository: false);
                 app.LoadAppSettings(null);
 
                 var compiler = new Compilation.Compiler(app);

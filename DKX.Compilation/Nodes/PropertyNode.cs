@@ -2,6 +2,7 @@
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Files;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace DKX.Compilation.Nodes
@@ -10,28 +11,36 @@ namespace DKX.Compilation.Nodes
     {
         private string _name;
         private DataType _dataType;
-        private Privacy _privacy;
 
-        public PropertyNode(Node parent, string name, DataType dataType, Privacy privacy)
+        public PropertyNode(Node parent, string name, DataType dataType)
             : base(parent)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _dataType = dataType;
-            _privacy = privacy;
         }
 
         public string Name => _name;
         public DataType DataType => _dataType;
-        public PropertyAccessorNode Getter => ChildNodes.Where(n => (n is PropertyAccessorNode a) && a.AccessorType == PropertyAccessorType.Getter).Cast<PropertyAccessorNode>().FirstOrDefault();
-        public PropertyAccessorNode Setter => ChildNodes.Where(n => (n is PropertyAccessorNode a) && a.AccessorType == PropertyAccessorType.Setter).Cast<PropertyAccessorNode>().FirstOrDefault();
+        public IEnumerable<PropertyAccessorNode> Getters => ChildNodes.Where(n => (n is PropertyAccessorNode a) && a.AccessorType == PropertyAccessorType.Getter).Cast<PropertyAccessorNode>();
+        public IEnumerable<PropertyAccessorNode> Setters => ChildNodes.Where(n => (n is PropertyAccessorNode a) && a.AccessorType == PropertyAccessorType.Setter).Cast<PropertyAccessorNode>();
 
-        public ObjectProperty ToObjectProperty() => new ObjectProperty
+        public ObjectProperty ToObjectProperty()
         {
-            Name = _name,
-            Privacy = _privacy,
-            DataType = _dataType.ToCode(),
-            ReadOnly = Setter == null
-        };
+            var getters = Getters.Select(x => x.ToObjectPropertyAccessor()).ToArray();
+            if (getters.Length == 0) getters = null;
+
+            var setters = Setters.Select(x => x.ToObjectPropertyAccessor()).ToArray();
+            if (setters.Length == 0) setters = null;
+
+            return new ObjectProperty
+            {
+                Name = _name,
+                DataType = _dataType.ToCode(),
+                ReadOnly = !Setters.Any(),
+                Getters = getters,
+                Setters = setters
+            };
+        }
     }
 
     enum PropertyAccessorType
@@ -43,12 +52,16 @@ namespace DKX.Compilation.Nodes
     class PropertyAccessorNode : Node, IReturnTargetNode, IBodyNode
     {
         private PropertyAccessorType _accessorType;
+        private Privacy _privacy;
+        private FileContext _fileContext;
         private CodeSpan _bodySpan;
 
-        public PropertyAccessorNode(PropertyNode property, PropertyAccessorType accessorType, int bodyStartPos)
+        public PropertyAccessorNode(PropertyNode property, PropertyAccessorType accessorType, Privacy privacy, FileContext fileContext, int bodyStartPos)
             : base(property)
         {
             _accessorType = accessorType;
+            _privacy = privacy;
+            _fileContext = fileContext;
             _bodySpan = new CodeSpan(bodyStartPos, bodyStartPos);
         }
 
@@ -57,5 +70,12 @@ namespace DKX.Compilation.Nodes
         public DataType ReturnDataType => _accessorType == PropertyAccessorType.Getter ? GetContainerOrNull<PropertyNode>().DataType : DataType.Void;
 
         public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
+
+        public ObjectPropertyAccessor ToObjectPropertyAccessor() => new ObjectPropertyAccessor
+        {
+            Privacy = _privacy,
+            FileContext = _fileContext,
+            Body = GenerateObjectBody(_bodySpan.Start)
+        };
     }
 }

@@ -1,15 +1,13 @@
-﻿using DKX.Compilation.Variables;
+﻿using DK.Code;
+using DKX.Compilation.Variables;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using System;
 
 namespace DKX.Compilation.Files
 {
     public class ObjectFileModel
     {
         public string SourcePathName { get; set; }
-
-        public string DestinationPathName { get; set; }
 
         public string ClassName { get; set; }
 
@@ -33,6 +31,9 @@ namespace DKX.Compilation.Files
         [JsonConverter(typeof(StringEnumConverter))]
         public Privacy Privacy { get; set; }
 
+        [JsonConverter(typeof(StringEnumConverter))]
+        public FileContext FileContext { get; set; }
+
         public string ReturnDataType { get; set; }
 
         public ObjectMethodArgument[] Arguments { get; set; }
@@ -44,16 +45,24 @@ namespace DKX.Compilation.Files
     {
         public string Name { get; set; }
 
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Privacy Privacy { get; set; }
-
         public string DataType { get; set; }
 
         public bool ReadOnly { get; set; }
 
-        public ObjectBody Getter { get; set; }
+        public ObjectPropertyAccessor[] Getters { get; set; }
 
-        public ObjectBody Setter { get; set; }
+        public ObjectPropertyAccessor[] Setters { get; set; }
+    }
+
+    public class ObjectPropertyAccessor
+    {
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Privacy Privacy { get; set; }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public FileContext FileContext { get; set; }
+
+        public ObjectBody Body { get; set; }
     }
 
     public class ObjectMethodArgument
@@ -69,6 +78,9 @@ namespace DKX.Compilation.Files
     public class ObjectMemberVariable
     {
         public string Name { get; set; }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public FileContext FileContext { get; set; }
 
         public string DataType { get; set; }
     }

@@ -124,7 +124,7 @@ namespace DkTools
 
             _config = new WindowsAppConfigSource(_log);
 
-            _app = new DkAppContext(_fs, _log, _config);
+            _app = new DkAppContext(_fs, _log, _config, loadRepository: true);
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 

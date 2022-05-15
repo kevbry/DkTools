@@ -20,13 +20,11 @@ namespace DKX.Compilation.Tests.CodeGeneration
         {
             var queue = new TestJobQueue();
 
-            var dkxPathName = @"x:\src\test.ncx";
-            var wbdkPathName = @"x:\src\test.nc";
-            var objPathName = @"x:\bin\.dkx\test.ncx.dkxx";
-            var fileContext = FileContext.NeutralClass;
+            var dkxPathName = @"x:\src\test.dkx";
+            var wbdkPathName = @"x:\src\__test.nc";
+            var objPathName = @"x:\bin\.dkx\test.dkxx";
 
             model.SourcePathName = dkxPathName;
-            model.DestinationPathName = wbdkPathName;
             model.ClassName = "Test";
 
             var objReader = new TestObjectFileReader(model);
@@ -35,9 +33,7 @@ namespace DKX.Compilation.Tests.CodeGeneration
                 app: app,
                 compileQueue: queue,
                 dkxPathName: dkxPathName,
-                wbdkPathName: wbdkPathName,
                 objPathName: objPathName,
-                fileContext: fileContext,
                 objectFileReader: objReader,
                 reporter: queue);
 
@@ -51,6 +47,7 @@ namespace DKX.Compilation.Tests.CodeGeneration
 
             Assert.IsTrue(app.FileSystem.FileExists(dkxPathName));
 
+            Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName));
             var actualWbdkCode = app.FileSystem.GetFileText(wbdkPathName);
             TestContext.Out.WriteLine("Generated Output:");
             TestContext.Out.WriteLine(actualWbdkCode);
@@ -72,6 +69,7 @@ namespace DKX.Compilation.Tests.CodeGeneration
                         {
                             Name = "TestMethod",
                             Privacy = Privacy.Public,
+                            FileContext = FileContext.NeutralClass,
                             ReturnDataType = "void",
                             Arguments = null,
                             Body = new ObjectBody
@@ -112,6 +110,7 @@ void TestMethod()
                         {
                             Name = "TestMethod",
                             Privacy = Privacy.Public,
+                            FileContext = FileContext.NeutralClass,
                             ReturnDataType = "void",
                             Arguments = null,
                             Body = new ObjectBody

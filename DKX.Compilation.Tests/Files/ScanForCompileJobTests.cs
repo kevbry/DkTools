@@ -35,20 +35,20 @@ namespace DKX.Compilation.Tests.Files
             await scanJob.ExecuteAsync(cancel: default);
 
             Assert.AreEqual(4, jobQueue.Jobs.Count);
-            var job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\cust.scx")).FirstOrDefault();
-            ValidateFileJob(job, @"x:\src\cust.scx", @"x:\src\cust.sc", @"x:\bin\.dkx\cust.scx.dkxx", FileContext.ServerClass);
+            var job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\cust.dkx")).FirstOrDefault();
+            ValidateFileJob(job, @"x:\src\cust.dkx", @"x:\bin\.dkx\cust.dkxx");
             jobQueue.Jobs.Remove(job);
 
-            job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\info.ccx")).FirstOrDefault();
-            ValidateFileJob(job, @"x:\src\info.ccx", @"x:\src\info.cc", @"x:\bin\.dkx\info.ccx.dkxx", FileContext.ClientClass);
+            job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\info.dkx")).FirstOrDefault();
+            ValidateFileJob(job, @"x:\src\info.dkx", @"x:\bin\.dkx\info.dkxx");
             jobQueue.Jobs.Remove(job);
 
-            job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\info.scx")).FirstOrDefault();
-            ValidateFileJob(job, @"x:\src\info.scx", @"x:\src\info.sc", @"x:\bin\.dkx\info.scx.dkxx", FileContext.ServerClass);
+            job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\test.dkx")).FirstOrDefault();
+            ValidateFileJob(job, @"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx");
             jobQueue.Jobs.Remove(job);
 
-            job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\test.ncx")).FirstOrDefault();
-            ValidateFileJob(job, @"x:\src\test.ncx", @"x:\src\test.nc", @"x:\bin\.dkx\test.ncx.dkxx", FileContext.NeutralClass);
+            job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(@"x:\src\util.dkx")).FirstOrDefault();
+            ValidateFileJob(job, @"x:\src\util.dkx", @"x:\bin\.dkx\util.dkxx");
             jobQueue.Jobs.Remove(job);
 
             Assert.AreEqual(0, jobQueue.Jobs.Count);
@@ -107,7 +107,7 @@ namespace DKX.Compilation.Tests.Files
             foreach (var file in touchedFiles)
             {
                 var job = jobQueue.Jobs.Cast<TestCompileFileJob>().Where(x => x.DkxPathName.EqualsI(file.DkxPathName)).FirstOrDefault();
-                ValidateFileJob(job, file.DkxPathName, file.WbdkPathName, file.ObjectPathName, file.FileContext);
+                ValidateFileJob(job, file.DkxPathName, file.ObjectPathName);
                 jobQueue.Jobs.Remove(job);
             }
         }
@@ -180,13 +180,11 @@ namespace DKX.Compilation.Tests.Files
             }
         }
 
-        private void ValidateFileJob(TestCompileFileJob job, string dkxPathName, string wbdkPathName, string objPathName, FileContext fileContext)
+        private void ValidateFileJob(TestCompileFileJob job, string dkxPathName, string objPathName)
         {
             Assert.IsNotNull(job);
             Assert.AreEqual(dkxPathName.ToLower(), job.DkxPathName.ToLower());
-            Assert.AreEqual(wbdkPathName.ToLower(), job.WbdkPathName.ToLower());
             Assert.AreEqual(objPathName.ToLower(), job.ObjectPathName.ToLower());
-            Assert.AreEqual(fileContext, job.FileContext);
         }
     }
 }

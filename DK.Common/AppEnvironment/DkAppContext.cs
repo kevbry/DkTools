@@ -11,6 +11,7 @@ namespace DK.AppEnvironment
         private IAppConfigSource _config;
         private DkAppSettings _settings;
         private IncludeFileCache _includeFileCache;
+        private bool _loadRepository;
 
         public event EventHandler<AppSettingsEventArgs> AppChanged;
         public event EventHandler RefreshAllDocumentsRequired;
@@ -18,13 +19,14 @@ namespace DK.AppEnvironment
         public event EventHandler<FileEventArgs> FileChanged;
         public event EventHandler<FileEventArgs> FileDeleted;
 
-        public DkAppContext(IFileSystem fileSystem, ILogger log, IAppConfigSource config)
+        public DkAppContext(IFileSystem fileSystem, ILogger log, IAppConfigSource config, bool loadRepository)
         {
             _fs = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _loadRepository = loadRepository;
 
-            _settings = new DkAppSettings(this);
+            _settings = new DkAppSettings(this, _loadRepository);
             _includeFileCache = new IncludeFileCache(this);
         }
 
@@ -36,7 +38,7 @@ namespace DK.AppEnvironment
 
         public void LoadAppSettings(string appName = null)
         {
-            var settings = DkEnvironment.LoadAppSettings(this, appName);
+            var settings = DkEnvironment.LoadAppSettings(this, appName, _loadRepository);
             _settings = settings;
             OnAppChanged(settings);
             OnRefreshAllDocumentsRequired();

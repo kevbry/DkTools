@@ -30,7 +30,7 @@ namespace DK.AppEnvironment
 		public AppRepo Repo { get; set; }
 		public Dict Dict { get; set; }
 
-		public DkAppSettings(DkAppContext app)
+		public DkAppSettings(DkAppContext app, bool loadRepository)
 		{
 			_app = app ?? throw new ArgumentNullException(nameof(app));
 
@@ -51,7 +51,7 @@ namespace DK.AppEnvironment
 			IncludeFiles = new string[0];
 			SourceAndIncludeFiles = new string[0];
 			Dict = new Dict();
-			Repo = new AppRepo(this);
+			if (loadRepository) Repo = new AppRepo(this);
 		}
 
 		public IAppConfigSource Config => _app.Config;

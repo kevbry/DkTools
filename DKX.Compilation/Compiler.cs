@@ -51,7 +51,7 @@ namespace DKX.Compilation
                 app: _app,
                 workDir: _workDir,
                 compileQueue: queue,
-                compileFileJobFactory: new CompileFileJobFactory(_app, queue, queue),
+                compileFileJobFactory: new CompileFileJobFactory(_app, queue),
                 objectFileReaderFactory: new ObjectFileReaderFactory(_app),
                 tableHashProvider: tableHashProvider));
 

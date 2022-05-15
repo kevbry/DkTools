@@ -71,16 +71,16 @@
     <Compile Include="TestLogger.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TestSource\info.ccx.txt">
+    <Content Include="TestSource\info.dkx.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestSource\info.scx.txt">
+    <Content Include="TestSource\util.dkx.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestSource\test.ncx.txt">
+    <Content Include="TestSource\test.dkx.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestSource\cust.scx.txt">
+    <Content Include="TestSource\cust.dkx.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="TestSource\util.nc.txt">

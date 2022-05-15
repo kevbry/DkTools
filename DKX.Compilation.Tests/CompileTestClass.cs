@@ -14,7 +14,7 @@ namespace DKX.Compilation.Tests
             var log = new TestLogger();
             var config = new TestAppConfigSource();
 
-            var app = new DkAppContext(fs, log, config);
+            var app = new DkAppContext(fs, log, config, loadRepository: false);
             SetupCompileFiles(app);
             app.LoadAppSettings();
             return app;
@@ -101,10 +101,10 @@ namespace DKX.Compilation.Tests
             SetupFile(app, @"x:\src\include\all.i", null);
 
             // DKX source
-            SetupFile(app, @"x:\src\cust.scx", "cust.scx.txt");
-            SetupFile(app, @"x:\src\info.ccx", "info.ccx.txt");
-            SetupFile(app, @"x:\src\info.scx", "info.scx.txt");
-            SetupFile(app, @"x:\src\test.ncx", "test.ncx.txt");
+            SetupFile(app, @"x:\src\cust.dkx", "cust.dkx.txt");
+            SetupFile(app, @"x:\src\info.dkx", "info.dkx.txt");
+            SetupFile(app, @"x:\src\test.dkx", "test.dkx.txt");
+            SetupFile(app, @"x:\src\util.dkx", "util.dkx.txt");
         }
 
         private void SetupFile(DkAppContext app, string pathName, string testFileName)

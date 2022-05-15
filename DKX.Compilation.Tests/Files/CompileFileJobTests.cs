@@ -21,12 +21,11 @@ namespace DKX.Compilation.Tests.Files
             var dkxPathName = @"x:\src\test.ncx";
             var wbdkPathName = @"x:\src\test.nc";
             var objPathName = @"x:\bin\.dkx\test.ncx.dkxx";
-            var fileContext = FileContext.NeutralClass;
 
             fs.WriteFileText(dkxPathName, source);
 
             var queue = new TestJobQueue();
-            var compileJob = new CompileFileJob(app, queue, dkxPathName, wbdkPathName, objPathName, fileContext, queue);
+            var compileJob = new CompileFileJob(app, dkxPathName, objPathName, queue);
             await compileJob.ExecuteAsync(cancel: default);
 
             foreach (var item in queue.ReportItems)
@@ -44,7 +43,6 @@ namespace DKX.Compilation.Tests.Files
             Assert.IsNotNull(obj);
 
             Assert.AreEqual(dkxPathName, obj.SourcePathName);
-            Assert.AreEqual(wbdkPathName, obj.DestinationPathName);
 
             return obj;
         }
@@ -54,14 +52,12 @@ namespace DKX.Compilation.Tests.Files
             var fs = app.FileSystem;
 
             var dkxPathName = @"x:\src\test.ncx";
-            var wbdkPathName = @"x:\src\test.nc";
             var objPathName = @"x:\bin\.dkx\test.ncx.dkxx";
-            var fileContext = FileContext.NeutralClass;
 
             fs.WriteFileText(dkxPathName, source);
 
             var queue = new TestJobQueue();
-            var compileJob = new CompileFileJob(app, queue, dkxPathName, wbdkPathName, objPathName, fileContext, queue);
+            var compileJob = new CompileFileJob(app, dkxPathName, objPathName, queue);
             await compileJob.ExecuteAsync(cancel: default);
 
             foreach (var item in queue.ReportItems)
@@ -95,7 +91,7 @@ class Test
 
             var method = obj.Methods[0];
             Assert.AreEqual("DoNothing", method.Name);
-            Assert.AreEqual(Privacy.Private, method.Privacy);
+            Assert.AreEqual(Privacy.Public, method.Privacy);
             Assert.AreEqual("void", method.ReturnDataType);
             Assert.IsNull(method.Arguments);
         }
@@ -181,9 +177,16 @@ class Test
 
             var prop = obj.Properties[0];
             Assert.AreEqual("Zero", prop.Name);
-            Assert.AreEqual(Privacy.Public, prop.Privacy);
             Assert.AreEqual("int", prop.DataType);
             Assert.AreEqual(true, prop.ReadOnly);
+
+            Assert.IsNotNull(prop.Getters, "Getters array is null.");
+            Assert.AreEqual(1, prop.Getters.Length, "Wrong number of getters.");
+            var getter = prop.Getters[0];
+            Assert.AreEqual(FileContext.NeutralClass, getter.FileContext);
+            Assert.AreEqual(Privacy.Public, getter.Privacy);
+
+            Assert.IsNull(prop.Setters);
         }
 
         [Test]
@@ -217,7 +220,6 @@ class Test
 
             var prop = obj.Properties[0];
             Assert.AreEqual("Id", prop.Name);
-            Assert.AreEqual(Privacy.Public, prop.Privacy);
             Assert.AreEqual("int", prop.DataType);
             Assert.AreEqual(false, prop.ReadOnly);
         }

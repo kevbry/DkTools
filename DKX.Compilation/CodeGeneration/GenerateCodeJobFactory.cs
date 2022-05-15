@@ -1,5 +1,4 @@
 ﻿using DK.AppEnvironment;
-using DK.Code;
 using DKX.Compilation.Files;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.ReportItems;
@@ -26,11 +25,11 @@ namespace DKX.Compilation.CodeGeneration
             _reporterFactory = reporterFactory ?? throw new ArgumentNullException(nameof(reporterFactory));
         }
 
-        public ICompileJob CreateGenerateCodeJob(string dkxPathName, string wbdkPathName, string objPathName, FileContext fileContext)
+        public ICompileJob CreateGenerateCodeJob(string dkxPathName, string objPathName)
         {
             var reporter = _reporterFactory.CreateSourceCodeReporter(_app, dkxPathName);
 
-            return new GenerateCodeJob(_app, _compileQueue, dkxPathName, wbdkPathName, objPathName, fileContext,
+            return new GenerateCodeJob(_app, _compileQueue, dkxPathName, objPathName,
                 _objectFileReaderFactory.CreateObjectFileReader(objPathName), reporter);
         }
     }
