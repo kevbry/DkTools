@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace DKX.Compilation.DataTypes
+﻿namespace DKX.Compilation.DataTypes
 {
     public enum BaseType : byte
     {
@@ -92,18 +90,6 @@ namespace DKX.Compilation.DataTypes
         /// <summary>
         /// COM variant
         /// </summary>
-        Variant = 17,
-
-        /// <summary>
-        /// like operator on a single identifier.
-        /// Options list will contain 1 string with the identifier name.
-        /// </summary>
-        Like1 = 18,
-
-        /// <summary>
-        /// Like operator on a word-dot-pair.
-        /// Options list will contain 2 strings with the 2 words.
-        /// </summary>
-        Like2 = 19
+        Variant = 17
     }
 }

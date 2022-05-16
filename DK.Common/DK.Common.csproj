@@ -142,6 +142,10 @@
     <Compile Include="Diagnostics\Output.cs" />
     <Compile Include="Modeling\SignatureDocumentor.cs" />
     <Compile Include="Preprocessing\IncludeDependency.cs" />
+    <Compile Include="Repository\AppRepoFactory.cs" />
+    <Compile Include="Repository\IAppRepo.cs" />
+    <Compile Include="Repository\IAppRepoFactory.cs" />
+    <Compile Include="Repository\NoAppRepo.cs" />
     <Compile Include="Schema\Column.cs" />
     <Compile Include="Schema\Dict.cs" />
     <Compile Include="Schema\Interface.cs" />

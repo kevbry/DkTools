@@ -22,6 +22,8 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task AllExportsGenerated()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
 
             var jobQueue = new TestJobQueue();
 
@@ -59,6 +61,8 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task OnlyModifiedFilesPickedUp()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
 
             var jobQueue = new TestJobQueue();
@@ -129,6 +133,8 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task IncludeDependencies()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
 
             var jobQueue = new TestJobQueue();
@@ -201,6 +207,8 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task DeleteFile(string sourceFile, string exportFile)
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
 
             var jobQueue = new TestJobQueue();
@@ -229,6 +237,8 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task TableDependencies()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
 
             var jobQueue = new TestJobQueue();

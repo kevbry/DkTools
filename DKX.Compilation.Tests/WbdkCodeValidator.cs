@@ -1,7 +1,7 @@
 ﻿using DK;
 using NUnit.Framework;
 
-namespace DKX.Compilation.Tests.CodeGeneration
+namespace DKX.Compilation.Tests
 {
     class WbdkCodeValidator
     {

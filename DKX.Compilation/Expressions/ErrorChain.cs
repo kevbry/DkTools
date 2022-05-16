@@ -1,4 +1,7 @@
 ﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.Constants;
+using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 
 namespace DKX.Compilation.Expressions
@@ -27,6 +30,12 @@ namespace DKX.Compilation.Expressions
 
         public override void Report(ISourceCodeReporter reporter) => reporter.ReportItem(Span, _errorCode, _args);
 
-        public override string ToCode(int offset) => _innerChain?.ToCode(offset);
+        public override OpCodeFragment Execute(OpCodeGeneratorContext context) => throw new OpCodeCannotGenerateKnownErrorsException();
+
+        public override OpCodeFragment ReadProvideVariable(OpCodeGeneratorContext context)  => throw new OpCodeCannotGenerateKnownErrorsException();
+
+        public override OpCodeFragment ReadToVariable(OpCodeGeneratorContext context, string varName, DataType? varDataType) => throw new OpCodeCannotGenerateKnownErrorsException();
+
+        public override ConstantValue ReadConstant(DataType constDataType) => throw new OpCodeCannotGenerateKnownErrorsException();
     }
 }

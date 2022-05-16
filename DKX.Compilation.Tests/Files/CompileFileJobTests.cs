@@ -2,7 +2,6 @@
 using DK.Code;
 using DKX.Compilation.Files;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Tests.CodeGeneration;
 using DKX.Compilation.Variables;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -72,6 +71,8 @@ namespace DKX.Compilation.Tests.Files
         public async Task SimpleMethod()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var obj = await SetupCodeSuccess(app, @"
 class Test
 {
@@ -100,6 +101,8 @@ class Test
         public async Task MethodWithArguments()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var obj = await SetupCodeSuccess(app, @"
 class Test
 {
@@ -154,6 +157,8 @@ class Test
         public async Task SimpleReadOnlyProperty()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var obj = await SetupCodeSuccess(app, @"
 class Test
 {
@@ -193,6 +198,8 @@ class Test
         public async Task SimpleReadWriteProperty()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var obj = await SetupCodeSuccess(app, @"
 class Test
 {
@@ -200,11 +207,9 @@ class Test
     {
         get
         {
-            return 0;
         }
         set
         {
-            _id = value;
         }
     }
 }
@@ -228,6 +233,8 @@ class Test
         public async Task PropertyWithNoGetter()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var queue = await SetupCodeError(app, @"
 class Test
 {
@@ -247,6 +254,8 @@ class Test
         public async Task PropertyWithNoGetterOrSetter()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var queue = await SetupCodeError(app, @"
 class Test
 {
@@ -262,6 +271,8 @@ class Test
         public async Task MemberVariables()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var obj = await SetupCodeSuccess(app, @"
 class Test
 {
@@ -300,6 +311,8 @@ class Test
         public async Task MemberVariablesCanOnlyBePrivate(string privacy)
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var queue = await SetupCodeError(app, @"
 class Test
 {
@@ -310,89 +323,11 @@ class Test
         }
 
         [Test]
-        public async Task Constants()
-        {
-            var app = CreateAppContext();
-            var obj = await SetupCodeSuccess(app, @"
-class Test
-{
-    public const string InstitutionName = ""Credit Union"";
-    public const unsigned(3) InstitutionRouteNumber = 899;
-    public const int SecondsPerDay = 24 * 60 * 60;
-}
-");
-
-            Assert.AreEqual("Test", obj.ClassName);
-            Assert.IsNull(obj.FileDependencies);
-            Assert.IsNull(obj.TableDependencies);
-            Assert.IsNull(obj.Properties);
-
-            Assert.IsNull(obj.Methods);
-            Assert.IsNull(obj.Properties);
-            Assert.IsNull(obj.MemberVariables);
-
-            Assert.IsNotNull(obj.Constants);
-            Assert.AreEqual(3, obj.Constants.Length);
-
-            var constant = obj.Constants[0];
-            Assert.AreEqual("InstitutionName", constant.Name);
-            Assert.AreEqual("string", constant.DataType);
-            Assert.AreEqual("\"Credit Union\":14", constant.Code);
-            Assert.AreEqual(59, constant.CodeStartPosition);
-
-            constant = obj.Constants[1];
-            Assert.AreEqual("InstitutionRouteNumber", constant.Name);
-            Assert.AreEqual("unsigned(3)", constant.DataType);
-            Assert.AreEqual("899:3", constant.Code);
-            Assert.AreEqual(130, constant.CodeStartPosition);
-
-            constant = obj.Constants[2];
-            Assert.AreEqual("SecondsPerDay", constant.Name);
-            Assert.AreEqual("int", constant.DataType);
-            Assert.AreEqual("mul:12(mul:7(24:2,60:502),60:1002)", constant.Code);
-            Assert.AreEqual(173, constant.CodeStartPosition);
-        }
-
-        [TestCase("2 + 4 * 8", "add(2,mul(4,8))")]
-        [TestCase("(2 + 4) * 8", "mul(add(2,4),8)")]
-        [TestCase("2 * (4 + 8)", "mul(2,add(4,8))")]
-        [TestCase("1 * 2 + 3", "add(mul(1,2),3)")]
-        [TestCase("1 * 2 + 3 - 4", "sub(add(mul(1,2),3),4)")]
-        [TestCase("(10 - 5) * 6 + 3", "add(mul(sub(10,5),6),3)")]
-        [TestCase("2 * (4 + 8) + (10 - 5) * 6 + 3", "add(add(mul(2,add(4,8)),mul(sub(10,5),6)),3)")]
-        public async Task PrecedenceChain(string initializer, string codeOut)
-        {
-            var app = CreateAppContext();
-            var obj = await SetupCodeSuccess(app, @"
-class Test
-{
-    public const int Precedence = " + initializer + @";
-}
-");
-
-            Assert.AreEqual("Test", obj.ClassName);
-            Assert.IsNull(obj.FileDependencies);
-            Assert.IsNull(obj.TableDependencies);
-            Assert.IsNull(obj.Properties);
-
-            Assert.IsNull(obj.Methods);
-            Assert.IsNull(obj.Properties);
-            Assert.IsNull(obj.MemberVariables);
-
-            Assert.IsNotNull(obj.Constants);
-            Assert.AreEqual(1, obj.Constants.Length);
-
-            var constant = obj.Constants[0];
-            Assert.AreEqual("Precedence", constant.Name);
-            Assert.AreEqual("int", constant.DataType);
-
-            OpCodeStringValidator.Validate(codeOut, constant.Code);
-        }
-
-        [Test]
         public async Task DuplicateVariableNames()
         {
             var app = CreateAppContext();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
             var queue = await SetupCodeError(app, @"
 class Test
 {
@@ -402,45 +337,6 @@ class Test
 }
 ");
             Assert.True(queue.ReportItems.Any(i => i.Code == ErrorCode.DuplicateVariable));
-        }
-
-        [Test]
-        public async Task VariableDeclaration()
-        {
-            var app = CreateAppContext();
-            var obj = await SetupCodeSuccess(app, @"
-class Test
-{
-    void DoTest()
-    {
-        int x = 0;
-    }
-}
-");
-
-            Assert.AreEqual("Test", obj.ClassName);
-            Assert.IsNull(obj.FileDependencies);
-            Assert.IsNull(obj.TableDependencies);
-            Assert.IsNull(obj.Properties);
-
-            Assert.IsNull(obj.Properties);
-            Assert.IsNull(obj.MemberVariables);
-            Assert.IsNull(obj.Constants);
-
-            Assert.IsNotNull(obj.Methods);
-            Assert.AreEqual(1, obj.Methods.Length);
-            var method = obj.Methods[0];
-
-            Assert.IsNotNull(method.Body);
-            Assert.IsNotNull(method.Body.Variables);
-            Assert.AreEqual(1, method.Body.Variables.Length);
-
-            var v = method.Body.Variables[0];
-            Assert.AreEqual("x", v.Name);
-            Assert.AreEqual("int", v.DataType);
-            Assert.IsNull(v.InitializerCode);
-
-            Assert.AreEqual("asn:1405(@x:5,0:401)", method.Body.Code);
         }
     }
 }

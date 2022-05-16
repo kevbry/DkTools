@@ -1,4 +1,7 @@
-﻿using DKX.Compilation.CodeGeneration.OpCodes;
+﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.Constants;
+using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using System;
 
@@ -10,8 +13,8 @@ namespace DKX.Compilation.Expressions
         private Chain _left;
         private Chain _right;
 
-        public OperatorChain(Operator op, Chain left, Chain right)
-            : base(right != null ? left.Span.Envelope(right.Span) : left.Span)
+        public OperatorChain(Operator op, Chain left, Chain right, CodeSpan opSpan)
+            : base(right != null ? left.Span.Envelope(right.Span) : left.Span.Envelope(opSpan))
         {
             _op = op;
             _left = left ?? throw new ArgumentNullException(nameof(left));
@@ -20,25 +23,58 @@ namespace DKX.Compilation.Expressions
             if (_right == null && !_op.IsUnaryPost()) throw new ArgumentNullException(nameof(right));
         }
 
-        public override string ToCode(int parentOffset)
+        public override OpCodeFragment Execute(OpCodeGeneratorContext context)
         {
-            if (_right != null)
+            OpCodeFragment leftFrag;
+
+            switch (_op)
             {
-                return string.Concat(
-                    OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
-                    "(",
-                    _left.ToCode(Span.Start),
-                    ",",
-                    _right.ToCode(Span.Start),
-                    ")");
+                case Operator.Increment:
+                    leftFrag = _left.ReadProvideVariable(context);
+                    return leftFrag.Append(OpCodeFragment.Increment(Span, leftFrag.DataType, leftFrag.VarName));
+                default:
+                    throw new NotImplementedException();
             }
-            else
+        }
+
+        public override OpCodeFragment ReadProvideVariable(OpCodeGeneratorContext context)
+        {
+            OpCodeFragment leftFrag;
+
+            switch (_op)
             {
-                return string.Concat(
-                    OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
-                    "(",
-                    _left.ToCode(Span.Start),
-                    ")");
+                case Operator.Increment:
+                    leftFrag = _left.ReadProvideVariable(context);
+                    return leftFrag.Append(OpCodeFragment.Increment(Span, leftFrag.DataType, leftFrag.VarName));
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public override OpCodeFragment ReadToVariable(OpCodeGeneratorContext context, string varName, DataType? varDataType)
+        {
+            OpCodeFragment leftFrag;
+
+            switch (_op)
+            {
+                case Operator.Increment:
+                    leftFrag = _left.ReadProvideVariable(context);
+                    leftFrag.Append(OpCodeFragment.Increment(Span, leftFrag.DataType, leftFrag.VarName));
+                    if (varName != leftFrag.VarName) leftFrag.Append(OpCodeFragment.SetVarToVar(Span, varDataType, varName, leftFrag.VarName));
+                    return leftFrag;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public override ConstantValue ReadConstant(DataType constDataType)
+        {
+            switch (_op)
+            {
+                case Operator.Increment:
+                    throw new OpCodeCannotBeConstantException();
+                default:
+                    throw new NotImplementedException();
             }
         }
 

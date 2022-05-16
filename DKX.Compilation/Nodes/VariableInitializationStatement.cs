@@ -18,15 +18,6 @@ namespace DKX.Compilation.Nodes
             _exp = exp ?? throw new ArgumentNullException(nameof(exp));
         }
 
-        public override string ToCode(int parentOffset)
-        {
-            return string.Concat(
-                OpCodeGenerator.GenerateOpCode("asn", parentOffset, Span),
-                "(",
-                OpCodeGenerator.GenerateIdentifier(_variable.Name, Span.Start, Span),
-                ",",
-                _exp.ToCode(Span.Start),
-                ")");
-        }
+        public override OpCodeFragment Execute(OpCodeGeneratorContext context) => _exp.ReadToVariable(context, _variable.Name, _variable.DataType);
     }
 }
