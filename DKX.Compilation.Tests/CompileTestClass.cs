@@ -17,8 +17,6 @@ namespace DKX.Compilation.Tests
             var appRepoFactory = new NoAppRepoFactory();
 
             var app = new DkAppContext(fs, log, config, new NoAppRepoFactory());
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
             return app;
         }
 
