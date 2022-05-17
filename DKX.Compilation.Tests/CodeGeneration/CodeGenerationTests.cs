@@ -82,7 +82,7 @@ namespace DKX.Compilation.Tests.CodeGeneration
                                         DataType = "int"
                                     }
                                 },
-                                Code = "asn(@x,0)"
+                                Code = "asn($x,0)"
                             }
                         }
                     }
@@ -123,7 +123,7 @@ void TestMethod()
                                         DataType = "int"
                                     }
                                 },
-                                Code = "asn(@x,0),inc(@x)"
+                                Code = "asn($x,0),inc($x)"
                             }
                         }
                     }

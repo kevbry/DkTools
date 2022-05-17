@@ -106,5 +106,23 @@ namespace DKX.Compilation.CodeGeneration
 
             return CodeFragment.Empty;
         }
+
+        public bool TryGetVariable(string name, out DataType dataTypeOut)
+        {
+            if (_variables.TryGetValue(name, out var obj))
+            {
+                var varDataType = DataType.Parse(obj.DataType);
+                if (varDataType != null)
+                {
+                    if (varDataType.Value.IsUnresolved) varDataType = ResolveDataType(varDataType.Value);
+
+                    dataTypeOut = varDataType.Value;
+                    return true;
+                }
+            }
+
+            dataTypeOut = default;
+            return false;
+        }
     }
 }

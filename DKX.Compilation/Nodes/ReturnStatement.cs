@@ -9,7 +9,7 @@ namespace DKX.Compilation.Nodes
     {
         private Chain _exp;
 
-        public ReturnStatement(Node parent, CodeSpan keywordSpan)
+        public ReturnStatement(Node parent, CodeSpan keywordSpan, NodeBodyContext bodyContext)
             : base(parent, keywordSpan)
         {
             var returnNode = GetContainerOrNull<IReturnTargetNode>();
@@ -17,7 +17,7 @@ namespace DKX.Compilation.Nodes
 
             if (!returnNode.ReturnDataType.IsVoid)
             {
-                _exp = ExpressionParser.ReadExpressionOrNull(Code);
+                _exp = ExpressionParser.ReadExpressionOrNull(bodyContext);
                 if (_exp == null) ReportItem(keywordSpan, ErrorCode.ExpectedExpression);
                 else Span = keywordSpan.Envelope(_exp.Span);
             }

@@ -49,16 +49,16 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
                 return OpCodeType.OpCode;
             }
 
-            if (ch == '@')
+            if (ch == '$')
             {
                 _pos++;
-                if (_pos > _len || !(ch = _source[_pos]).IsWordChar(true)) throw new InvalidOpCodeSourceException("'@' not followed by word char.");
+                if (_pos > _len || !(ch = _source[_pos]).IsWordChar(true)) throw new InvalidOpCodeSourceException("'$' not followed by word char.");
                 _text.Append(ch);
 
                 while ((ch = _source[++_pos]).IsWordChar(false)) _text.Append(ch);
 
                 ReadSpanSuffix();
-                return OpCodeType.Identifier;
+                return OpCodeType.Variable;
             }
 
             if (ch == '\"' || ch == '\'')
@@ -211,11 +211,11 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
             return _text.ToString();
         }
 
-        public string ReadIdentifier(bool throwOnError = true)
+        public string ReadVariable(bool throwOnError = true)
         {
-            if (Read() != OpCodeType.Identifier)
+            if (Read() != OpCodeType.Variable)
             {
-                if (throwOnError) throw new InvalidOpCodeSourceException("Expected identifier.");
+                if (throwOnError) throw new InvalidOpCodeSourceException("Expected variable.");
                 return null;
             }
             return _text.ToString();
@@ -259,7 +259,7 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
     {
         None,
         OpCode,
-        Identifier,
+        Variable,
         Number,
         String,
         Char,

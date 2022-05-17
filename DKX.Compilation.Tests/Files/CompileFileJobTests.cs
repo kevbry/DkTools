@@ -18,9 +18,9 @@ namespace DKX.Compilation.Tests.Files
         {
             var fs = app.FileSystem;
 
-            var dkxPathName = @"x:\src\test.ncx";
-            var wbdkPathName = @"x:\src\test.nc";
-            var objPathName = @"x:\bin\.dkx\test.ncx.dkxx";
+            var dkxPathName = @"x:\src\test.dkx";
+            var wbdkPathName = @"x:\src\__test.nc";
+            var objPathName = @"x:\bin\.dkx\test.dkx.dkxx";
 
             fs.WriteFileText(dkxPathName, source);
 
@@ -154,7 +154,7 @@ class Test
         public async Task SimpleReadOnlyProperty()
         {
             var app = CreateAppContext();
-            var obj = await SetupCodeSuccess(app, @"
+            var actualModel = await SetupCodeSuccess(app, @"
 class Test
 {
     public int Zero
@@ -167,35 +167,43 @@ class Test
 }
 ");
 
-            Assert.AreEqual("Test", obj.ClassName);
-            Assert.IsNull(obj.FileDependencies);
-            Assert.IsNull(obj.TableDependencies);
-            Assert.IsNull(obj.Methods);
-
-            Assert.IsNotNull(obj.Properties);
-            Assert.AreEqual(1, obj.Properties.Length);
-
-            var prop = obj.Properties[0];
-            Assert.AreEqual("Zero", prop.Name);
-            Assert.AreEqual("int", prop.DataType);
-            Assert.AreEqual(true, prop.ReadOnly);
-
-            Assert.IsNotNull(prop.Getters, "Getters array is null.");
-            Assert.AreEqual(1, prop.Getters.Length, "Wrong number of getters.");
-            var getter = prop.Getters[0];
-            Assert.AreEqual(FileContext.NeutralClass, getter.FileContext);
-            Assert.AreEqual(Privacy.Public, getter.Privacy);
-
-            Assert.IsNull(prop.Setters);
+            ObjectModelValidator.ValidateModel(new ObjectFileModel
+            {
+                ClassName = "Test",
+                SourcePathName = @"x:\src\test.dkx",
+                Properties = new ObjectProperty[]
+                {
+                    new ObjectProperty
+                    {
+                        Name = "Zero",
+                        DataType = "int",
+                        Getters = new ObjectPropertyAccessor[]
+                        {
+                            new ObjectPropertyAccessor
+                            {
+                                Privacy = Privacy.Public,
+                                FileContext = FileContext.NeutralClass,
+                                Body = new ObjectBody
+                                {
+                                    StartPosition = 67,
+                                    Code = "ret(0)"
+                                }
+                            }
+                        }
+                    }
+                }
+            }, actualModel);
         }
 
         [Test]
         public async Task SimpleReadWriteProperty()
         {
             var app = CreateAppContext();
-            var obj = await SetupCodeSuccess(app, @"
+            var actualModel = await SetupCodeSuccess(app, @"
 class Test
 {
+    int _id;
+
     public int Id
     {
         get
@@ -209,19 +217,54 @@ class Test
     }
 }
 ");
-
-            Assert.AreEqual("Test", obj.ClassName);
-            Assert.IsNull(obj.FileDependencies);
-            Assert.IsNull(obj.TableDependencies);
-            Assert.IsNull(obj.Methods);
-
-            Assert.IsNotNull(obj.Properties);
-            Assert.AreEqual(1, obj.Properties.Length);
-
-            var prop = obj.Properties[0];
-            Assert.AreEqual("Id", prop.Name);
-            Assert.AreEqual("int", prop.DataType);
-            Assert.AreEqual(false, prop.ReadOnly);
+            ObjectModelValidator.ValidateModel(new ObjectFileModel
+            {
+                ClassName = "Test",
+                SourcePathName = @"x:\src\test.dkx",
+                MemberVariables = new ObjectMemberVariable[]
+                {
+                    new ObjectMemberVariable
+                    {
+                        Name = "_id",
+                        DataType = "int",
+                        FileContext = FileContext.NeutralClass
+                    }
+                },
+                Properties = new ObjectProperty[]
+                {
+                    new ObjectProperty
+                    {
+                        Name = "Id",
+                        DataType = "int",
+                        Getters = new ObjectPropertyAccessor[]
+                        {
+                            new ObjectPropertyAccessor
+                            {
+                                Privacy = Privacy.Public,
+                                FileContext = FileContext.NeutralClass,
+                                Body = new ObjectBody
+                                {
+                                    StartPosition = 81,
+                                    Code = "ret(0)"
+                                }
+                            }
+                        },
+                        Setters = new ObjectPropertyAccessor[]
+                        {
+                            new ObjectPropertyAccessor
+                            {
+                                Privacy = Privacy.Public,
+                                FileContext = FileContext.NeutralClass,
+                                Body = new ObjectBody
+                                {
+                                    StartPosition = 139,
+                                    Code = "asn($_id,$value)"
+                                }
+                            }
+                        }
+                    }
+                }
+            }, actualModel);
         }
 
         [Test]
@@ -408,7 +451,7 @@ class Test
         public async Task VariableDeclaration()
         {
             var app = CreateAppContext();
-            var obj = await SetupCodeSuccess(app, @"
+            var actualModel = await SetupCodeSuccess(app, @"
 class Test
 {
     void DoTest()
@@ -418,29 +461,35 @@ class Test
 }
 ");
 
-            Assert.AreEqual("Test", obj.ClassName);
-            Assert.IsNull(obj.FileDependencies);
-            Assert.IsNull(obj.TableDependencies);
-            Assert.IsNull(obj.Properties);
-
-            Assert.IsNull(obj.Properties);
-            Assert.IsNull(obj.MemberVariables);
-            Assert.IsNull(obj.Constants);
-
-            Assert.IsNotNull(obj.Methods);
-            Assert.AreEqual(1, obj.Methods.Length);
-            var method = obj.Methods[0];
-
-            Assert.IsNotNull(method.Body);
-            Assert.IsNotNull(method.Body.Variables);
-            Assert.AreEqual(1, method.Body.Variables.Length);
-
-            var v = method.Body.Variables[0];
-            Assert.AreEqual("x", v.Name);
-            Assert.AreEqual("int", v.DataType);
-            Assert.IsNull(v.InitializerCode);
-
-            Assert.AreEqual("asn:1405(@x:5,0:401)", method.Body.Code);
+            ObjectModelValidator.ValidateModel(new ObjectFileModel
+            {
+                ClassName = "Test",
+                SourcePathName = @"x:\src\Test.dkx",
+                Methods = new ObjectMethod[]
+                {
+                    new ObjectMethod
+                    {
+                        Name = "DoTest",
+                        Privacy = Privacy.Public,
+                        FileContext = FileContext.NeutralClass,
+                        ReturnDataType = "void",
+                        Arguments = null,
+                        Body = new ObjectBody
+                        {
+                            Variables = new ObjectVariable[]
+                            {
+                                new ObjectVariable
+                                {
+                                    Name = "x",
+                                    DataType = "int"
+                                }
+                            },
+                            StartPosition = 41,
+                            Code = "asn($x,0)"
+                        }
+                    }
+                }
+            }, actualModel);
         }
     }
 }

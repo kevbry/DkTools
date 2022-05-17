@@ -17,7 +17,6 @@ namespace DKX.Compilation.Nodes
         private Node _parent;
         private DkAppContext _app;
         private CodeParser _code;
-        private Dictionary<string, Variable> _vars;
         private List<Node> _childNodes;
 
         public static readonly Node[] EmptyArray = new Node[0];
@@ -61,13 +60,13 @@ namespace DKX.Compilation.Nodes
         #endregion
 
         #region Variables
+        private Dictionary<string, Variable> _vars;
+
         public bool HasVariable(string name)
         {
             if (_vars != null && _vars.ContainsKey(name)) return true;
             return _parent?.HasVariable(name) ?? false;
         }
-
-        public virtual bool HasConstant(string name) => _parent.HasConstant(name);
 
         public virtual bool HasProperty(string name) => _parent.HasProperty(name);
 
@@ -87,21 +86,24 @@ namespace DKX.Compilation.Nodes
             _vars[variable.Name] = variable;
         }
 
-        public IEnumerable<Variable> Variables
+        public IEnumerable<Variable> GetVariables(bool includeParents)
         {
-            get
+            if (includeParents && _parent != null)
             {
-                if (_parent != null)
-                {
-                    foreach (var v in _parent.Variables) yield return v;
-                }
+                foreach (var v in _parent.GetVariables(true)) yield return v;
+            }
 
-                if (_vars != null)
-                {
-                    foreach (var v in _vars.Values) yield return v;
-                }
+            if (_vars != null)
+            {
+                foreach (var v in _vars.Values) yield return v;
             }
         }
+        #endregion
+
+        #region Constants
+        public virtual bool HasConstant(string name) => _parent.HasConstant(name);
+
+        internal virtual Constant GetConstant(string name) => _parent.GetConstant(name);
         #endregion
 
         #region Children
@@ -122,7 +124,7 @@ namespace DKX.Compilation.Nodes
         #endregion
 
         #region Statements
-        internal void ReadCodeBody(int bodyStartPos)
+        internal void ReadCodeBody(NodeBodyContext bodyContext, int bodyStartPos)
         {
             if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called by IBodyNode implementations.");
 
@@ -133,7 +135,7 @@ namespace DKX.Compilation.Nodes
                     bodyNode.BodySpan = new CodeSpan(bodyStartPos, Code.Span.Start);
                     return;
                 }
-                if (!ParseStatement())
+                if (!ParseStatement(bodyContext))
                 {
                     Code.SkipToAfterExit(out var bodyEndPos);
                     bodyNode.BodySpan = new CodeSpan(bodyStartPos, bodyEndPos);
@@ -142,11 +144,11 @@ namespace DKX.Compilation.Nodes
             }
         }
 
-        internal bool ParseStatement()
+        internal bool ParseStatement(NodeBodyContext bodyContext)
         {
             if (Code.ReadExact("return"))
             {
-                new ReturnStatement(this, Code.Span);
+                new ReturnStatement(this, Code.Span, bodyContext);
                 return true;
             }
 
@@ -169,7 +171,7 @@ namespace DKX.Compilation.Nodes
                     if (Code.ReadExact('='))
                     {
                         var eqSpan = Code.Span;
-                        initializer = ExpressionParser.ReadExpressionOrNull(Code);
+                        initializer = ExpressionParser.ReadExpressionOrNull(bodyContext);
                         if (initializer == null) ReportItem(eqSpan, ErrorCode.ExpectedExpression);
                         initializerSpan = nameSpan.Envelope(initializer.Span);
                     }
@@ -186,7 +188,11 @@ namespace DKX.Compilation.Nodes
                             initializer: null);                     // Variables don't use an initializer; they add the initialization statement into the code directly where they are declared.
 
                         AddVariable(variable);
-                        if (initializer != null) new VariableInitializationStatement(this, variable, initializer, initializerSpan);
+                        if (initializer != null)
+                        {
+                            new VariableInitializationStatement(this, variable, initializer, initializerSpan);
+                            initializer.Report(this);
+                        }
                     }
 
                     if (Code.ReadExact(';')) return true;
@@ -197,9 +203,10 @@ namespace DKX.Compilation.Nodes
                 }
             }
 
-            var exp = ExpressionParser.ReadExpressionOrNull(Code);
+            var exp = ExpressionParser.ReadExpressionOrNull(bodyContext);
             if (exp != null)
             {
+                exp.Report(this);
                 new ExpressionStatement(this, exp);
                 if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
                 return true;
@@ -236,7 +243,7 @@ namespace DKX.Compilation.Nodes
         {
             if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called for an IBodyNode implementation.");
 
-            var variables = Variables.Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
+            var variables = GetVariables(includeParents: false).Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
             if (variables.Length == 0) variables = null;
 
             var bodyCode = new StringBuilder();

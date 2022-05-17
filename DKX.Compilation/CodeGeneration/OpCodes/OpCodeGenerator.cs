@@ -37,9 +37,9 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
             return $"{opCodeName}{GenerateSpanCode(parentOffset, fullOpCodeSpan)}";
         }
 
-        public static string GenerateIdentifier(string identifierName, int parentOffset, CodeSpan identifierSpan)
+        public static string GenerateVariable(string variableName, int parentOffset, CodeSpan variableSpan)
         {
-            return $"@{identifierName}{GenerateSpanCode(parentOffset, identifierSpan)}";
+            return $"${variableName}{GenerateSpanCode(parentOffset, variableSpan)}";
         }
 
         public static string GenerateStringLiteral(string rawText, int parentOffset, CodeSpan literalSpan)

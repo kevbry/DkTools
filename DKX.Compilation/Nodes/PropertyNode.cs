@@ -36,7 +36,6 @@ namespace DKX.Compilation.Nodes
             {
                 Name = _name,
                 DataType = _dataType.ToCode(),
-                ReadOnly = !Setters.Any(),
                 Getters = getters,
                 Setters = setters
             };
@@ -63,6 +62,17 @@ namespace DKX.Compilation.Nodes
             _privacy = privacy;
             _fileContext = fileContext;
             _bodySpan = new CodeSpan(bodyStartPos, bodyStartPos);
+
+            if (accessorType == PropertyAccessorType.Setter)
+            {
+                // Add the implicit argument 'value'.
+                AddVariable(new Variables.Variable(
+                    name: "value",
+                    dataType: property.DataType,
+                    fileContext: fileContext,
+                    passType: Variables.ArgumentPassType.ByValue,
+                    initializer: null));
+            }
         }
 
         public PropertyAccessorType AccessorType => _accessorType;

@@ -18,6 +18,8 @@ namespace DKX.Compilation.Tests.CodeGeneration
                 Assert.AreEqual(expOps.Text, actOps.Text, $"Token differs: {StringDiff(expOps, actOps)}");
                 Assert.AreEqual(expOps.EndOfFile, actOps.EndOfFile, $"End of file is not the same: {StringDiff(expOps, actOps)}");
                 if (expOps.EndOfFile) break;
+                Assert.AreNotEqual(OpCodeType.None, expType);
+                Assert.AreNotEqual(OpCodeType.None, actType);
             }
         }
 

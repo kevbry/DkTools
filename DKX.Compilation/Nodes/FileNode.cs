@@ -166,7 +166,9 @@ namespace DKX.Compilation.Nodes
                         fileContext: methodFileContext,
                         bodySpan: new CodeSpan(bodyStartPos, bodyStartPos));
 
-                    method.ReadCodeBody(bodyStartPos);
+                    var bodyContext = new NodeBodyContext(method);
+
+                    method.ReadCodeBody(bodyContext, bodyStartPos);
                 }
                 else if (Code.ReadExact('{'))
                 {
@@ -200,7 +202,9 @@ namespace DKX.Compilation.Nodes
                                     fileContext: accessorFileContext,
                                     bodyStartPos: Code.Span.Start);
 
-                                getter.ReadCodeBody(Code.Span.End);
+                                var bodyContext = new NodeBodyContext(getter);
+
+                                getter.ReadCodeBody(bodyContext, Code.Span.End);
                             }
                             else
                             {
@@ -220,7 +224,9 @@ namespace DKX.Compilation.Nodes
                                     fileContext: accessorFileContext,
                                     bodyStartPos: Code.Span.Start);
 
-                                setter.ReadCodeBody(Code.Span.End);
+                                var bodyContext = new NodeBodyContext(setter);
+
+                                setter.ReadCodeBody(bodyContext, Code.Span.End);
                             }
                             else
                             {
@@ -263,7 +269,8 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExact('='))
                             {
                                 var eqSpan = Code.Span;
-                                initializer = ExpressionParser.ReadExpressionOrNull(Code);
+                                var bodyContext = new NodeBodyContext(this);
+                                initializer = ExpressionParser.ReadExpressionOrNull(bodyContext);
                                 if (initializer == null)
                                 {
                                     ReportItem(eqSpan, ErrorCode.ExpectedExpression);
@@ -309,7 +316,8 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExact('='))
                             {
                                 var eqSpan = Code.Span;
-                                initializer = ExpressionParser.ReadExpressionOrNull(Code);
+                                var bodyContext = new NodeBodyContext(this);
+                                initializer = ExpressionParser.ReadExpressionOrNull(bodyContext);
                                 if (initializer == null)
                                 {
                                     ReportItem(eqSpan, ErrorCode.ExpectedExpression);
@@ -546,6 +554,8 @@ namespace DKX.Compilation.Nodes
         private Dictionary<string, Constant> _constants = new Dictionary<string, Constant>();
 
         public override bool HasConstant(string name) => _constants.ContainsKey(name);
+
+        internal override Constant GetConstant(string name) => _constants.TryGetValue(name, out var constant) ? constant : default;
 
         public void AddConstant(Constant constant)
         {

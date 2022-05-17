@@ -67,10 +67,15 @@ namespace DKX.Compilation.CodeGeneration
                     throw new InvalidOpCodeSourceException("Unexpected end of opcode source.");
                 case OpCodeType.OpCode:
                     return GenerateOp(_ops.Text, _ops.Span);
-                case OpCodeType.Identifier:
-                    return _cgc.ResolveIdentifier(_ops.Text, _ops.Span);
-                case OpCodeType.Number:
+                case OpCodeType.Variable:
                     var text = _ops.Text;
+                    if (_cgc.TryGetVariable(text, out var dataType))
+                    {
+                        return new CodeFragment(text, dataType, OpPrec.None, terminated: false, sourceSpan: _ops.Span, readOnly: false);
+                    }
+                    throw new InvalidOpCodeSourceException($"Unknown variable '{text}'.");
+                case OpCodeType.Number:
+                    text = _ops.Text;
                     return new CodeFragment(text, GetDataTypeFromNumberText(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
                 case OpCodeType.String:
                     text = _ops.Text;

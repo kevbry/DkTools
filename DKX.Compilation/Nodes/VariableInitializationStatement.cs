@@ -23,7 +23,7 @@ namespace DKX.Compilation.Nodes
             return string.Concat(
                 OpCodeGenerator.GenerateOpCode("asn", parentOffset, Span),
                 "(",
-                OpCodeGenerator.GenerateIdentifier(_variable.Name, Span.Start, Span),
+                OpCodeGenerator.GenerateVariable(_variable.Name, Span.Start, Span),
                 ",",
                 _exp.ToCode(Span.Start),
                 ")");

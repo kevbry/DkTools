@@ -64,13 +64,14 @@
     <Compile Include="Compiler.cs" />
     <Compile Include="Exceptions\CompilerException.cs" />
     <Compile Include="Expressions\Chain.cs" />
+    <Compile Include="Expressions\ConstantChain.cs" />
     <Compile Include="Expressions\ErrorChain.cs" />
     <Compile Include="Expressions\ExpressionParser.cs" />
-    <Compile Include="Expressions\IdentifierChain.cs" />
     <Compile Include="Expressions\NumberChain.cs" />
     <Compile Include="Expressions\Operator.cs" />
     <Compile Include="Expressions\OperatorChain.cs" />
     <Compile Include="Expressions\StringLiteralChain.cs" />
+    <Compile Include="Expressions\VariableChain.cs" />
     <Compile Include="Files\CompileFileJob.cs" />
     <Compile Include="Files\CompileFileJobFactory.cs" />
     <Compile Include="Files\DkxFileHelper.cs" />
@@ -88,6 +89,7 @@
     <Compile Include="Nodes\IReturnTargetNode.cs" />
     <Compile Include="Nodes\MethodNode.cs" />
     <Compile Include="Nodes\Node.cs" />
+    <Compile Include="Nodes\NodeBodyContext.cs" />
     <Compile Include="Nodes\PropertyNode.cs" />
     <Compile Include="Nodes\VariableInitializationStatement.cs" />
     <Compile Include="ReportItems\IReportItemCollector.cs" />
@@ -105,6 +107,7 @@
     <Compile Include="Nodes\ExpressionStatement.cs" />
     <Compile Include="Nodes\ReturnStatement.cs" />
     <Compile Include="Nodes\Statement.cs" />
+    <Compile Include="TestApproachAttribute.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
     <Compile Include="Variables\Variable.cs" />

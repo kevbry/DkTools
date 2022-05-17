@@ -7,6 +7,7 @@ namespace DKX.Compilation.Files
 {
     public class ObjectFileModel
     {
+        [TestApproach(TestApproach.Normal, IgnoreCase = true)]
         public string SourcePathName { get; set; }
 
         public string ClassName { get; set; }
@@ -46,8 +47,6 @@ namespace DKX.Compilation.Files
         public string Name { get; set; }
 
         public string DataType { get; set; }
-
-        public bool ReadOnly { get; set; }
 
         public ObjectPropertyAccessor[] Getters { get; set; }
 
@@ -100,6 +99,7 @@ namespace DKX.Compilation.Files
     {
         public ObjectVariable[] Variables { get; set; }
 
+        [TestApproach(TestApproach.OpCodeValidator)]
         public string Code { get; set; }
 
         public int StartPosition { get; set; }
