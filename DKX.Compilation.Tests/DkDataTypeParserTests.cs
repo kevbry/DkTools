@@ -77,5 +77,44 @@ namespace DKX.Compilation.Tests
             Assert.AreEqual(expectedOptions.Length, options.Length);
             Assert.AreEqual(expectedOptions, options);
         }
+
+        [TestCase("like x", "x")]
+        [TestCase("like g_globalVariable", "g_globalVariable")]
+        [TestCase("like addr1", "addr1")]
+        public void Like1(string codeFragment, string expectedOptionsString)
+        {
+            var code = new CodeParser(codeFragment);
+            var dataType = DkDataTypeParser.Parse(code);
+            Assert.IsNotNull(dataType);
+            Assert.AreEqual(BaseType.Like1, dataType.Value.BaseType);
+            Assert.AreEqual(0, dataType.Value.Width);
+            Assert.AreEqual(0, dataType.Value.Scale);
+
+            var options = dataType.Value.Options;
+            Assert.IsNotNull(options);
+            Assert.AreEqual(1, options.Length);
+            Assert.AreEqual(expectedOptionsString, options[0]);
+        }
+
+        [TestCase("like cust.no", "cust|no")]
+        [TestCase("like chql.cheqno", "chql|cheqno")]
+        public void Like2(string codeFragment, string expectedOptionsString)
+        {
+            var code = new CodeParser(codeFragment);
+            var dataType = DkDataTypeParser.Parse(code);
+            Assert.IsNotNull(dataType);
+            Assert.AreEqual(BaseType.Like2, dataType.Value.BaseType);
+            Assert.AreEqual(0, dataType.Value.Width);
+            Assert.AreEqual(0, dataType.Value.Scale);
+
+            var expectedOptions = expectedOptionsString.Split('|');
+            Assert.AreEqual(2, expectedOptions.Length);
+
+            var options = dataType.Value.Options;
+            Assert.IsNotNull(options);
+            Assert.AreEqual(2, options.Length);
+            Assert.AreEqual(expectedOptions, options);
+        }
+
     }
 }

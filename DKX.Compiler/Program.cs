@@ -1,7 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
 using DK.Implementation.Windows;
-using DK.Repository;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -19,7 +18,7 @@ namespace DKX.Compiler
                 var log = new ConsoleLogger();
                 var config = new WindowsAppConfigSource(log);
                 
-                var app = new DkAppContext(fileSystem, log, config, new NoAppRepoFactory());
+                var app = new DkAppContext(fileSystem, log, config, loadRepository: false);
                 app.LoadAppSettings(null);
 
                 var compiler = new Compilation.Compiler(app);

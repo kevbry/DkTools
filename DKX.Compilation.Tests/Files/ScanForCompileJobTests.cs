@@ -19,8 +19,6 @@ namespace DKX.Compilation.Tests.Files
         public async Task FirstCompile()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
             var jobQueue = new TestJobQueue();
             var compileFileJobFactory = new TestCompileFileJobFactory();
@@ -60,8 +58,6 @@ namespace DKX.Compilation.Tests.Files
         public async Task ChangedFile()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
             var jobQueue = new TestJobQueue();
             var compileFileJobFactory = new TestCompileFileJobFactory();
@@ -120,8 +116,6 @@ namespace DKX.Compilation.Tests.Files
         public async Task DeleteFile()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
             var fs = app.FileSystem as VirtualFileSystem;
             var jobQueue = new TestJobQueue();
             var compileFileJobFactory = new TestCompileFileJobFactory();

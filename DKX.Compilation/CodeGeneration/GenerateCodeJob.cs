@@ -1,7 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
 using DK.Diagnostics;
-using DKX.Compilation.Exceptions;
 using DKX.Compilation.Files;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.ReportItems;
@@ -40,21 +39,14 @@ namespace DKX.Compilation.CodeGeneration
 
         public async Task ExecuteAsync(CancellationToken cancel)
         {
-            try
-            {
-                var gen = new CodeFileGenerator(_app, _objectFileReader.GetModel(), _report);
+            var gen = new CodeFileGenerator(_app, _objectFileReader.GetModel(), _report);
 
-                foreach (var fileContext in _objectFileReader.GetFileContexts())
-                {
-                    var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(_dkxPathName, fileContext);
-                    await _app.Log.InfoAsync("Generating: {0}", wbdkPathName);
-                    var fileContent = await gen.GenerateCodeAsync(fileContext, wbdkPathName);
-                    _app.FileSystem.WriteFileText(wbdkPathName, fileContent);
-                }
-            }
-            catch (CompilerException ex)
+            foreach (var fileContext in _objectFileReader.GetFileContexts())
             {
-                _report.ReportItem(CodeSpan.Empty, ErrorCode.GenerateCodeFailed, ex);
+                var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(_dkxPathName, fileContext);
+                await _app.Log.InfoAsync("Generating: {0}", wbdkPathName);
+                var fileContent = await gen.GenerateCodeAsync(fileContext, wbdkPathName);
+                _app.FileSystem.WriteFileText(wbdkPathName, fileContent);
             }
         }
     }

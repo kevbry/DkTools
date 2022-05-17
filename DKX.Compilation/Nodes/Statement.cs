@@ -1,13 +1,12 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
 
 namespace DKX.Compilation.Nodes
 {
     abstract class Statement : Node
     {
-        public abstract OpCodeFragment Execute(OpCodeGeneratorContext context);
-
         private CodeSpan _span;
+
+        public abstract string ToCode(int offset);
 
         public Statement(Node parent, CodeSpan span)
             : base(parent)

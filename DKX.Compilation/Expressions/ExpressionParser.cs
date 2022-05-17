@@ -47,7 +47,6 @@ namespace DKX.Compilation.Expressions
             var op = ReadOperatorOrNull(code);
             if (op != null)
             {
-                var opSpan = code.Span;
                 var opPrec = op.Value.op.GetPrecedence();
                 if (leftPrec >= opPrec)
                 {
@@ -57,7 +56,7 @@ namespace DKX.Compilation.Expressions
 
                 if (op.Value.op.IsUnaryPost())
                 {
-                    var newChain = new OperatorChain(op.Value.op, chain, right: null, opSpan);
+                    var newChain = new OperatorChain(op.Value.op, chain, right: null);
                     return ReadAfterValue(code, newChain, leftPrec);
                 }
                 else
@@ -70,7 +69,7 @@ namespace DKX.Compilation.Expressions
                     }
                     else
                     {
-                        var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(code, right, opPrec), opSpan);
+                        var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(code, right, opPrec));
                         return ReadAfterValue(code, newChain, leftPrec);
                     }
                 }

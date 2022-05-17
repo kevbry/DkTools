@@ -1,5 +1,4 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Files;
 using DKX.Compilation.Variables;
@@ -31,20 +30,15 @@ namespace DKX.Compilation.Nodes
 
         public string Name => _name;
 
-        public ObjectMethod ToObjectFile()
+        public ObjectMethod ToObjectFile() => new ObjectMethod
         {
-            var context = new OpCodeGeneratorContext(_returnDataType);
-
-            return new ObjectMethod
-            {
-                Name = _name,
-                Privacy = _privacy,
-                FileContext = _fileContext,
-                ReturnDataType = _returnDataType.ToCode(),
-                Arguments = (_args ?? Variable.EmptyArray).Length != 0 ? _args.Select(a => a.ToObjectMethodArgument()).ToArray() : null,
-                Body = GenerateObjectBody(context)
-            };
-        }
+            Name = _name,
+            Privacy = _privacy,
+            FileContext = _fileContext,
+            ReturnDataType = _returnDataType.ToCode(),
+            Arguments = (_args ?? Variable.EmptyArray).Length != 0 ? _args.Select(a => a.ToObjectMethodArgument()).ToArray() : null,
+            Body = GenerateObjectBody(_bodySpan.Start)
+        };
 
         public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
     }

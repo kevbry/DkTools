@@ -71,6 +71,12 @@ namespace DKX.Compilation.DataTypes
                 case BaseType.Enum:
                     if (options.Length == 0) throw new ArgumentException("Options list must contain at least 1 value.");
                     break;
+                case BaseType.Like1:
+                    if (options.Length != 1) throw new ArgumentException("Options list must contain exactly 1 value.");
+                    break;
+                case BaseType.Like2:
+                    if (options.Length != 2) throw new ArgumentException("Options list must contain exactly 2 values.");
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(baseType));
             }
@@ -93,8 +99,9 @@ namespace DKX.Compilation.DataTypes
         public short Width => _width;
         public short Scale => _scale;
         public string[] Options => OptionsToStringList(_options ?? string.Empty);
+        public bool IsUnresolved => _baseType == BaseType.Like1 || _baseType == BaseType.Like2;
         public bool IsUnsupported => _baseType == BaseType.Unsupported;
-        public bool IsValue => _baseType != BaseType.Void && _baseType != BaseType.Unsupported;
+        public bool IsValue => _baseType != BaseType.Void && _baseType != BaseType.Unsupported && _baseType != BaseType.Like1 && _baseType != BaseType.Like2;
         public bool IsVoid => _baseType == BaseType.Void;
 
         public override string ToString() => ToCode();
@@ -183,6 +190,10 @@ namespace DKX.Compilation.DataTypes
                     return "indrel";
                 case BaseType.Variant:
                     return "variant";
+                case BaseType.Like1:
+                    return $"like {_options[0]}";
+                case BaseType.Like2:
+                    return $"like {_options[0]} {_options[1]}";
                 default:
                     throw new InvalidBaseTypeException(_baseType);
             }
@@ -241,6 +252,10 @@ namespace DKX.Compilation.DataTypes
                     return "indrel";
                 case BaseType.Variant:
                     return "variant";
+                case BaseType.Like1:
+                    return $"like {_options[0]}";
+                case BaseType.Like2:
+                    return $"like {_options[0]} {_options[1]}";
                 default:
                     throw new InvalidBaseTypeException(_baseType);
             }
@@ -444,6 +459,27 @@ namespace DKX.Compilation.DataTypes
                 case "variant":
                     spanOut = wordSpan;
                     return Variant;
+
+                case "like":
+                    if (!code.ReadWord())
+                    {
+                        spanOut = CodeSpan.Empty;
+                        return null;
+                    }
+                    var word1 = code.Text;
+                    var word1Span = code.Span;
+                    if (code.ReadExact('.'))
+                    {
+                        if (!code.ReadWord())
+                        {
+                            spanOut = CodeSpan.Empty;
+                            return null;
+                        }
+                        spanOut = wordSpan.Envelope(code.Span);
+                        return new DataType(BaseType.Like2, new string[] { word1, code.Text });
+                    }
+                    spanOut = wordSpan.Envelope(word1Span);
+                    return new DataType(BaseType.Like1, new string[] { word1 });
             }
 
             spanOut = CodeSpan.Empty;

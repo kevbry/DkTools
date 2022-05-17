@@ -14,8 +14,6 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task AgeFunctionFile()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
 
             var pathName = @"x:\src\age.f";
             var exportsPathName = @"x:\bin\.dkx\age.f.wbdkx";
@@ -54,8 +52,6 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task GatewayClassFile()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
 
             var pathName = @"x:\src\gateway\gateway.cc";
             var exportsPathName = @"x:\bin\.dkx\gateway\gateway.cc.wbdkx";
@@ -92,8 +88,6 @@ namespace DKX.Compilation.Tests.WbdkExports
         public async Task UtilClassFile()
         {
             var app = CreateAppContext();
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
 
             var pathName = @"x:\src\util.nc";
             var exportsPathName = @"x:\bin\.dkx\util.nc.wbdkx";

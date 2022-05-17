@@ -9,8 +9,7 @@ namespace DK.AppEnvironment
 {
 	public class DkAppSettings
 	{
-		private DkAppContext _app;
-		private IAppRepoFactory _appRepoFactory;
+		DkAppContext _app;
 
 		public string AppName { get; set; }
 		public bool Initialized { get; set; }
@@ -28,13 +27,12 @@ namespace DK.AppEnvironment
 		public string[] SourceFiles { get; set; }
 		public string[] IncludeFiles { get; set; }
 		public string[] SourceAndIncludeFiles { get; set; }
-		public IAppRepo Repo { get; set; }
+		public AppRepo Repo { get; set; }
 		public Dict Dict { get; set; }
 
-		public DkAppSettings(DkAppContext app, IAppRepoFactory appRepoFactory)
+		public DkAppSettings(DkAppContext app, bool loadRepository)
 		{
 			_app = app ?? throw new ArgumentNullException(nameof(app));
-			_appRepoFactory = appRepoFactory ?? throw new ArgumentNullException(nameof(appRepoFactory));
 
 			AppName = string.Empty;
 			Initialized = false;
@@ -53,7 +51,7 @@ namespace DK.AppEnvironment
 			IncludeFiles = new string[0];
 			SourceAndIncludeFiles = new string[0];
 			Dict = new Dict();
-			Repo = _appRepoFactory.CreateAppRepo(this);
+			if (loadRepository) Repo = new AppRepo(this);
 		}
 
 		public IAppConfigSource Config => _app.Config;

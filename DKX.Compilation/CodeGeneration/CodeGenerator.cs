@@ -11,65 +11,76 @@ namespace DKX.Compilation.CodeGeneration
 {
     class CodeGenerator
     {
-        private CodeParser _code;
+        private OpCodeParser _ops;
         private CodeGenerationContext _cgc;
         private CodeWriter _writer;
         private ISourceCodeReporter _reporter;
 
-        public CodeGenerator(string opCodeSource, CodeGenerationContext cgc, CodeWriter writer, ISourceCodeReporter reporter)
+        public CodeGenerator(string code, CodeGenerationContext cgc, CodeWriter writer, ISourceCodeReporter reporter)
         {
-            _code = new CodeParser(opCodeSource);
+            _ops = new OpCodeParser(code);
             _cgc = cgc ?? throw new ArgumentNullException(nameof(cgc));
             _writer = writer ?? throw new ArgumentNullException(nameof(writer));
             _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
         }
 
-        public bool EndOfCode => _code.EndOfFile;
+        public bool EndOfCode => _ops.EndOfFile;
 
         public void GenerateBody(bool mustEndWithClose)
         {
-            while (!_code.EndOfFile)
+            do
             {
-                var opSpan = ReadSpan();
-                if (!_code.ReadWord()) throw new InvalidOpCodeSourceException("Expected op code to follow span.");
-
-                // TODO: Allow for statements which take a different structure than op codes.
-
-                GenerateOp(_code.Text, opSpan);
-                _writer.Write(';');
-                _writer.WriteLine();
+                if (!GenerateStatement()) break;
             }
+            while (_ops.ReadDelim(throwOnError: false));
         }
 
-        private CodeSpan ReadSpan()
+        public bool GenerateStatement()
         {
-            if (!_code.ReadExact('[')) throw new InvalidOpCodeSourceException("Expected code span '['.");
-            if (!_code.ReadNumber()) throw new InvalidOpCodeSourceException("Expected code span starting position.");
-            if (!int.TryParse(_code.Text, out var start)) throw new InvalidOpCodeSourceException($"Invalid code span starting position '{_code.Text}'.");
-            if (!_code.ReadExact(':')) throw new InvalidOpCodeSourceException("Expected code span ':'.");
-            if (!_code.ReadNumber()) throw new InvalidOpCodeSourceException("Expected code span length.");
-            if (!int.TryParse(_code.Text, out var length)) throw new InvalidOpCodeSourceException($"Invalid code span length '{_code.Text}'.");
-            if (!_code.ReadExact(']')) throw new InvalidOpCodeSourceException("Expected code span ']'.");
+            if (_ops.EndOfFile) return false;
 
-            return new CodeSpan(start, start + length);
+            // TODO: to implement later
+            //if (_ops.ReadStatement())
+            //{
+            //    switch (_ops.Text)
+            //    {
+            //        case "if":
+            //            GenerateIfStatement();
+            //            return true;
+            //        default:
+            //            throw new InvalidOpCodeSourceException($"Invalid statement type '{_ops.Text}'.");
+            //    }
+            //}
+
+            var exp = GenerateFragment();
+            _writer.Write(exp.ToString());
+            if (!exp.Terminated) _writer.Write(';');
+            _writer.WriteLine();
+            return true;
         }
 
-        private string ReadVarName()
+        public CodeFragment GenerateFragment()
         {
-            if (!_code.ReadWord()) throw new InvalidOpCodeSourceException("Expected variable name.");
-            return _code.Text;
-        }
-
-        private string ReadNumber()
-        {
-            if (!_code.ReadNumber()) throw new InvalidOpCodeSourceException("Expected number.");
-            return _code.Text;
-        }
-
-        private string ReadString()
-        {
-            if (!_code.ReadStringLiteral()) throw new InvalidOpCodeSourceException("Expected string.");
-            return _code.Text;
+            switch (_ops.Read())
+            {
+                case OpCodeType.None:
+                    throw new InvalidOpCodeSourceException("Unexpected end of opcode source.");
+                case OpCodeType.OpCode:
+                    return GenerateOp(_ops.Text, _ops.Span);
+                case OpCodeType.Identifier:
+                    return _cgc.ResolveIdentifier(_ops.Text, _ops.Span);
+                case OpCodeType.Number:
+                    var text = _ops.Text;
+                    return new CodeFragment(text, GetDataTypeFromNumberText(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                case OpCodeType.String:
+                    text = _ops.Text;
+                    return new CodeFragment(CodeParser.StringToStringLiteral(text), GetDataTypeFromStringLiteral(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                case OpCodeType.Char:
+                    text = _ops.Text;
+                    return new CodeFragment(CodeParser.CharToCharLiteral(text[0]), DataType.Char, OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                default:
+                    throw new InvalidOpCodeSourceException($"Unexpected token '{_ops.Text}' in opcode source.");
+            }
         }
 
         private DataType GetDataTypeFromNumberText(string number)
@@ -102,70 +113,60 @@ namespace DKX.Compilation.CodeGeneration
             return new DataType(BaseType.String, width: (byte)len);
         }
 
-        private void GenerateOp(string opName, CodeSpan opSpan)
+        private CodeFragment GenerateOp(string opName, CodeSpan opSpan)
         {
             switch (opName)
             {
-                //case "asn":
-                //    Op_Assign(opSpan);
-                //    break;
-                case "dec": Op_Increment(decrement: true); break;
-                case "inc": Op_Increment(decrement: false); break;
-                case "ret": Op_Return(withVariable: false); break;
-                case "retv": Op_Return(withVariable: true); break;
-                case "seti": Op_SetVarToIdentifier(); break;
-                case "setn": Op_SetVarToNumber(); break;
-                case "sets": Op_SetVarToString(); break;
-                case "setv": Op_SetVarToVar(); break;
-                default:
-                    throw new InvalidOpCodeSourceException($"Invalid op code '{opName}'.");
+                case "asn": return Op_Assign(opSpan);
+                case "dec": return Op_Increment(opSpan, decrement: true);
+                case "inc": return Op_Increment(opSpan, decrement: false);
+                default: throw new InvalidOpCodeSourceException($"Invalid op code '{opName}'.");
             }
         }
 
-        private void Op_Increment(bool decrement)
+        private CodeFragment Op_Increment(CodeSpan opSpan, bool decrement)
         {
-            var varName = ReadVarName();
+            _ops.ReadOpen();
 
-            _writer.Write(varName);
-            _writer.Write(decrement ? " -= 1" : " += 1");
+            var leftFrag = GenerateFragment();
+            if (leftFrag.IsEmpty || leftFrag.ReadOnly) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, decrement ? "--" : "++");
+            else if (!leftFrag.DataType.IsSuitableForIncDec) _reporter.ReportItem(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, decrement ? "--" : "++");
+
+            _ops.ReadClose();
+
+            return new CodeFragment(
+                text: string.Concat(leftFrag.Protect(OpPrec.AddSub), decrement ? " -= 1" : " += 1"),
+                dataType: leftFrag.DataType,
+                precedence: OpPrec.Assign,
+                terminated: false,
+                sourceSpan: leftFrag.SourceSpan.Envelope(opSpan),
+                readOnly: false);
         }
 
-        private void Op_Return(bool withVariable)
+        private CodeFragment Op_Assign(CodeSpan opSpan)
         {
-            _writer.Write("return");
-            if (withVariable)
-            {
-                _writer.Write(' ');
-                _writer.Write(ReadVarName());
-            }
-        }
+            _ops.ReadOpen();
 
-        private void Op_SetVarToVar()
-        {
-            _writer.Write(ReadVarName());
-            _writer.Write(" = ");
-            _writer.Write(ReadVarName());
-        }
+            var leftFrag = GenerateFragment();
+            if (leftFrag.IsEmpty || leftFrag.ReadOnly) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, '=');
 
-        private void Op_SetVarToIdentifier()
-        {
-            _writer.Write(ReadVarName());
-            _writer.Write(" = ");
-            _writer.Write(ReadVarName());
-        }
+            _ops.ReadDelim();
 
-        private void Op_SetVarToNumber()
-        {
-            _writer.Write(ReadVarName());
-            _writer.Write(" = ");
-            _writer.Write(ReadNumber());
-        }
+            var rightFrag = GenerateFragment();
+            if (rightFrag.IsEmpty || !rightFrag.DataType.IsValue) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsValueOnRight, '=');
 
-        private void Op_SetVarToString()
-        {
-            _writer.Write(ReadVarName());
-            _writer.Write(" = ");
-            _writer.Write(ReadString());
+            _ops.ReadClose();
+
+            // TODO: Check data type conversions
+
+            return new CodeFragment(
+                text: string.Concat(leftFrag.Protect(OpPrec.Assign), " = ", rightFrag.Protect(OpPrec.Assign)),
+                dataType: leftFrag.DataType,
+                precedence: OpPrec.Assign,
+                terminated: false,
+                sourceSpan: leftFrag.SourceSpan.Envelope(rightFrag.SourceSpan),
+                readOnly: false);
+
         }
     }
 }

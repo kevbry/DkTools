@@ -488,6 +488,7 @@ namespace DKX.Compilation.Nodes
 
             public void CheckForClass(ISourceCodeReporter report, CodeSpan classKeywordSpan)
             {
+                if (!Static) report.ReportItem(classKeywordSpan, ErrorCode.ClassMustBeStatic);
             }
 
             public void CheckForMethod(ISourceCodeReporter report)

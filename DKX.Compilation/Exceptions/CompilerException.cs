@@ -3,6 +3,10 @@ using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Exceptions
 {
@@ -58,12 +62,12 @@ namespace DKX.Compilation.Exceptions
         }
     }
 
-    class InvalidOpCodeSourceException : CompilerException
+    class InvalidOpCodeSourceException : Exception
     {
         public InvalidOpCodeSourceException(string message) : base(message) { }
     }
 
-    class InvalidBaseTypeException : CompilerException
+    class InvalidBaseTypeException : Exception
     {
         public InvalidBaseTypeException(BaseType baseType) : base($"Invalid base type '{baseType}'.") { }
     }

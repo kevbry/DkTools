@@ -1,5 +1,4 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Files;
 using System;
@@ -27,10 +26,10 @@ namespace DKX.Compilation.Nodes
 
         public ObjectProperty ToObjectProperty()
         {
-            var getters = Getters.Select(x => x.ToObjectPropertyAccessor(new OpCodeGeneratorContext(_dataType))).ToArray();
+            var getters = Getters.Select(x => x.ToObjectPropertyAccessor()).ToArray();
             if (getters.Length == 0) getters = null;
 
-            var setters = Setters.Select(x => x.ToObjectPropertyAccessor(new OpCodeGeneratorContext(DataType.Void))).ToArray();
+            var setters = Setters.Select(x => x.ToObjectPropertyAccessor()).ToArray();
             if (setters.Length == 0) setters = null;
 
             return new ObjectProperty
@@ -72,11 +71,11 @@ namespace DKX.Compilation.Nodes
 
         public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
 
-        public ObjectPropertyAccessor ToObjectPropertyAccessor(OpCodeGeneratorContext context) => new ObjectPropertyAccessor
+        public ObjectPropertyAccessor ToObjectPropertyAccessor() => new ObjectPropertyAccessor
         {
             Privacy = _privacy,
             FileContext = _fileContext,
-            Body = GenerateObjectBody(context)
+            Body = GenerateObjectBody(_bodySpan.Start)
         };
     }
 }
