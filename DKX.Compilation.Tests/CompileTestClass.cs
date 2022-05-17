@@ -14,6 +14,7 @@ namespace DKX.Compilation.Tests
             var fs = new VirtualFileSystem();
             var log = new TestLogger();
             var config = new TestAppConfigSource();
+            var appRepoFactory = new NoAppRepoFactory();
 
             var app = new DkAppContext(fs, log, config, new NoAppRepoFactory());
             SetupCompileFiles(app);
@@ -79,7 +80,26 @@ namespace DKX.Compilation.Tests
             public int DefaultSamPort => 5001;
         }
 
-        private void SetupCompileFiles(DkAppContext app)
+        public void SetupCompileFiles(DkAppContext app)
+        {
+            SetupCompile(app);
+
+            // DKX source
+            SetupFile(app, @"x:\src\cust.dkx", "cust.dkx.txt");
+            SetupFile(app, @"x:\src\info.dkx", "info.dkx.txt");
+            SetupFile(app, @"x:\src\test.dkx", "test.dkx.txt");
+            SetupFile(app, @"x:\src\util.dkx", "util.dkx.txt");
+        }
+
+        private void SetupFile(DkAppContext app, string pathName, string testFileName)
+        {
+            var uri = new Uri(Assembly.GetExecutingAssembly().GetName().CodeBase);
+            var exeDir = System.IO.Path.GetDirectoryName(uri.AbsolutePath);
+            var content = testFileName != null ? System.IO.File.ReadAllText($"{exeDir}\\TestSource\\{testFileName}") : string.Empty;
+            app.FileSystem.WriteFileText(pathName, content);
+        }
+
+        public void SetupCompile(DkAppContext app)
         {
             app.FileSystem.CreateDirectory(@"x:\bin");
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
@@ -100,20 +120,6 @@ namespace DKX.Compilation.Tests
             SetupFile(app, @"x:\src\util.nc", "util.nc.txt");
             SetupFile(app, @"x:\src\gateway\gateway.cc", "gateway.cc.txt");
             SetupFile(app, @"x:\src\include\all.i", null);
-
-            // DKX source
-            SetupFile(app, @"x:\src\cust.dkx", "cust.dkx.txt");
-            SetupFile(app, @"x:\src\info.dkx", "info.dkx.txt");
-            SetupFile(app, @"x:\src\test.dkx", "test.dkx.txt");
-            SetupFile(app, @"x:\src\util.dkx", "util.dkx.txt");
-        }
-
-        private void SetupFile(DkAppContext app, string pathName, string testFileName)
-        {
-            var uri = new Uri(Assembly.GetExecutingAssembly().GetName().CodeBase);
-            var exeDir = System.IO.Path.GetDirectoryName(uri.AbsolutePath);
-            var content = testFileName != null ? System.IO.File.ReadAllText($"{exeDir}\\TestSource\\{testFileName}") : string.Empty;
-            app.FileSystem.WriteFileText(pathName, content);
         }
     }
 }

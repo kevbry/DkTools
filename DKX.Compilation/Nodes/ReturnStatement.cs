@@ -25,13 +25,17 @@ namespace DKX.Compilation.Nodes
             if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
         }
 
-        public override string ToCode(int parentOffset)
+        public override OpCodeFragment Execute(OpCodeGeneratorContext context)
         {
-            return string.Concat(
-                OpCodeGenerator.GenerateOpCode("ret", parentOffset, Span),
-                "(",
-                _exp?.ToCode(Span.Start),
-                ")");
+            if (_exp != null)
+            {
+                var code = _exp.ReadProvideVariable(context);
+                return code.Append(OpCodeFragment.ReturnValue(Span, context.ReturnDataType, code.VarName));
+            }
+            else
+            {
+                return OpCodeFragment.Return(Span);
+            }
         }
     }
 }

@@ -49,11 +49,15 @@
     <Compile Include="CodeGeneration\CodeFileGenerator.cs" />
     <Compile Include="CodeGeneration\CodeGenerator.cs" />
     <Compile Include="CodeGeneration\CodeWriter.cs" />
+    <Compile Include="CodeGeneration\Constants\ConstantValue.cs" />
+    <Compile Include="CodeGeneration\Constants\NumberConstantValue.cs" />
+    <Compile Include="CodeGeneration\Constants\StringConstantValue.cs" />
     <Compile Include="CodeGeneration\GenerateCodeJob.cs" />
     <Compile Include="CodeGeneration\GenerateCodeJobFactory.cs" />
     <Compile Include="CodeGeneration\IGenerateCodeJobFactory.cs" />
-    <Compile Include="CodeGeneration\OpCodes\OpCodeGenerator.cs" />
-    <Compile Include="CodeGeneration\OpCodes\OpCodeParser.cs" />
+    <Compile Include="CodeGeneration\OpCodes\OpCodeExceptions.cs" />
+    <Compile Include="CodeGeneration\OpCodes\OpCodeGeneratorContext.cs" />
+    <Compile Include="CodeGeneration\OpCodes\OpCodeFragment.cs" />
     <Compile Include="CodeGeneration\ScanForGenerateCodeJob.cs" />
     <Compile Include="CompileConstants.cs" />
     <Compile Include="DataTypes\DkDataTypeParser.cs" />

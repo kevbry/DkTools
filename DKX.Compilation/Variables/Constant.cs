@@ -25,12 +25,17 @@ namespace DKX.Compilation.Variables
         public DataType DataType => _dataType;
         public Chain Value => _value;
 
-        public ObjectConstant ToObjectConstant() => new ObjectConstant
+        public ObjectConstant ToObjectConstant()
         {
-            Name = _name,
-            DataType = _dataType.ToCode(),
-            Code = _value.ToCode(_value.Span.Start),
-            CodeStartPosition = _value.Span.Start
-        };
+            var constant = _value.ReadConstant(_dataType);
+
+            return new ObjectConstant
+            {
+                Name = _name,
+                DataType = _dataType.ToCode(),
+                Code = constant.ToCode(),
+                CodeStartPosition = _value.Span.Start
+            };
+        }
     }
 }

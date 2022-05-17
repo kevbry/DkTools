@@ -13,7 +13,13 @@ namespace DKX.Compilation
         /// {1} = Exception
         /// </summary>
         [Description("Compile Job Failed: {0} - {1}")]
-        DKX0001_CompileJobFailed = 1,
+        CompileJobFailed = 1,
+
+        /// <summary>
+        /// {0} = exception
+        /// </summary>
+        [Description("Exception when generating code: {0}")]
+        GenerateCodeFailed = 2,
         #endregion
 
         #region General Code Errors (1000-1099)
@@ -60,9 +66,6 @@ namespace DKX.Compilation
 
         [Description("'static' is not valid on this item.")]
         InvalidStatic = 1108,
-
-        [Description("Classes must be declared 'static'.")]
-        ClassMustBeStatic = 1109,
         #endregion
 
         #region Methods (1200-1299)

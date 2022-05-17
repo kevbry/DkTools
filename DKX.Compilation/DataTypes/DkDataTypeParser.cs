@@ -274,22 +274,6 @@ namespace DKX.Compilation.DataTypes
                 return new DataType(BaseType.Enum, options.ToArray());
             }
             #endregion
-            #region like
-            if (word.EqualsI("like"))
-            {
-                if (!code.ReadWord()) return null;
-                var word1 = code.Text;
-
-                var resetPos = code.Position;
-                if (code.ReadExact('.'))
-                {
-                    if (!code.ReadWord()) code.Position = resetPos;
-                    else return new DataType(BaseType.Like2, new string[] { word1, code.Text });
-                }
-
-                return new DataType(BaseType.Like1, new string[] { word1 });
-            }
-            #endregion
             #region table
             if (word.EqualsI("table"))
             {

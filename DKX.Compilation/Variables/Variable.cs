@@ -1,5 +1,6 @@
 ﻿using DK;
 using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
@@ -49,11 +50,16 @@ namespace DKX.Compilation.Variables
             DataType = _dataType.ToCode()
         };
 
-        public ObjectVariable ToObjectVariable() => new ObjectVariable
+        public ObjectVariable ToObjectVariable(OpCodeGeneratorContext context)
         {
-            Name = _name,
-            DataType = _dataType.ToCode(),
-            InitializerCode = _initializer?.ToCode(0)
-        };
+            var frag = _initializer?.ReadToVariable(context, _name, _dataType);
+
+            return new ObjectVariable
+            {
+                Name = _name,
+                DataType = _dataType.ToCode(),
+                InitializerCode = frag?.ToString()
+            };
+        }
     }
 }

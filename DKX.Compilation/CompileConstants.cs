@@ -22,10 +22,10 @@ namespace DKX.Compilation
         public const int WbdkFileTitleMaxLength = 12;
 
         public static readonly HashSet<string> AllKeywords = StringHelper.ParseWordList(
-            "and bool char class const date enum if indrel int like numeric or private program protected public" +
+            "and bool char class const date enum if indrel int numeric or private program protected public" +
             "short switch string table time trigger uint unsigned unsupported ushort variant void while");
 
         public static readonly HashSet<string> DataTypeKeyword = StringHelper.ParseWordList(
-            "bool char date enum indrel int like numeric short string table time uint unsigned unsupported ushort variant void");
+            "bool char date enum indrel int numeric short string table time uint unsigned unsupported ushort variant void");
     }
 }

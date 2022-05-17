@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
@@ -232,20 +233,19 @@ namespace DKX.Compilation.Nodes
 
         protected virtual DataType? GetTypedefDataType(string typedefName) => _parent.GetTypedefDataType(typedefName);
 
-        protected ObjectBody GenerateObjectBody(int parentOffset)
+        protected ObjectBody GenerateObjectBody(OpCodeGeneratorContext context)
         {
             if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called for an IBodyNode implementation.");
 
-            var variables = Variables.Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
+            var variables = Variables.Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable(context)).ToArray();
             if (variables.Length == 0) variables = null;
 
             var bodyCode = new StringBuilder();
             foreach (var stmt in ChildNodes.Where(n => n is Statement).Cast<Statement>())
             {
-                var stmtCode = stmt.ToCode(parentOffset);
-                if (string.IsNullOrEmpty(stmtCode)) continue;
-
-                if (bodyCode.Length > 0) bodyCode.Append(',');
+                var stmtCode = stmt.Execute(context);
+                if (stmtCode.IsEmpty) continue;
+                if (bodyCode.Length != 0) bodyCode.Append(OpCodeFragment.NewLine);
                 bodyCode.Append(stmtCode);
             }
 
