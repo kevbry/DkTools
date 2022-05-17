@@ -25,7 +25,7 @@ namespace DKX.Compilation.Tests.CodeGeneration
 
         private static string StringDiff(string expSource, int expIndex, string actSource, int actIndex)
         {
-            return $"\nExpected: {expSource.Substring(0, expIndex)}\nActual: {actSource.Substring(0, actIndex)}";
+            return $"\nExpected: {expSource.Substring(0, expIndex + 1 <= expSource.Length ? expIndex + 1 : expSource.Length)}\nActual: {actSource.Substring(0, actIndex + 1 <= actSource.Length ? actIndex + 1 : actSource.Length)}";
         }
     }
 }

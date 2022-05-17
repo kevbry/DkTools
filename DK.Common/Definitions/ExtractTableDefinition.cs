@@ -10,6 +10,8 @@ namespace DK.Definitions
 		private bool _permanent;
 		private List<ExtractFieldDefinition> _fields = new List<ExtractFieldDefinition>();
 
+		public static readonly new ExtractTableDefinition[] EmptyArray = new ExtractTableDefinition[0];
+
 		public ExtractTableDefinition(string name, FilePosition filePos, bool permanent)
 			: base(name, filePos, permanent ? string.Concat("permx:", name) : null)
 		{

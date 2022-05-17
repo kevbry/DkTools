@@ -63,7 +63,7 @@ Permanent Extracts:
 
 namespace DK.Repository
 {
-    public class AppRepo
+    public class AppRepo : IAppRepo
     {
         private DkAppSettings _appSettings;
         private string _repoDir;

@@ -9,6 +9,7 @@ namespace DK.Code
 		private bool _primaryFile;
 
 		public static readonly FilePosition Empty = new FilePosition();
+		public static readonly FilePosition[] EmptyArray = new FilePosition[0];
 
 		public FilePosition(string fileName, int pos, bool primaryFile)
 		{

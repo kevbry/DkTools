@@ -18,6 +18,8 @@ namespace DK.Definitions
 
 		private static readonly Regex _rxDeprecated = new Regex(@"\bdeprecated\b", RegexOptions.IgnoreCase);
 
+		public static readonly new FunctionDefinition[] EmptyArray = new FunctionDefinition[0];
+
 		public FunctionDefinition(
 			FunctionSignature signature,
 			FilePosition filePos,

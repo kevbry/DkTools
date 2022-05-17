@@ -123,7 +123,7 @@ void TestMethod()
                                         DataType = "int"
                                     }
                                 },
-                                Code = "asn(@x,0)inc(@x)"
+                                Code = "asn(@x,0),inc(@x)"
                             }
                         }
                     }

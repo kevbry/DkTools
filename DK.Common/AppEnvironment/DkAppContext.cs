@@ -1,5 +1,6 @@
 ﻿using DK.Diagnostics;
 using DK.Preprocessing;
+using DK.Repository;
 using System;
 
 namespace DK.AppEnvironment
@@ -9,9 +10,9 @@ namespace DK.AppEnvironment
         private IFileSystem _fs;
         private ILogger _log;
         private IAppConfigSource _config;
+        private IAppRepoFactory _appRepoFactory;
         private DkAppSettings _settings;
         private IncludeFileCache _includeFileCache;
-        private bool _loadRepository;
 
         public event EventHandler<AppSettingsEventArgs> AppChanged;
         public event EventHandler RefreshAllDocumentsRequired;
@@ -19,14 +20,14 @@ namespace DK.AppEnvironment
         public event EventHandler<FileEventArgs> FileChanged;
         public event EventHandler<FileEventArgs> FileDeleted;
 
-        public DkAppContext(IFileSystem fileSystem, ILogger log, IAppConfigSource config, bool loadRepository)
+        public DkAppContext(IFileSystem fileSystem, ILogger log, IAppConfigSource config, IAppRepoFactory appRepoFactory)
         {
             _fs = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            _loadRepository = loadRepository;
+            _appRepoFactory = appRepoFactory ?? throw new ArgumentNullException(nameof(appRepoFactory));
 
-            _settings = new DkAppSettings(this, _loadRepository);
+            _settings = new DkAppSettings(this, _appRepoFactory);
             _includeFileCache = new IncludeFileCache(this);
         }
 
@@ -38,7 +39,7 @@ namespace DK.AppEnvironment
 
         public void LoadAppSettings(string appName = null)
         {
-            var settings = DkEnvironment.LoadAppSettings(this, appName, _loadRepository);
+            var settings = DkEnvironment.LoadAppSettings(this, appName, _appRepoFactory);
             _settings = settings;
             OnAppChanged(settings);
             OnRefreshAllDocumentsRequired();

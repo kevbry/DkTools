@@ -12,9 +12,9 @@ namespace DK.AppEnvironment
     public static class DkEnvironment
     {
         #region PSelect
-        public static DkAppSettings LoadAppSettings(DkAppContext app, string appName, bool loadRepository)
+        public static DkAppSettings LoadAppSettings(DkAppContext app, string appName, IAppRepoFactory appRepoFactory)
         {
-            var appSettings = ReloadCurrentApp(app, appName, loadRepository);
+            var appSettings = ReloadCurrentApp(app, appName, appRepoFactory);
             if (appSettings.Initialized)
             {
                 ReloadTableList(appSettings, app.Log);
@@ -23,12 +23,12 @@ namespace DK.AppEnvironment
             return appSettings;
         }
 
-        private static DkAppSettings ReloadCurrentApp(DkAppContext app, string appName, bool loadRepository)
+        private static DkAppSettings ReloadCurrentApp(DkAppContext app, string appName, IAppRepoFactory appRepoFactory)
         {
             app.Log.Write(LogLevel.Info, "Loading application settings...");
             var startTime = DateTime.Now;
 
-            var appSettings = new DkAppSettings(app, loadRepository);
+            var appSettings = new DkAppSettings(app, appRepoFactory);
             var platformInfo = app.Config.GetWbdkPlatformInfo();
 
             appSettings.PlatformPath = platformInfo.PlatformPath;
@@ -76,7 +76,7 @@ namespace DK.AppEnvironment
             appSettings.Dict = new Dict();
             appSettings.Dict.Load(appSettings);
 
-            if (loadRepository) appSettings.Repo = new AppRepo(appSettings);
+            appSettings.Repo = appRepoFactory.CreateAppRepo(appSettings);
 
             var elapsed = DateTime.Now.Subtract(startTime);
             app.Log.Write(LogLevel.Info, "Application settings reloaded (elapsed: {0})", elapsed);

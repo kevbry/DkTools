@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Implementation.Virtual;
+using DK.Repository;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -14,7 +15,7 @@ namespace DKX.Compilation.Tests
             var log = new TestLogger();
             var config = new TestAppConfigSource();
 
-            var app = new DkAppContext(fs, log, config, loadRepository: false);
+            var app = new DkAppContext(fs, log, config, new NoAppRepoFactory());
             SetupCompileFiles(app);
             app.LoadAppSettings();
             return app;

@@ -12,6 +12,8 @@ namespace DK.Definitions
 		private ServerContext _serverContext;
 		private List<FunctionDefinition> _funcs = new List<FunctionDefinition>();
 
+		public static readonly new ClassDefinition[] EmptyArray = new ClassDefinition[0];
+
 		public ClassDefinition(string name, string fileName, ServerContext serverContext)
 			: base(name, new FilePosition(fileName, 0, true), GetExternalRefId(name))
 		{
