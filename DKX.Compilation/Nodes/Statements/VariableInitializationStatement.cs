@@ -18,15 +18,18 @@ namespace DKX.Compilation.Nodes.Statements
             _exp = exp ?? throw new ArgumentNullException(nameof(exp));
         }
 
-        public override string ToCode(int parentOffset)
+        public override void ToCode(OpCodeGenerator code, int parentOffset)
         {
-            return string.Concat(
-                OpCodeGenerator.GenerateOpCode("asn", parentOffset, Span),
-                "(",
-                OpCodeGenerator.GenerateVariable(_variable.Name, Span.Start, Span),
-                ",",
-                _exp.ToOpCodes(Span.Start),
-                ")");
+            if (_exp.IsEmptyCode) return;
+
+            code.WriteOpCode(OpCode.Assign, parentOffset, Span);
+            code.WriteOpen();
+            code.WriteVariable(_variable.WbdkName, Span.Start, Span);
+            code.WriteDelim();
+            _exp.ToCode(code, Span.Start);
+            code.WriteClose();
         }
+
+        public override bool IsEmptyCode => _exp.IsEmptyCode;
     }
 }

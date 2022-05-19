@@ -43,7 +43,7 @@ namespace DKX.Compilation.Files
             await _app.Log.DebugAsync("Scanning for compiles");
 
             var allDkxFiles = ScanForDkxFiles().ToList();
-            var allExportFiles = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + CompileConstants.DkxObjectExtension).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var allExportFiles = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + DkxConst.DkxObjectExtension).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Process all the known DKX files.
             foreach (var dkxFile in allDkxFiles)
@@ -81,9 +81,9 @@ namespace DKX.Compilation.Files
 
         private IEnumerable<ScanResultFile> ScanForDkxFiles(string sourceDir, string relPath)
         {
-            foreach (var dkxPathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + CompileConstants.DkxExtension))
+            foreach (var dkxPathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + DkxConst.DkxExtension))
             {
-                var exportPathName = PathUtil.CombinePath(_workDir, relPath, PathUtil.GetFileNameWithoutExtension(dkxPathName) + CompileConstants.DkxObjectExtension);
+                var exportPathName = PathUtil.CombinePath(_workDir, relPath, PathUtil.GetFileNameWithoutExtension(dkxPathName) + DkxConst.DkxObjectExtension);
                 yield return new ScanResultFile(dkxPathName, exportPathName, relPath);
             }
 

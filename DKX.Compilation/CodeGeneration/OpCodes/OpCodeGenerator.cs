@@ -1,20 +1,17 @@
 ﻿using DK.Code;
+using System.Text;
 
 namespace DKX.Compilation.CodeGeneration.OpCodes
 {
-    class OpCodeGenerator
+    public class OpCodeGenerator
     {
-        /// <summary>
-        /// Generates a suffix that contains the relative span of an item.
-        /// </summary>
-        /// <param name="parentOffset">Starting position of the parent item.
-        /// Pass -1 to not generate any suffix.</param>
-        /// <param name="span">Span of the item.</param>
-        /// <returns>A suffix string that encodes a span relative to the parent element.
-        /// Empty string is parentOffset is -1.</returns>
-        public static string GenerateSpanCode(int parentOffset, CodeSpan span)
+        private StringBuilder _code = new StringBuilder();
+
+        public override string ToString() => _code.ToString();
+
+        private void WriteSpan(int parentOffset, CodeSpan span)
         {
-            if (parentOffset < 0) return string.Empty;
+            if (parentOffset < 0) return;
 
             var start = span.Start - parentOffset;
             var end = span.End - parentOffset;
@@ -24,32 +21,52 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
 
             if (len < 100)
             {
-                return $":{start * 100 + len}";
+                _code.Append(':');
+                _code.Append(start * 100 + len);
             }
             else
             {
-                return $":{start}:{len}";
+                _code.Append(':');
+                _code.Append(start);
+                _code.Append(':');
+                _code.Append(len);
             }
         }
 
-        public static string GenerateOpCode(string opCodeName, int parentOffset, CodeSpan fullOpCodeSpan)
+        public void WriteOpCode(string opCodeName, int parentOffset, CodeSpan fullOpCodeSpan)
         {
-            return $"{opCodeName}{GenerateSpanCode(parentOffset, fullOpCodeSpan)}";
+            _code.Append(opCodeName);
+            WriteSpan(parentOffset, fullOpCodeSpan);
         }
 
-        public static string GenerateVariable(string variableName, int parentOffset, CodeSpan variableSpan)
+        public void WriteVariable(string variableName, int parentOffset, CodeSpan variableSpan)
         {
-            return $"${variableName}{GenerateSpanCode(parentOffset, variableSpan)}";
+            _code.Append('$');
+            _code.Append(variableName);
+            WriteSpan(parentOffset, variableSpan);
         }
 
-        public static string GenerateStringLiteral(string rawText, int parentOffset, CodeSpan literalSpan)
+        public void WriteStringLiteral(string rawText, int parentOffset, CodeSpan literalSpan)
         {
-            return $"{CodeParser.StringToStringLiteral(rawText)}{GenerateSpanCode(parentOffset, literalSpan)}";
+            _code.Append(CodeParser.StringToStringLiteral(rawText));
+            WriteSpan(parentOffset, literalSpan);
         }
 
-        public static string GenerateNumber(string numberText, int parentOffset, CodeSpan numberSpan)
+        public void WriteNumberLiteral(string numberText, int parentOffset, CodeSpan literalSpan)
         {
-            return $"{numberText}{GenerateSpanCode(parentOffset, numberSpan)}";
+            _code.Append(numberText);
+            WriteSpan(parentOffset, literalSpan);
         }
+
+        public void WriteBoolLiteral(bool value, int parentOffset, CodeSpan literalSpan)
+        {
+            _code.Append('!');
+            _code.Append(value ? 'T' : 'F');
+            WriteSpan(parentOffset, literalSpan);
+        }
+
+        public void WriteOpen() => _code.Append('(');
+        public void WriteClose() => _code.Append(')');
+        public void WriteDelim() => _code.Append(',');
     }
 }

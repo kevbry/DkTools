@@ -5,10 +5,7 @@ using DKX.Compilation.Files;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Tests.Files;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests.CodeGeneration
@@ -82,7 +79,7 @@ namespace DKX.Compilation.Tests.CodeGeneration
                                         DataType = "int"
                                     }
                                 },
-                                Code = "asn($x,0)"
+                                Code = "mov($x,0)"
                             }
                         }
                     }
@@ -123,7 +120,7 @@ void TestMethod()
                                         DataType = "int"
                                     }
                                 },
-                                Code = "asn($x,0),inc($x)"
+                                Code = "mov($x,0),inc($x)"
                             }
                         }
                     }

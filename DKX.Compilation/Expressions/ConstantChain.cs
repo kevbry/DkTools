@@ -1,4 +1,5 @@
 ﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
 using System;
@@ -15,14 +16,10 @@ namespace DKX.Compilation.Expressions
             _constant = constant ?? throw new ArgumentNullException(nameof(constant));
         }
 
-        public override string ToOpCodes(int parentOffset)
-        {
-            return _constant.Value.ToOpCodes(-1);
-        }
+        public override void ToCode(OpCodeGenerator code, int parentOffset) => _constant.Value.ToCode(code, -1);
 
-        public override void Report(ISourceCodeReporter reporter)
-        {
-            _constant.Value.Report(reporter);
-        }
+        public override bool IsEmptyCode => false;
+
+        public override void Report(ISourceCodeReporter reporter) => _constant.Value.Report(reporter);
     }
 }

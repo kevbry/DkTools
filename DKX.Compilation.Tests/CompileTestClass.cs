@@ -149,6 +149,7 @@ namespace DKX.Compilation.Tests
 
             if (expectedError.HasValue) TestContext.Out.WriteLine($"Expected Error: {expectedError.ToString()}");
 
+            TestContext.Out.WriteLine($"DKX Source:\n{dkxSource}");
             if (app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object File:\n{app.FileSystem.GetFileText(objPathName)}");
             if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{app.FileSystem.GetFileText(wbdkPathName)}");
 

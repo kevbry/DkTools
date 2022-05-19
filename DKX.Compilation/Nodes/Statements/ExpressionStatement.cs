@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.Expressions;
+﻿using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.Expressions;
 using System;
 
 namespace DKX.Compilation.Nodes.Statements
@@ -13,6 +14,8 @@ namespace DKX.Compilation.Nodes.Statements
             _exp = expression ?? throw new ArgumentNullException(nameof(expression));
         }
 
-        public override string ToCode(int parentOffset) => _exp.ToOpCodes(parentOffset);
+        public override void ToCode(OpCodeGenerator code, int parentOffset) => _exp.ToCode(code, parentOffset);
+
+        public override bool IsEmptyCode => _exp.IsEmptyCode;
     }
 }

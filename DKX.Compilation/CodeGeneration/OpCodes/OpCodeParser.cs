@@ -8,6 +8,9 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
 {
     public class OpCodeParser
     {
+        public const string True = "true";
+        public const string False = "false";
+
         private string _source;
         private int _pos;
         private int _len;
@@ -137,6 +140,24 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
                 return OpCodeType.Number;
             }
 
+            if (ch == '!' && _pos + 1 < _len)
+            {
+                if (_source[_pos + 1] == 'T')
+                {
+                    _text.Append(True);
+                    _pos += 2;
+                    ReadSpanSuffix();
+                    return OpCodeType.Bool;
+                }
+                else if (_source[_pos + 1] == 'F')
+                {
+                    _text.Append(False);
+                    _pos += 2;
+                    ReadSpanSuffix();
+                    return OpCodeType.Bool;
+                }
+            }
+
             if (ch == '(')
             {
                 _text.Append('(');
@@ -206,9 +227,11 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
 
         public string ReadOpCode(bool throwOnError = true)
         {
+            var resetPos = _pos;
             if (Read() != OpCodeType.OpCode)
             {
                 if (throwOnError) throw new InvalidOpCodeSourceException("Expected op code.");
+                _pos = resetPos;
                 return null;
             }
             return _text.ToString();
@@ -216,9 +239,11 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
 
         public string ReadVariable(bool throwOnError = true)
         {
+            var resetPos = _pos;
             if (Read() != OpCodeType.Variable)
             {
                 if (throwOnError) throw new InvalidOpCodeSourceException("Expected variable.");
+                _pos = resetPos;
                 return null;
             }
             return _text.ToString();
@@ -265,6 +290,7 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
         Variable,
         Number,
         String,
+        Bool,
         Char,
         Open,
         Close,

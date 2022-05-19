@@ -95,7 +95,7 @@ namespace DKX.Compilation
                 await _app.Log.InfoAsync("Creating directory: {0}", _workDir);
                 _app.FileSystem.CreateDirectory(_workDir);
             }
-            _workDir = _app.FileSystem.CombinePath(_workDir, CompileConstants.WorkDirectoryName);
+            _workDir = _app.FileSystem.CombinePath(_workDir, DkxConst.WorkDirectoryName);
             if (!_app.FileSystem.DirectoryExists(_workDir))
             {
                 await _app.Log.InfoAsync("Creating directory: {0}", _workDir);

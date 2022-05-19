@@ -62,12 +62,12 @@ namespace DKX.Compilation.Exceptions
         }
     }
 
-    class InvalidOpCodeSourceException : Exception
+    class InvalidOpCodeSourceException : CompilerException
     {
         public InvalidOpCodeSourceException(string message) : base(message) { }
     }
 
-    class InvalidBaseTypeException : Exception
+    class InvalidBaseTypeException : CompilerException
     {
         public InvalidBaseTypeException(BaseType baseType) : base($"Invalid base type '{baseType}'.") { }
     }

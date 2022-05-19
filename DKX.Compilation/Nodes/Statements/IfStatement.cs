@@ -1,7 +1,6 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.Expressions;
-using System.Text;
 
 namespace DKX.Compilation.Nodes.Statements
 {
@@ -37,6 +36,8 @@ namespace DKX.Compilation.Nodes.Statements
             }
             Span = span;
         }
+
+        public override bool IsEmptyCode => false;
 
         private bool ReadIfConditionAndBody(NodeBodyContext bodyContext)
         {
@@ -74,7 +75,6 @@ namespace DKX.Compilation.Nodes.Statements
                 if (!Code.ReadExact('{'))
                 {
                     ReportItem(Code.Position, ErrorCode.ExpectedToken, '{');
-                    Code.SkipToAfterExit();
                     return false;
                 }
 
@@ -86,12 +86,10 @@ namespace DKX.Compilation.Nodes.Statements
             return true;
         }
 
-        public override string ToCode(int offset)
+        public override void ToCode(OpCodeGenerator code, int offset)
         {
-            var sb = new StringBuilder();
-
-            sb.Append(OpCodeGenerator.GenerateOpCode("if", offset, Span));
-            sb.Append('(');
+            code.WriteOpCode(OpCode.If, offset, Span);
+            code.WriteOpen();
 
             var first = true;
             foreach (var node in ChildNodes)
@@ -99,18 +97,17 @@ namespace DKX.Compilation.Nodes.Statements
                 if (node is IfBody body)
                 {
                     if (first) first = false;
-                    else sb.Append(',');
+                    else code.WriteDelim();
 
-                    if (body.Condition != null) sb.Append(body.Condition.ToOpCodes(Span.Start));
-                    sb.Append(',');
-                    sb.Append('(');
-                    sb.Append(body.ToCode(Span.Start));
-                    sb.Append(')');
+                    if (body.Condition != null) body.Condition.ToCode(code, Span.Start);
+                    code.WriteDelim();
+                    code.WriteOpen();
+                    body.ToCode(code, Span.Start);
+                    code.WriteClose();
                 }
             }
-            sb.Append(')');
 
-            return sb.ToString();
+            code.WriteClose();
         }
 
         private class IfBody : Statement, IBodyNode
@@ -121,6 +118,7 @@ namespace DKX.Compilation.Nodes.Statements
                 : base(parent, span)
             {
                 _condition = condition;
+                _condition?.Report(this);
             }
 
             public Chain Condition => _condition;
@@ -148,9 +146,11 @@ namespace DKX.Compilation.Nodes.Statements
                 return true;
             }
 
-            public override string ToCode(int parentOffset) => GenerateStatementsOpCode(parentOffset);
+            public override void ToCode(OpCodeGenerator code, int parentOffset) => GenerateStatementsCode(code, parentOffset);
 
             public CodeSpan BodySpan { get => Span; set => Span = value; }
+
+            public override bool IsEmptyCode => false;
         }
     }
 }

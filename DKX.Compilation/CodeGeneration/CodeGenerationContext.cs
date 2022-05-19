@@ -107,7 +107,7 @@ namespace DKX.Compilation.CodeGeneration
             return CodeFragment.Empty;
         }
 
-        public bool TryGetVariable(string name, out DataType dataTypeOut)
+        public bool TryGetVariable(string name, out string wbdkNameOut, out DataType dataTypeOut)
         {
             if (_variables.TryGetValue(name, out var obj))
             {
@@ -116,11 +116,13 @@ namespace DKX.Compilation.CodeGeneration
                 {
                     if (varDataType.Value.IsUnresolved) varDataType = ResolveDataType(varDataType.Value);
 
+                    wbdkNameOut = name; // TODO: this might need to be decorated
                     dataTypeOut = varDataType.Value;
                     return true;
                 }
             }
 
+            wbdkNameOut = default;
             dataTypeOut = default;
             return false;
         }

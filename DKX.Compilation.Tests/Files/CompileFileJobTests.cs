@@ -258,7 +258,7 @@ class Test
                                 Body = new ObjectBody
                                 {
                                     StartPosition = 139,
-                                    Code = "asn($_id,$value)"
+                                    Code = "mov($_id,$value)"
                                 }
                             }
                         }
@@ -485,7 +485,7 @@ class Test
                                 }
                             },
                             StartPosition = 41,
-                            Code = "asn($x,0)"
+                            Code = "mov($x,0)"
                         }
                     }
                 }

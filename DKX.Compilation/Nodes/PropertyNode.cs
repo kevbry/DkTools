@@ -67,7 +67,8 @@ namespace DKX.Compilation.Nodes
             {
                 // Add the implicit argument 'value'.
                 AddVariable(new Variables.Variable(
-                    name: "value",
+                    name: DkxConst.Properties.SetterArgumentName,
+                    wbdkName: DkxConst.Properties.SetterArgumentName,
                     dataType: property.DataType,
                     fileContext: fileContext,
                     passType: Variables.ArgumentPassType.ByValue,

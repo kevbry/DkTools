@@ -16,10 +16,9 @@ namespace DKX.Compilation.Expressions
             _variable = variable ?? throw new ArgumentNullException(nameof(variable));
         }
 
-        public override string ToOpCodes(int parentOffset)
-        {
-            return OpCodeGenerator.GenerateVariable(_variable.Name, parentOffset, Span);
-        }
+        public override void ToCode(OpCodeGenerator code, int parentOffset) => code.WriteVariable(_variable.WbdkName, parentOffset, Span);
+
+        public override bool IsEmptyCode => false;
 
         public override void Report(ISourceCodeReporter reporter) { }
     }

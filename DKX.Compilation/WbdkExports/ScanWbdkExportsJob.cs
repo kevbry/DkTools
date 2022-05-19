@@ -42,7 +42,7 @@ namespace DKX.Compilation.WbdkExports
             await _app.Log.DebugAsync("Scanning for WBDK exports.");
 
             var existingExports = GetFullListOfLinkedExportFiles().ToList();
-            var allExports = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + CompileConstants.WbdkExportsExtension).ToList();
+            var allExports = _app.FileSystem.GetFilesInDirectoryRecursive(_workDir, "*" + DkxConst.WbdkExportsExtension).ToList();
 
             foreach (var result in existingExports)
             {
@@ -104,7 +104,7 @@ namespace DKX.Compilation.WbdkExports
                             pathName = pathName,
                             relPath = relPath,
                             fileContext = fileContext,
-                            exportsPathName = PathUtil.CombinePath(_workDir, relPath, PathUtil.GetFileName(pathName) + CompileConstants.WbdkExportsExtension)
+                            exportsPathName = PathUtil.CombinePath(_workDir, relPath, PathUtil.GetFileName(pathName) + DkxConst.WbdkExportsExtension)
                         };
                         break;
                 }

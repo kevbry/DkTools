@@ -103,7 +103,7 @@ namespace DKX.Compilation.CodeGeneration
         {
             var results = new List<ScanResultFile>();
 
-            foreach (var pathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + CompileConstants.DkxObjectExtension))
+            foreach (var pathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + DkxConst.DkxObjectExtension))
             {
                 var objectFileReader = _objectFileReaderFactory.CreateObjectFileReader(pathName);
 

@@ -52,10 +52,11 @@
     <Compile Include="CodeGeneration\GenerateCodeJob.cs" />
     <Compile Include="CodeGeneration\GenerateCodeJobFactory.cs" />
     <Compile Include="CodeGeneration\IGenerateCodeJobFactory.cs" />
+    <Compile Include="CodeGeneration\OpCodes\OpCode.cs" />
     <Compile Include="CodeGeneration\OpCodes\OpCodeGenerator.cs" />
     <Compile Include="CodeGeneration\OpCodes\OpCodeParser.cs" />
     <Compile Include="CodeGeneration\ScanForGenerateCodeJob.cs" />
-    <Compile Include="CompileConstants.cs" />
+    <Compile Include="DkxConst.cs" />
     <Compile Include="DataTypes\DkDataTypeParser.cs" />
     <Compile Include="DataTypes\BaseType.cs" />
     <Compile Include="DataTypes\DataType.cs" />
@@ -63,6 +64,7 @@
     <Compile Include="CompileQueue.cs" />
     <Compile Include="Compiler.cs" />
     <Compile Include="Exceptions\CompilerException.cs" />
+    <Compile Include="Expressions\BooleanLiteralChain.cs" />
     <Compile Include="Expressions\Chain.cs" />
     <Compile Include="Expressions\ConstantChain.cs" />
     <Compile Include="Expressions\ErrorChain.cs" />
@@ -91,8 +93,10 @@
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\NodeBodyContext.cs" />
     <Compile Include="Nodes\PropertyNode.cs" />
+    <Compile Include="Nodes\Statements\EmptyStatement.cs" />
     <Compile Include="Nodes\Statements\IfStatement.cs" />
     <Compile Include="Nodes\Statements\VariableInitializationStatement.cs" />
+    <Compile Include="Nodes\Statements\WhileStatement.cs" />
     <Compile Include="ReportItems\IReportItemCollector.cs" />
     <Compile Include="ReportItems\ISourceCodeReporter.cs" />
     <Compile Include="ReportItems\ISourceCodeReporterFactory.cs" />

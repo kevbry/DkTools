@@ -136,6 +136,7 @@ namespace DKX.Compilation.Nodes
 
                             args.Add(new Variable(
                                 name: argName,
+                                wbdkName: argName,
                                 dataType: argDataType.Value,
                                 fileContext: methodFileContext,
                                 passType: argType,
@@ -175,7 +176,7 @@ namespace DKX.Compilation.Nodes
                     // This is a property
                     modifiers.CheckForProperty(this);
 
-                    if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                    if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                     else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
 
                     var prop = new PropertyNode(this, name, dataType);
@@ -285,7 +286,7 @@ namespace DKX.Compilation.Nodes
                                 ReportItem(nameSpan, ErrorCode.ConstantsMustHaveInitializer);
                             }
 
-                            if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                            if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                             else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
                             else AddConstant(new Constant(name, dataType, initializer));
 
@@ -328,10 +329,11 @@ namespace DKX.Compilation.Nodes
                                 }
                             }
 
-                            if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                            if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                             else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
                             else AddVariable(new Variable(
                                 name: name,
+                                wbdkName: name, // TODO: may need to decorate with the class name
                                 dataType: dataType,
                                 fileContext: modifiers.FileContext ?? FileContext.NeutralClass,
                                 passType: null, // Only arguments use passType

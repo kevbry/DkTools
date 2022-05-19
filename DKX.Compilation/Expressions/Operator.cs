@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DKX.Compilation.CodeGeneration.OpCodes;
+using System;
 
 namespace DKX.Compilation.Expressions
 {
@@ -123,28 +124,28 @@ namespace DKX.Compilation.Expressions
         {
             switch (op)
             {
-                case Operator.Dot: return "dot";
-                case Operator.Increment: return "inc";
-                case Operator.Decrement: return "dec";
-                case Operator.Multiply: return "mul";
-                case Operator.Divide: return "div";
-                case Operator.Modulus: return "mod";
-                case Operator.Add: return "add";
-                case Operator.Subtract: return "sub";
-                case Operator.Assign: return "asn";
-                case Operator.AssignAdd: return "aad";
-                case Operator.AssignSubtract: return "asb";
-                case Operator.AssignMultiply: return "aml";
-                case Operator.AssignDivide: return "adv";
-                case Operator.AssignModulus: return "amo";
-                case Operator.Equal: return "eq";
-                case Operator.NotEqual: return "ne";
-                case Operator.LessThan: return "lt";
-                case Operator.LessEqual: return "le";
-                case Operator.GreaterThan: return "gt";
-                case Operator.GreaterEqual: return "ge";
-                case Operator.Negative: return "neg";
-                case Operator.Not: return "not";
+                case Operator.Dot: return OpCode.Dot;
+                case Operator.Increment: return OpCode.Increment;
+                case Operator.Decrement: return OpCode.Decrement;
+                case Operator.Multiply: return OpCode.Multiply;
+                case Operator.Divide: return OpCode.Divide;
+                case Operator.Modulus: return OpCode.Modulus;
+                case Operator.Add: return OpCode.Add;
+                case Operator.Subtract: return OpCode.Subtract;
+                case Operator.Assign: return OpCode.Assign;
+                case Operator.AssignAdd: return OpCode.AssignAdd;
+                case Operator.AssignSubtract: return OpCode.AssignSubtract;
+                case Operator.AssignMultiply: return OpCode.AssignMultiply;
+                case Operator.AssignDivide: return OpCode.AssignDivide;
+                case Operator.AssignModulus: return OpCode.AssignModulus;
+                case Operator.Equal: return OpCode.CompareEQ;
+                case Operator.NotEqual: return OpCode.CompareNE;
+                case Operator.LessThan: return OpCode.CompareLT;
+                case Operator.LessEqual: return OpCode.CompareLE;
+                case Operator.GreaterThan: return OpCode.CompareGT;
+                case Operator.GreaterEqual: return OpCode.CompareGE;
+                case Operator.Negative: return OpCode.Negate;
+                case Operator.Not: return OpCode.Not;
                 default: throw new InvalidOperatorException();
             }
         }

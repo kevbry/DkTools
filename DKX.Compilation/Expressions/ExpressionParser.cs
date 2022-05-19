@@ -17,14 +17,26 @@ namespace DKX.Compilation.Expressions
             {
                 var word = code.Text;
                 var wordSpan = code.Span;
+                Chain chain;
+
+                switch (word)
+                {
+                    case "false":
+                        chain = new BooleanLiteralChain(false, wordSpan);
+                        return ReadAfterValue(bodyContext, chain, leftPrec);
+                    case "true":
+                        chain = new BooleanLiteralChain(true, wordSpan);
+                        return ReadAfterValue(bodyContext, chain, leftPrec);
+                }
+
                 if (bodyContext.TryGetVariable(word, out var variable))
                 {
-                    var chain = new VariableChain(variable, wordSpan);
+                    chain = new VariableChain(variable, wordSpan);
                     return ReadAfterValue(bodyContext, chain, leftPrec);
                 }
                 else if (bodyContext.TryGetConstant(word, out var constant))
                 {
-                    var chain = new ConstantChain(constant, wordSpan);
+                    chain = new ConstantChain(constant, wordSpan);
                     return ReadAfterValue(bodyContext, chain, leftPrec);
                 }
                 else

@@ -25,13 +25,14 @@ namespace DKX.Compilation.Nodes.Statements
             if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
         }
 
-        public override string ToCode(int parentOffset)
+        public override void ToCode(OpCodeGenerator code, int parentOffset)
         {
-            return string.Concat(
-                OpCodeGenerator.GenerateOpCode("ret", parentOffset, Span),
-                "(",
-                _exp?.ToOpCodes(Span.Start),
-                ")");
+            code.WriteOpCode(OpCode.Return, parentOffset, Span);
+            code.WriteOpen();
+            _exp?.ToCode(code, Span.Start);
+            code.WriteClose();
         }
+
+        public override bool IsEmptyCode => false;
     }
 }

@@ -28,7 +28,7 @@ namespace DKX.Compilation.Files
                     fileName = PathUtil.GetFileNameWithoutExtension(dkxPathName) + fileContext.GetExtension();
                     break;
                 default:
-                    fileName = CompileConstants.WbdkFilePrefix + PathUtil.GetFileNameWithoutExtension(dkxPathName) + fileContext.GetExtension();
+                    fileName = DkxConst.WbdkFilePrefix + PathUtil.GetFileNameWithoutExtension(dkxPathName) + fileContext.GetExtension();
                     break;
             }
 

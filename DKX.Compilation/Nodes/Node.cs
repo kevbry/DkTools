@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
@@ -9,7 +10,6 @@ using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace DKX.Compilation.Nodes
 {
@@ -170,6 +170,10 @@ namespace DKX.Compilation.Nodes
                     stmt = new ReturnStatement(this, Code.MovePeekedSpan(), bodyContext);
                     stmtSpanOut = stmt.Span;
                     return true;
+                case "while":
+                    stmt = new WhileStatement(this, Code.MovePeekedSpan(), bodyContext);
+                    stmtSpanOut = stmt.Span;
+                    return true;
             }
 
             // Try for variable declaration
@@ -199,12 +203,13 @@ namespace DKX.Compilation.Nodes
                         stmtSpan = stmtSpan.Envelope(initializerSpan);
                     }
 
-                    if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                    if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                     else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
                     else
                     {
                         var variable = new Variable(
                             name: name,
+                            wbdkName: name,
                             dataType: dataType.Value,
                             fileContext: FileContext.NeutralClass,  // Variables don't use a file context as that's up to the parent method / property accessor.
                             passType: null,                         // Variables don't use a pass type; that's only for arguments.
@@ -237,8 +242,17 @@ namespace DKX.Compilation.Nodes
                 exp.Report(this);
                 new ExpressionStatement(this, exp);
                 if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
-                stmtSpanOut = stmtSpan.Envelope(exp.Span);
+                stmtSpanOut = exp.Span;
                 return true;
+            }
+            else
+            {
+                if (Code.ReadExact(';'))
+                {
+                    new EmptyStatement(this, Code.Span);
+                    stmtSpanOut = Code.Span;
+                    return true;
+                }
             }
 
             ReportItem(Code.Position, ErrorCode.ExpectedStatement);
@@ -276,30 +290,26 @@ namespace DKX.Compilation.Nodes
             var variables = GetVariables(includeParents: false).Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
             if (variables.Length == 0) variables = null;
 
-            var bodyCode = GenerateStatementsOpCode(parentOffset);
+            var generator = new OpCodeGenerator();
+            GenerateStatementsCode(generator, parentOffset);
 
             return new ObjectBody
             {
                 Variables = variables,
-                Code = bodyCode,
+                Code = generator.ToString(),
                 StartPosition = bodyNode.BodySpan.Start
             };
         }
 
-        protected string GenerateStatementsOpCode(int parentOffset)
+        protected void GenerateStatementsCode(OpCodeGenerator code, int parentOffset)
         {
-            var bodyCode = new StringBuilder();
-
-            foreach (var stmt in ChildNodes.Where(n => n is Statement).Cast<Statement>())
+            var first = true;
+            foreach (var stmt in ChildNodes.Where(n => n is Statement).Cast<Statement>().Where(x => !x.IsEmptyCode))
             {
-                var stmtCode = stmt.ToCode(parentOffset);
-                if (string.IsNullOrEmpty(stmtCode)) continue;
-
-                if (bodyCode.Length > 0) bodyCode.Append(',');
-                bodyCode.Append(stmtCode);
+                if (first) first = false;
+                else code.WriteDelim();
+                stmt.ToCode(code, parentOffset);
             }
-
-            return bodyCode.ToString();
         }
         #endregion
     }

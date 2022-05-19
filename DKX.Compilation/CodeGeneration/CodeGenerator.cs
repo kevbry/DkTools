@@ -38,33 +38,45 @@ namespace DKX.Compilation.CodeGeneration
 
         public void GenerateBody(bool mustEndWithClose)
         {
-            do
+            var first = true;
+            while (true)
             {
-                if (!GenerateStatement(_codeOffset)) break;
-            }
-            while (_ops.ReadDelim(throwOnError: false));
+                if (mustEndWithClose)
+                {
+                    if (_ops.ReadClose(throwOnError: false)) break;
+                }
+                else
+                {
+                    if (_ops.EndOfFile) break;
+                }
 
-            if (!_ops.EndOfFile) throw new InvalidOpCodeSourceException("Expected end of op code string.");
+                if (first) first = false;
+                else _ops.ReadDelim();
+
+                GenerateStatement(_codeOffset);
+            }
         }
 
-        private bool GenerateStatement(int parentOffset)
+        private void GenerateStatement(int parentOffset)
         {
-            if (_ops.EndOfFile) return false;
+            if (_ops.EndOfFile) throw new InvalidOpCodeSourceException("Unexpected end of file where statement was expected.");
 
             var spanOffset = _ops.SpanOffset;
             _ops.SpanOffset = parentOffset;
             try
             {
-
                 var resetPos = _ops.Position;
                 var op = _ops.ReadOpCode(throwOnError: false);
                 if (op != null)
                 {
                     switch (op)
                     {
-                        case "if":
+                        case OpCode.If:
                             Statement_If(_ops.Span);
-                            return true;
+                            return;
+                        case OpCode.While:
+                            Statement_While(_ops.Span);
+                            return;
                         default:
                             _ops.Position = resetPos;
                             break;
@@ -75,7 +87,6 @@ namespace DKX.Compilation.CodeGeneration
                 _writer.Write(exp.ToString());
                 if (!exp.Terminated) _writer.Write(';');
                 _writer.WriteLine();
-                return true;
             }
             finally
             {
@@ -97,9 +108,9 @@ namespace DKX.Compilation.CodeGeneration
                         return GenerateOp(_ops.Text, _ops.Span);
                     case OpCodeType.Variable:
                         var text = _ops.Text;
-                        if (_cgc.TryGetVariable(text, out var dataType))
+                        if (_cgc.TryGetVariable(text, out var wbdkName, out var dataType))
                         {
-                            return new CodeFragment(text, dataType, OpPrec.None, terminated: false, sourceSpan: _ops.Span, readOnly: false);
+                            return new CodeFragment(wbdkName, dataType, OpPrec.None, terminated: false, sourceSpan: _ops.Span, readOnly: false);
                         }
                         throw new InvalidOpCodeSourceException($"Unknown variable '{text}'.");
                     case OpCodeType.Number:
@@ -109,8 +120,9 @@ namespace DKX.Compilation.CodeGeneration
                         text = _ops.Text;
                         return new CodeFragment(CodeParser.StringToStringLiteral(text), GetDataTypeFromStringLiteral(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
                     case OpCodeType.Char:
-                        text = _ops.Text;
-                        return new CodeFragment(CodeParser.CharToCharLiteral(text[0]), DataType.Char, OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                        return new CodeFragment(CodeParser.CharToCharLiteral(_ops.Text[0]), DataType.Char, OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                    case OpCodeType.Bool:
+                        return new CodeFragment(_ops.Text == OpCodeParser.True ? "1" : "0", DataType.Bool, OpPrec.None, terminated: false, _ops.Span, readOnly: true);
                     default:
                         throw new InvalidOpCodeSourceException($"Unexpected token '{_ops.Text}' in opcode source.");
                 }
@@ -156,15 +168,15 @@ namespace DKX.Compilation.CodeGeneration
         {
             switch (opName)
             {
-                case "asn": return Op_Assign(opSpan);
-                case "dec": return Op_Increment(opSpan, decrement: true);
-                case "eq": return Op_Comparison(opSpan, Operator.Equal);
-                case "ge": return Op_Comparison(opSpan, Operator.GreaterEqual);
-                case "gt": return Op_Comparison(opSpan, Operator.GreaterThan);
-                case "inc": return Op_Increment(opSpan, decrement: false);
-                case "le": return Op_Comparison(opSpan, Operator.LessEqual);
-                case "lt": return Op_Comparison(opSpan, Operator.LessThan);
-                case "ne": return Op_Comparison(opSpan, Operator.NotEqual);
+                case OpCode.Assign: return Op_Assign(opSpan);
+                case OpCode.CompareEQ: return Op_Comparison(opSpan, Operator.Equal);
+                case OpCode.CompareGE: return Op_Comparison(opSpan, Operator.GreaterEqual);
+                case OpCode.CompareGT: return Op_Comparison(opSpan, Operator.GreaterThan);
+                case OpCode.CompareLE: return Op_Comparison(opSpan, Operator.LessEqual);
+                case OpCode.CompareLT: return Op_Comparison(opSpan, Operator.LessThan);
+                case OpCode.CompareNE: return Op_Comparison(opSpan, Operator.NotEqual);
+                case OpCode.Decrement: return Op_Increment(opSpan, decrement: true);
+                case OpCode.Increment: return Op_Increment(opSpan, decrement: false);
                 default: throw new InvalidOpCodeSourceException($"Invalid op code '{opName}'.");
             }
         }
@@ -247,19 +259,21 @@ namespace DKX.Compilation.CodeGeneration
             var first = true;
             while (true)
             {
-                if (first == false && _ops.ReadClose(throwOnError: false)) return;
+                if (first == false)
+                {
+                    if (_ops.ReadClose(throwOnError: false)) return;
+                    _ops.ReadDelim();
+                }
                 if (first == false && _ops.ReadDelim(throwOnError: false))
                 {
+                    // 'else' with no condition
+
                     _writer.WriteLine("else");
 
                     _ops.ReadOpen();
                     using (_writer.Indent())
                     {
-                        while (true)
-                        {
-                            if (_ops.ReadClose(throwOnError: false)) break;
-                            if (!GenerateStatement(keywordSpan.Start)) break;
-                        }
+                        GenerateBody(mustEndWithClose: true);
                     }
                     _writer.WriteLine();
 
@@ -268,11 +282,13 @@ namespace DKX.Compilation.CodeGeneration
                 }
                 else
                 {
+                    // 'if' or 'else if'
+
                     if (first) _writer.Write("if ");
                     else _writer.Write("else if ");
 
                     var condition = GenerateFragment(keywordSpan.Start);
-                    if (condition.DataType.BaseType != BaseType.Bool) _reporter.ReportItem(condition.SourceSpan, ErrorCode.IfConditionMustBeBool);
+                    if (condition.DataType.BaseType != BaseType.Bool) _reporter.ReportItem(condition.SourceSpan, ErrorCode.ConditionMustBeBool);
 
                     _writer.Write(condition.ToString());
                     _writer.WriteLine();
@@ -281,20 +297,35 @@ namespace DKX.Compilation.CodeGeneration
                     _ops.ReadOpen();
                     using (_writer.Indent())
                     {
-                        while (true)
-                        {
-                            if (_ops.ReadClose(throwOnError: false)) break;
-                            if (!GenerateStatement(keywordSpan.Start)) break;
-                        }
+                        GenerateBody(mustEndWithClose: true);
                     }
                     _writer.WriteLine();
-
-                    if (_ops.ReadClose(throwOnError: false)) break;
-                    _ops.ReadDelim();
                 }
 
                 first = false;
             }
+        }
+
+        private void Statement_While(CodeSpan keywordSpan)
+        {
+            _ops.ReadOpen();
+
+            var condition = GenerateFragment(keywordSpan.Start);
+            if (condition.DataType.BaseType != BaseType.Bool) _reporter.ReportItem(condition.SourceSpan, ErrorCode.ConditionMustBeBool);
+
+            _ops.ReadDelim();
+            _ops.ReadOpen();
+
+            _writer.Write("while ");
+            _writer.Write(condition);
+            _writer.WriteLine();
+            using (_writer.Indent())
+            {
+                GenerateBody(mustEndWithClose: true);
+            }
+            _writer.WriteLine();
+
+            _ops.ReadClose();
         }
         #endregion
     }

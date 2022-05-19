@@ -20,27 +20,20 @@ namespace DKX.Compilation.Expressions
             if (_right == null && !_op.IsUnaryPost()) throw new ArgumentNullException(nameof(right));
         }
 
-        public override string ToOpCodes(int parentOffset)
+        public override void ToCode(OpCodeGenerator code, int parentOffset)
         {
+            code.WriteOpCode(_op.GetOpCode(), parentOffset, Span);
+            code.WriteOpen();
+            _left.ToCode(code, Span.Start);
             if (_right != null)
             {
-                return string.Concat(
-                    OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
-                    "(",
-                    _left.ToOpCodes(Span.Start),
-                    ",",
-                    _right.ToOpCodes(Span.Start),
-                    ")");
+                code.WriteDelim();
+                _right.ToCode(code, Span.Start);
             }
-            else
-            {
-                return string.Concat(
-                    OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
-                    "(",
-                    _left.ToOpCodes(Span.Start),
-                    ")");
-            }
+            code.WriteClose();
         }
+
+        public override bool IsEmptyCode => false;
 
         public override void Report(ISourceCodeReporter reporter)
         {

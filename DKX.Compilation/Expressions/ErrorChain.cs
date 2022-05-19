@@ -1,4 +1,5 @@
 ﻿using DK.Code;
+using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.ReportItems;
 
 namespace DKX.Compilation.Expressions
@@ -27,6 +28,8 @@ namespace DKX.Compilation.Expressions
 
         public override void Report(ISourceCodeReporter reporter) => reporter.ReportItem(Span, _errorCode, _args);
 
-        public override string ToOpCodes(int offset) => _innerChain?.ToOpCodes(offset);
+        public override void ToCode(OpCodeGenerator code, int parentOffset) => _innerChain?.ToCode(code, parentOffset);
+
+        public override bool IsEmptyCode => _innerChain?.IsEmptyCode ?? true;
     }
 }

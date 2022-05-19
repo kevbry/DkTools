@@ -1,8 +1,5 @@
 ﻿using DKX.Compilation.Files;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Tests.CodeGeneration;
-using DKX.Compilation.Tests.Files;
-using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -13,10 +10,10 @@ using System.Threading.Tasks;
 namespace DKX.Compilation.Tests.FullCompileTests
 {
     [TestFixture]
-    class IfStatementTests : CompileTestClass
+    class WhileStatementTest : CompileTestClass
     {
         [Test]
-        public async Task If()
+        public async Task SimpleWhile()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
@@ -24,7 +21,10 @@ class Test
     void TestMethod()
     {
         int x = 0;
-        if (x == 0) { x = 1; }
+        while (x < 10)
+        {
+            x++;
+        }
     }
 }
 ", new ObjectFileModel
@@ -46,7 +46,7 @@ class Test
                             {
                                 new ObjectVariable { Name = "x", DataType = "int" }
                             },
-                            Code = "mov($x,0),if(eq($x,0),(mov($x,1)))"
+                            Code = "mov($x,0),while(lt($x,10),(inc($x)))"
                         }
                     }
                 }
@@ -55,13 +55,13 @@ void TestMethod()
 {
     int x;
     x = 0;
-    if x == 0 { x = 1; }
+    while x < 10 { x += 1; }
 }
 ");
         }
 
         [Test]
-        public async Task IfElse()
+        public async Task NoBody()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
@@ -69,8 +69,7 @@ class Test
     void TestMethod()
     {
         int x = 0;
-        if (x == 0) { x = 1; }
-        else { x = 2; }
+        while (x < 10) x++;
     }
 }
 ", new ObjectFileModel
@@ -92,7 +91,7 @@ class Test
                             {
                                 new ObjectVariable { Name = "x", DataType = "int" }
                             },
-                            Code = "mov($x,0),if(eq($x,0),(mov($x,1)),,(mov($x,2)))"
+                            Code = "mov($x,0),while(lt($x,10),(inc($x)))"
                         }
                     }
                 }
@@ -101,13 +100,13 @@ void TestMethod()
 {
     int x;
     x = 0;
-    if x == 0 { x = 1; } else { x = 2; }
+    while x < 10 { x += 1; }
 }
 ");
         }
 
         [Test]
-        public async Task IfElseIfElse()
+        public async Task NoBrackets()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
@@ -115,9 +114,7 @@ class Test
     void TestMethod()
     {
         int x = 0;
-        if (x == 0) { x = 1; }
-        else if (x == 1) { x = 2; }
-        else { x = 3; }
+        while x < 10 { x++; }
     }
 }
 ", new ObjectFileModel
@@ -139,7 +136,7 @@ class Test
                             {
                                 new ObjectVariable { Name = "x", DataType = "int" }
                             },
-                            Code = "mov($x,0),if(eq($x,0),(mov($x,1)),eq($x,1),(mov($x,2)),,(mov($x,3)))"
+                            Code = "mov($x,0),while(lt($x,10),(inc($x)))"
                         }
                     }
                 }
@@ -148,15 +145,13 @@ void TestMethod()
 {
     int x;
     x = 0;
-    if x == 0 { x = 1; }
-    else if x == 1 { x = 2; }
-    else { x = 3; }
+    while x < 10 { x += 1; }
 }
 ");
         }
 
         [Test]
-        public async Task NoBodies()
+        public async Task EmptyStatement()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
@@ -164,9 +159,7 @@ class Test
     void TestMethod()
     {
         int x = 0;
-        if (x == 0) x = 1;
-        else if (x == 1) x = 2;
-        else x = 3;
+        while x < 10 { }
     }
 }
 ", new ObjectFileModel
@@ -188,7 +181,7 @@ class Test
                             {
                                 new ObjectVariable { Name = "x", DataType = "int" }
                             },
-                            Code = "mov($x,0),if(eq($x,0),(mov($x,1)),eq($x,1),(mov($x,2)),,(mov($x,3)))"
+                            Code = "mov($x,0),while(lt($x,10),())"
                         }
                     }
                 }
@@ -197,15 +190,13 @@ void TestMethod()
 {
     int x;
     x = 0;
-    if x == 0 { x = 1; }
-    else if x == 1 { x = 2; }
-    else { x = 3; }
+    while x < 10 { }
 }
 ");
         }
 
         [Test]
-        public async Task NoBracketsFormat()
+        public async Task EmptyStatement2()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
@@ -213,9 +204,7 @@ class Test
     void TestMethod()
     {
         int x = 0;
-        if x == 0 { x = 1; }
-        else if x == 1 { x = 2; }
-        else { x = 3; }
+        while (x < 10) ;
     }
 }
 ", new ObjectFileModel
@@ -237,7 +226,7 @@ class Test
                             {
                                 new ObjectVariable { Name = "x", DataType = "int" }
                             },
-                            Code = "mov($x,0),if(eq($x,0),(mov($x,1)),eq($x,1),(mov($x,2)),,(mov($x,3)))"
+                            Code = "mov($x,0),while(lt($x,10),())"
                         }
                     }
                 }
@@ -246,15 +235,28 @@ void TestMethod()
 {
     int x;
     x = 0;
-    if x == 0 { x = 1; }
-    else if x == 1 { x = 2; }
-    else { x = 3; }
+    while x < 10 { }
 }
 ");
         }
 
         [Test]
-        public async Task IfElseIf()
+        public async Task ConditionNotBoolean()
+        {
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+class Test
+{
+    void TestMethod()
+    {
+        while (1) ;
+    }
+}
+", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 16, 6, 17, ErrorCode.ConditionMustBeBool));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task ConditionIsBool(bool value)
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
@@ -262,11 +264,10 @@ class Test
     void TestMethod()
     {
         int x = 0;
-        if (x == 0) { x = 1; }
-        else if (x == 1) { x = 2; }
+        while (%1) x++;
     }
 }
-", new ObjectFileModel
+".Replace("%1", value.ToString().ToLower()), new ObjectFileModel
             {
                 SourcePathName = @"x:\src\test.dkx",
                 ClassName = "Test",
@@ -285,7 +286,7 @@ class Test
                             {
                                 new ObjectVariable { Name = "x", DataType = "int" }
                             },
-                            Code = "mov($x,0),if(eq($x,0),(mov($x,1)),eq($x,1),(mov($x,2)))"
+                            Code = "mov($x,0),while(%1,(inc($x)))".Replace("%1", value ? "!T" : "!F")
                         }
                     }
                 }
@@ -294,66 +295,9 @@ void TestMethod()
 {
     int x;
     x = 0;
-    if x == 0 { x = 1; }
-    else if x == 1 { x = 2; }
+    while %1 { x += 1; }
 }
-");
-        }
-
-        [Test]
-        public async Task NegativeIfAlone()
-        {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
-class Test
-{
-    void TestMethod()
-    {
-        if
-    }
-}
-", null, null, expectedError: new ReportItem(@"x:\src\test.dkx", 6, 4, -1, -1, ErrorCode.ExpectedExpression));
-        }
-
-        [Test]
-        public async Task NegativeNoBody()
-        {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
-class Test
-{
-    void TestMethod()
-    {
-        if (1)
-    }
-}
-", null, null, expectedError: new ReportItem(@"x:\src\test.dkx", 6, 4, -1, -1, ErrorCode.ExpectedStatement));
-        }
-
-        [Test]
-        public async Task NegativeNoElseBody()
-        {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
-class Test
-{
-    void TestMethod()
-    {
-        if (1) { } else
-    }
-}
-", null, null, expectedError: new ReportItem(@"x:\src\test.dkx", 6, 4, -1, -1, ErrorCode.ExpectedStatement));
-        }
-
-        [Test]
-        public async Task NotBoolean()
-        {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
-class Test
-{
-    void TestMethod()
-    {
-        if (1) { }
-    }
-}
-", null, null, expectedError: new ReportItem(@"x:\src\test.dkx", 5, 12, 5, 13, ErrorCode.ConditionMustBeBool));
+".Replace("%1", value ? "1" : "0"));
         }
     }
 }

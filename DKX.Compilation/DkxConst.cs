@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DKX.Compilation
 {
-    public static class CompileConstants
+    public static class DkxConst
     {
         public const string WorkDirectoryName = ".dkx";
         public const string DkxExtension = ".dkx";
@@ -27,5 +27,10 @@ namespace DKX.Compilation
 
         public static readonly HashSet<string> DataTypeKeyword = StringHelper.ParseWordList(
             "bool char date enum indrel int like numeric short string table time uint unsigned unsupported ushort variant void");
+
+        public static class Properties
+        {
+            public const string SetterArgumentName = "value";
+        }
     }
 }

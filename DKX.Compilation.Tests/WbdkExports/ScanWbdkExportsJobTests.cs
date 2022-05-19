@@ -191,7 +191,7 @@ namespace DKX.Compilation.Tests.WbdkExports
                 Assert.IsTrue(pathName.StartsWith(@"x:\src\", StringComparison.OrdinalIgnoreCase));
                 var relPathName = pathName.Substring(@"x:\src\".Length);
 
-                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}{CompileConstants.WbdkExportsExtension}", scanJob.ExportsPathName.ToLower());
+                Assert.AreEqual($"x:\\bin\\.dkx\\{relPathName}{DkxConst.WbdkExportsExtension}", scanJob.ExportsPathName.ToLower());
                 Assert.AreEqual(FileContextHelper.GetFileContextFromFileName(pathName), scanJob.FileContext);
             }
         }

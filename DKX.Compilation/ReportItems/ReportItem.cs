@@ -115,6 +115,16 @@ namespace DKX.Compilation.ReportItems
 
             return sb.ToString();
         }
+
+        public static ReportItem FromOneBased(string pathName, int startLine, int startPos, int endLine, int endPos, ErrorCode errorCode, params object[] args)
+        {
+            return new ReportItem(pathName, startLine - 1, startPos - 1, endLine - 1, endPos - 1, errorCode, args);
+        }
+
+        public static ReportItem FromOneBased(string pathName, int startLine, int startPos, ErrorCode errorCode, params object[] args)
+        {
+            return new ReportItem(pathName, startLine - 1, startPos - 1, -1, -1, errorCode, args);
+        }
     }
 
     public enum ErrorSeverity

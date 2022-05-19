@@ -208,7 +208,7 @@ namespace DKX.Compilation.DataTypes
                 case BaseType.Void:
                     return "void";
                 case BaseType.Bool:
-                    return "Boolean_t";
+                    return "int";
                 case BaseType.Short:
                     return "short";
                 case BaseType.UShort:

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.CodeGeneration
 {
@@ -23,6 +20,8 @@ namespace DKX.Compilation.CodeGeneration
             CheckIndent();
             _code.Append(str);
         }
+
+        public void Write(CodeFragment frag) => Write(frag.ToString());
 
         public void Write(char ch)
         {
