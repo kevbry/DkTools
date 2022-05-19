@@ -1,7 +1,7 @@
 ﻿using DKX.Compilation.Expressions;
 using System;
 
-namespace DKX.Compilation.Nodes
+namespace DKX.Compilation.Nodes.Statements
 {
     class ExpressionStatement : Statement
     {
@@ -13,6 +13,6 @@ namespace DKX.Compilation.Nodes
             _exp = expression ?? throw new ArgumentNullException(nameof(expression));
         }
 
-        public override string ToCode(int parentOffset) => _exp.ToCode(parentOffset);
+        public override string ToCode(int parentOffset) => _exp.ToOpCodes(parentOffset);
     }
 }

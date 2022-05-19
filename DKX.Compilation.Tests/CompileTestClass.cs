@@ -1,9 +1,18 @@
-﻿using DK.AppEnvironment;
+﻿using DK;
+using DK.AppEnvironment;
 using DK.Implementation.Virtual;
 using DK.Repository;
+using DKX.Compilation.Files;
+using DKX.Compilation.ReportItems;
+using DKX.Compilation.Tests.CodeGeneration;
+using DKX.Compilation.Tests.Files;
+using Newtonsoft.Json;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests
 {
@@ -11,14 +20,19 @@ namespace DKX.Compilation.Tests
     {
         protected DkAppContext CreateAppContext()
         {
+            var app = CreateApp();
+            SetupCompileFiles(app);
+            app.LoadAppSettings();
+            return app;
+        }
+
+        protected DkAppContext CreateApp()
+        {
             var fs = new VirtualFileSystem();
             var log = new TestLogger();
             var config = new TestAppConfigSource();
 
-            var app = new DkAppContext(fs, log, config, new NoAppRepoFactory());
-            SetupCompileFiles(app);
-            app.LoadAppSettings();
-            return app;
+            return new DkAppContext(fs, log, config, new NoAppRepoFactory());
         }
 
         class TestAppConfigSource : IAppConfigSource
@@ -79,7 +93,7 @@ namespace DKX.Compilation.Tests
             public int DefaultSamPort => 5001;
         }
 
-        private void SetupCompileFiles(DkAppContext app)
+        protected void SetupCompile(DkAppContext app)
         {
             app.FileSystem.CreateDirectory(@"x:\bin");
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
@@ -100,6 +114,11 @@ namespace DKX.Compilation.Tests
             SetupFile(app, @"x:\src\util.nc", "util.nc.txt");
             SetupFile(app, @"x:\src\gateway\gateway.cc", "gateway.cc.txt");
             SetupFile(app, @"x:\src\include\all.i", null);
+        }
+
+        protected void SetupCompileFiles(DkAppContext app)
+        {
+            SetupCompile(app);
 
             // DKX source
             SetupFile(app, @"x:\src\cust.dkx", "cust.dkx.txt");
@@ -114,6 +133,45 @@ namespace DKX.Compilation.Tests
             var exeDir = System.IO.Path.GetDirectoryName(uri.AbsolutePath);
             var content = testFileName != null ? System.IO.File.ReadAllText($"{exeDir}\\TestSource\\{testFileName}") : string.Empty;
             app.FileSystem.WriteFileText(pathName, content);
+        }
+
+        protected async Task SetupCompileSingle(string dkxPathName, string objPathName, string wbdkPathName,
+            string dkxSource, ObjectFileModel objModel, string wbdkCode, ReportItem? expectedError = null)
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            app.FileSystem.WriteFileText(dkxPathName, dkxSource);
+
+            var compiler = new Compiler(app);
+            await compiler.CompileAsync(cancel: default);
+
+            if (expectedError.HasValue) TestContext.Out.WriteLine($"Expected Error: {expectedError.ToString()}");
+
+            if (app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object File:\n{app.FileSystem.GetFileText(objPathName)}");
+            if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{app.FileSystem.GetFileText(wbdkPathName)}");
+
+            if (expectedError.HasValue)
+            {
+                Assert.IsTrue(compiler.HasErrors, "Compiler did not return any errors.");
+
+                var errorText = expectedError.Value.ToString();
+                Assert.IsTrue(compiler.ReportItems.Any(x => x.ToString().EqualsI(errorText)), "Compiler returned errors, but not the expected one.");
+
+                Assert.IsFalse(app.FileSystem.FileExists(wbdkPathName), "WBDK file was generated even though there were errors.");
+                return;
+            }
+            else
+            {
+                Assert.IsFalse(compiler.HasErrors, "Compiler returned errors.");
+            }
+
+            Assert.IsTrue(app.FileSystem.FileExists(objPathName), "Object file was not created.");
+            ObjectModelValidator.ValidateModel(objModel, JsonConvert.DeserializeObject<ObjectFileModel>(app.FileSystem.GetFileText(objPathName)));
+
+            Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
+            WbdkCodeValidator.Validate(wbdkCode, app.FileSystem.GetFileText(wbdkPathName));
         }
     }
 }

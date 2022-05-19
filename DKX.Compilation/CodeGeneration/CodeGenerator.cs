@@ -12,13 +12,23 @@ namespace DKX.Compilation.CodeGeneration
     class CodeGenerator
     {
         private OpCodeParser _ops;
+        private int _codeOffset;
         private CodeGenerationContext _cgc;
         private CodeWriter _writer;
         private ISourceCodeReporter _reporter;
 
-        public CodeGenerator(string code, CodeGenerationContext cgc, CodeWriter writer, ISourceCodeReporter reporter)
+        /// <summary>
+        /// Creates a new code generator object.
+        /// </summary>
+        /// <param name="code">The op code source that will be used to generate the code.</param>
+        /// <param name="codeOffset">The starting position of the code body in the original DKX source. Used for generating spans on errors.</param>
+        /// <param name="cgc">Context for generating code.</param>
+        /// <param name="writer">Code writer</param>
+        /// <param name="reporter">Error reporter</param>
+        public CodeGenerator(string code, int codeOffset, CodeGenerationContext cgc, CodeWriter writer, ISourceCodeReporter reporter)
         {
             _ops = new OpCodeParser(code);
+            _codeOffset = codeOffset;
             _cgc = cgc ?? throw new ArgumentNullException(nameof(cgc));
             _writer = writer ?? throw new ArgumentNullException(nameof(writer));
             _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
@@ -30,61 +40,84 @@ namespace DKX.Compilation.CodeGeneration
         {
             do
             {
-                if (!GenerateStatement()) break;
+                if (!GenerateStatement(_codeOffset)) break;
             }
             while (_ops.ReadDelim(throwOnError: false));
+
+            if (!_ops.EndOfFile) throw new InvalidOpCodeSourceException("Expected end of op code string.");
         }
 
-        public bool GenerateStatement()
+        private bool GenerateStatement(int parentOffset)
         {
             if (_ops.EndOfFile) return false;
 
-            // TODO: to implement later
-            //if (_ops.ReadStatement())
-            //{
-            //    switch (_ops.Text)
-            //    {
-            //        case "if":
-            //            GenerateIfStatement();
-            //            return true;
-            //        default:
-            //            throw new InvalidOpCodeSourceException($"Invalid statement type '{_ops.Text}'.");
-            //    }
-            //}
+            var spanOffset = _ops.SpanOffset;
+            _ops.SpanOffset = parentOffset;
+            try
+            {
 
-            var exp = GenerateFragment();
-            _writer.Write(exp.ToString());
-            if (!exp.Terminated) _writer.Write(';');
-            _writer.WriteLine();
-            return true;
+                var resetPos = _ops.Position;
+                var op = _ops.ReadOpCode(throwOnError: false);
+                if (op != null)
+                {
+                    switch (op)
+                    {
+                        case "if":
+                            Statement_If(_ops.Span);
+                            return true;
+                        default:
+                            _ops.Position = resetPos;
+                            break;
+                    }
+                }
+
+                var exp = GenerateFragment(parentOffset);
+                _writer.Write(exp.ToString());
+                if (!exp.Terminated) _writer.Write(';');
+                _writer.WriteLine();
+                return true;
+            }
+            finally
+            {
+                _ops.SpanOffset = spanOffset;
+            }
         }
 
-        public CodeFragment GenerateFragment()
+        private CodeFragment GenerateFragment(int parentOffset)
         {
-            switch (_ops.Read())
+            var spanOffset = _ops.SpanOffset;
+            _ops.SpanOffset = parentOffset;
+            try
             {
-                case OpCodeType.None:
-                    throw new InvalidOpCodeSourceException("Unexpected end of opcode source.");
-                case OpCodeType.OpCode:
-                    return GenerateOp(_ops.Text, _ops.Span);
-                case OpCodeType.Variable:
-                    var text = _ops.Text;
-                    if (_cgc.TryGetVariable(text, out var dataType))
-                    {
-                        return new CodeFragment(text, dataType, OpPrec.None, terminated: false, sourceSpan: _ops.Span, readOnly: false);
-                    }
-                    throw new InvalidOpCodeSourceException($"Unknown variable '{text}'.");
-                case OpCodeType.Number:
-                    text = _ops.Text;
-                    return new CodeFragment(text, GetDataTypeFromNumberText(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
-                case OpCodeType.String:
-                    text = _ops.Text;
-                    return new CodeFragment(CodeParser.StringToStringLiteral(text), GetDataTypeFromStringLiteral(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
-                case OpCodeType.Char:
-                    text = _ops.Text;
-                    return new CodeFragment(CodeParser.CharToCharLiteral(text[0]), DataType.Char, OpPrec.None, terminated: false, _ops.Span, readOnly: true);
-                default:
-                    throw new InvalidOpCodeSourceException($"Unexpected token '{_ops.Text}' in opcode source.");
+                switch (_ops.Read())
+                {
+                    case OpCodeType.None:
+                        throw new InvalidOpCodeSourceException("Unexpected end of opcode source.");
+                    case OpCodeType.OpCode:
+                        return GenerateOp(_ops.Text, _ops.Span);
+                    case OpCodeType.Variable:
+                        var text = _ops.Text;
+                        if (_cgc.TryGetVariable(text, out var dataType))
+                        {
+                            return new CodeFragment(text, dataType, OpPrec.None, terminated: false, sourceSpan: _ops.Span, readOnly: false);
+                        }
+                        throw new InvalidOpCodeSourceException($"Unknown variable '{text}'.");
+                    case OpCodeType.Number:
+                        text = _ops.Text;
+                        return new CodeFragment(text, GetDataTypeFromNumberText(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                    case OpCodeType.String:
+                        text = _ops.Text;
+                        return new CodeFragment(CodeParser.StringToStringLiteral(text), GetDataTypeFromStringLiteral(text), OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                    case OpCodeType.Char:
+                        text = _ops.Text;
+                        return new CodeFragment(CodeParser.CharToCharLiteral(text[0]), DataType.Char, OpPrec.None, terminated: false, _ops.Span, readOnly: true);
+                    default:
+                        throw new InvalidOpCodeSourceException($"Unexpected token '{_ops.Text}' in opcode source.");
+                }
+            }
+            finally
+            {
+                _ops.SpanOffset = spanOffset;
             }
         }
 
@@ -118,13 +151,20 @@ namespace DKX.Compilation.CodeGeneration
             return new DataType(BaseType.String, width: (byte)len);
         }
 
+        #region Op Codes
         private CodeFragment GenerateOp(string opName, CodeSpan opSpan)
         {
             switch (opName)
             {
                 case "asn": return Op_Assign(opSpan);
                 case "dec": return Op_Increment(opSpan, decrement: true);
+                case "eq": return Op_Comparison(opSpan, Operator.Equal);
+                case "ge": return Op_Comparison(opSpan, Operator.GreaterEqual);
+                case "gt": return Op_Comparison(opSpan, Operator.GreaterThan);
                 case "inc": return Op_Increment(opSpan, decrement: false);
+                case "le": return Op_Comparison(opSpan, Operator.LessEqual);
+                case "lt": return Op_Comparison(opSpan, Operator.LessThan);
+                case "ne": return Op_Comparison(opSpan, Operator.NotEqual);
                 default: throw new InvalidOpCodeSourceException($"Invalid op code '{opName}'.");
             }
         }
@@ -133,7 +173,7 @@ namespace DKX.Compilation.CodeGeneration
         {
             _ops.ReadOpen();
 
-            var leftFrag = GenerateFragment();
+            var leftFrag = GenerateFragment(opSpan.Start);
             if (leftFrag.IsEmpty || leftFrag.ReadOnly) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, decrement ? "--" : "++");
             else if (!leftFrag.DataType.IsSuitableForIncDec) _reporter.ReportItem(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, decrement ? "--" : "++");
 
@@ -152,12 +192,12 @@ namespace DKX.Compilation.CodeGeneration
         {
             _ops.ReadOpen();
 
-            var leftFrag = GenerateFragment();
+            var leftFrag = GenerateFragment(opSpan.Start);
             if (leftFrag.IsEmpty || leftFrag.ReadOnly) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, '=');
 
             _ops.ReadDelim();
 
-            var rightFrag = GenerateFragment();
+            var rightFrag = GenerateFragment(opSpan.Start);
             if (rightFrag.IsEmpty || !rightFrag.DataType.IsValue) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsValueOnRight, '=');
 
             _ops.ReadClose();
@@ -173,5 +213,89 @@ namespace DKX.Compilation.CodeGeneration
                 readOnly: false);
 
         }
+
+        private CodeFragment Op_Comparison(CodeSpan opSpan, Operator op)
+        {
+            _ops.ReadOpen();
+
+            var leftFrag = GenerateFragment(opSpan.Start);
+            if (leftFrag.IsEmpty) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, op.GetText());
+
+            _ops.ReadDelim();
+
+            var rightFrag = GenerateFragment(opSpan.Start);
+            if (leftFrag.IsEmpty) _reporter.ReportItem(opSpan, ErrorCode.OperatorExpectsValueOnRight, op.GetText());
+
+            _ops.ReadClose();
+
+            var prec = op.GetPrecedence();
+            return new CodeFragment(
+                text: string.Concat(leftFrag.Protect(prec), " ", op.GetText(), " ", rightFrag.Protect(prec)),
+                dataType: DataType.Bool,
+                precedence: prec,
+                terminated: false,
+                sourceSpan: leftFrag.SourceSpan.Envelope(rightFrag.SourceSpan),
+                readOnly: true);
+        }
+        #endregion
+
+        #region Statements
+        private void Statement_If(CodeSpan keywordSpan)
+        {
+            _ops.ReadOpen();
+
+            var first = true;
+            while (true)
+            {
+                if (first == false && _ops.ReadClose(throwOnError: false)) return;
+                if (first == false && _ops.ReadDelim(throwOnError: false))
+                {
+                    _writer.WriteLine("else");
+
+                    _ops.ReadOpen();
+                    using (_writer.Indent())
+                    {
+                        while (true)
+                        {
+                            if (_ops.ReadClose(throwOnError: false)) break;
+                            if (!GenerateStatement(keywordSpan.Start)) break;
+                        }
+                    }
+                    _writer.WriteLine();
+
+                    _ops.ReadClose();   // Must end after the 'else' with no condition.
+                    return;
+                }
+                else
+                {
+                    if (first) _writer.Write("if ");
+                    else _writer.Write("else if ");
+
+                    var condition = GenerateFragment(keywordSpan.Start);
+                    if (condition.DataType.BaseType != BaseType.Bool) _reporter.ReportItem(condition.SourceSpan, ErrorCode.IfConditionMustBeBool);
+
+                    _writer.Write(condition.ToString());
+                    _writer.WriteLine();
+                    _ops.ReadDelim();
+
+                    _ops.ReadOpen();
+                    using (_writer.Indent())
+                    {
+                        while (true)
+                        {
+                            if (_ops.ReadClose(throwOnError: false)) break;
+                            if (!GenerateStatement(keywordSpan.Start)) break;
+                        }
+                    }
+                    _writer.WriteLine();
+
+                    if (_ops.ReadClose(throwOnError: false)) break;
+                    _ops.ReadDelim();
+                }
+
+                first = false;
+            }
+        }
+        #endregion
     }
 }

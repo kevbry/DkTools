@@ -5,27 +5,27 @@ namespace DKX.Compilation.Expressions
 {
     static class ExpressionParser
     {
-        public static Chain ReadExpressionOrNull(NodeBodyContext body)
+        public static Chain ReadExpressionOrNull(NodeBodyContext bodyContext)
         {
-            return ReadValueOrNull(body, 0);
+            return ReadValueOrNull(bodyContext, 0);
         }
 
-        private static Chain ReadValueOrNull(NodeBodyContext body, OpPrec leftPrec)
+        private static Chain ReadValueOrNull(NodeBodyContext bodyContext, OpPrec leftPrec)
         {
-            var code = body.Code;
+            var code = bodyContext.Code;
             if (code.ReadWord())
             {
                 var word = code.Text;
                 var wordSpan = code.Span;
-                if (body.TryGetVariable(word, out var variable))
+                if (bodyContext.TryGetVariable(word, out var variable))
                 {
                     var chain = new VariableChain(variable, wordSpan);
-                    return ReadAfterValue(body, chain, leftPrec);
+                    return ReadAfterValue(bodyContext, chain, leftPrec);
                 }
-                else if (body.TryGetConstant(word, out var constant))
+                else if (bodyContext.TryGetConstant(word, out var constant))
                 {
                     var chain = new ConstantChain(constant, wordSpan);
-                    return ReadAfterValue(body, chain, leftPrec);
+                    return ReadAfterValue(bodyContext, chain, leftPrec);
                 }
                 else
                 {
@@ -35,31 +35,31 @@ namespace DKX.Compilation.Expressions
             else if (code.ReadStringLiteral())
             {
                 var chain = new StringLiteralChain(CodeParser.StringLiteralToString(code.Text), code.Span);
-                return ReadAfterValue(body, chain, leftPrec);
+                return ReadAfterValue(bodyContext, chain, leftPrec);
             }
             else if (code.ReadNumber())
             {
                 var chain = new NumberChain(code.Text, code.Span);
-                return ReadAfterValue(body, chain, leftPrec);
+                return ReadAfterValue(bodyContext, chain, leftPrec);
             }
             else if (code.ReadExact('('))
             {
-                var chain = ReadValueOrNull(body, 0);
+                var chain = ReadValueOrNull(bodyContext, 0);
                 if (!code.ReadExact(')'))
                 {
                     return new ErrorChain(chain, code.Position, ErrorCode.ExpectedToken, ')');
                 }
                 else
                 {
-                    return ReadAfterValue(body, chain, leftPrec);
+                    return ReadAfterValue(bodyContext, chain, leftPrec);
                 }
             }
             else return null;
         }
 
-        private static Chain ReadAfterValue(NodeBodyContext body, Chain chain, OpPrec leftPrec)
+        private static Chain ReadAfterValue(NodeBodyContext bodyContext, Chain chain, OpPrec leftPrec)
         {
-            var code = body.Code;
+            var code = bodyContext.Code;
             var startPos = code.Position;
             var op = ReadOperatorOrNull(code);
             if (op != null)
@@ -74,11 +74,11 @@ namespace DKX.Compilation.Expressions
                 if (op.Value.op.IsUnaryPost())
                 {
                     var newChain = new OperatorChain(op.Value.op, chain, right: null);
-                    return ReadAfterValue(body, newChain, leftPrec);
+                    return ReadAfterValue(bodyContext, newChain, leftPrec);
                 }
                 else
                 {
-                    var right = ReadValueOrNull(body, opPrec);
+                    var right = ReadValueOrNull(bodyContext, opPrec);
                     if (right == null)
                     {
                         code.Position = startPos;
@@ -86,8 +86,8 @@ namespace DKX.Compilation.Expressions
                     }
                     else
                     {
-                        var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(body, right, opPrec));
-                        return ReadAfterValue(body, newChain, leftPrec);
+                        var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(bodyContext, right, opPrec));
+                        return ReadAfterValue(bodyContext, newChain, leftPrec);
                     }
                 }
             }

@@ -41,7 +41,7 @@ namespace DKX.Compilation.Expressions
             _dataType = new DataType(signed ? BaseType.Numeric : BaseType.UNumeric, width: width, scale: scale);
         }
 
-        public override string ToCode(int parentOffset) => OpCodeGenerator.GenerateNumber(_text, parentOffset, Span);
+        public override string ToOpCodes(int parentOffset) => OpCodeGenerator.GenerateNumber(_text, parentOffset, Span);
 
         public override void Report(ISourceCodeReporter reporter) { }
     }

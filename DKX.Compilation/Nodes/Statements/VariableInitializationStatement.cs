@@ -4,7 +4,7 @@ using DKX.Compilation.Expressions;
 using DKX.Compilation.Variables;
 using System;
 
-namespace DKX.Compilation.Nodes
+namespace DKX.Compilation.Nodes.Statements
 {
     class VariableInitializationStatement : Statement
     {
@@ -25,7 +25,7 @@ namespace DKX.Compilation.Nodes
                 "(",
                 OpCodeGenerator.GenerateVariable(_variable.Name, Span.Start, Span),
                 ",",
-                _exp.ToCode(Span.Start),
+                _exp.ToOpCodes(Span.Start),
                 ")");
         }
     }

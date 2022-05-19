@@ -573,11 +573,6 @@ namespace DK.Code
             return GetText(span.Start, span.Length);
         }
 
-        public string DocumentText
-        {
-            get { return _source; }
-        }
-
         public bool Peek()
         {
             var pos = _pos;
@@ -684,9 +679,11 @@ namespace DK.Code
 
         public string Source
         {
-            get { return _source; }
-            set { SetSource(value); }
+            get => _source;
+            set => SetSource(value);
         }
+
+        public string RemainingSource => _pos >= 0 && _pos <= _source.Length ? _source.Substring(_pos) : string.Empty;
 
         public bool ReadWord()
         {

@@ -15,9 +15,9 @@ namespace DKX.Compilation.Expressions
             _constant = constant ?? throw new ArgumentNullException(nameof(constant));
         }
 
-        public override string ToCode(int parentOffset)
+        public override string ToOpCodes(int parentOffset)
         {
-            return _constant.Value.ToCode(-1);
+            return _constant.Value.ToOpCodes(-1);
         }
 
         public override void Report(ISourceCodeReporter reporter)

@@ -89,7 +89,7 @@ namespace DKX.Compilation.CodeGeneration
                     }
 
                     var context = new CodeGenerationContext(_app, method.Body.Variables, _obj.Constants);
-                    var codeGenerator = new CodeGenerator(method.Body.Code, context, _code, _report);
+                    var codeGenerator = new CodeGenerator(method.Body.Code, method.Body.StartPosition, context, _code, _report);
                     codeGenerator.GenerateBody(mustEndWithClose: false);
                 }
             }

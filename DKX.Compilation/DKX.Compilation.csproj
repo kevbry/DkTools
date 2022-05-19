@@ -91,7 +91,8 @@
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\NodeBodyContext.cs" />
     <Compile Include="Nodes\PropertyNode.cs" />
-    <Compile Include="Nodes\VariableInitializationStatement.cs" />
+    <Compile Include="Nodes\Statements\IfStatement.cs" />
+    <Compile Include="Nodes\Statements\VariableInitializationStatement.cs" />
     <Compile Include="ReportItems\IReportItemCollector.cs" />
     <Compile Include="ReportItems\ISourceCodeReporter.cs" />
     <Compile Include="ReportItems\ISourceCodeReporterFactory.cs" />
@@ -104,9 +105,9 @@
     <Compile Include="Schema\TableHashProvider.cs" />
     <Compile Include="Files\ScanForCompileJob.cs" />
     <Compile Include="Nodes\FileNode.cs" />
-    <Compile Include="Nodes\ExpressionStatement.cs" />
-    <Compile Include="Nodes\ReturnStatement.cs" />
-    <Compile Include="Nodes\Statement.cs" />
+    <Compile Include="Nodes\Statements\ExpressionStatement.cs" />
+    <Compile Include="Nodes\Statements\ReturnStatement.cs" />
+    <Compile Include="Nodes\Statements\Statement.cs" />
     <Compile Include="TestApproachAttribute.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />

@@ -3,6 +3,7 @@ using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Files;
+using DKX.Compilation.Nodes.Statements;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
 using System;
@@ -39,24 +40,27 @@ namespace DKX.Compilation.Nodes
 
         public DkAppContext App => _app;
         public CodeParser Code => _code;
+        public Node Parent => _parent;
 
         public virtual string PathName => _parent.PathName;
 
         #region Report Items
         public void ReportItem(int pos, ErrorCode code, params object[] args)
         {
-            OnReportItem(new ReportItem(PathName, _code.DocumentText, pos, code, args));
+            OnReportItem(new ReportItem(PathName, _code.Source, pos, code, args));
         }
 
         public void ReportItem(CodeSpan span, ErrorCode code, params object[] args)
         {
-            OnReportItem(new ReportItem(PathName, _code.DocumentText, span, code, args));
+            OnReportItem(new ReportItem(PathName, _code.Source, span, code, args));
         }
 
         protected virtual void OnReportItem(ReportItem error)
         {
             _parent.OnReportItem(error);
         }
+
+        public virtual bool HasErrors => _parent.HasErrors;
         #endregion
 
         #region Variables
@@ -124,7 +128,13 @@ namespace DKX.Compilation.Nodes
         #endregion
 
         #region Statements
-        internal void ReadCodeBody(NodeBodyContext bodyContext, int bodyStartPos)
+        /// <summary>
+        /// Reads code between braces { }.
+        /// This method will read the closing '}'.
+        /// </summary>
+        /// <param name="bodyContext">The method/property context.</param>
+        /// <param name="bodyStartPos">Starting position of the body. This should be immediately following the opening '{'.
+        internal bool ReadCodeBody(NodeBodyContext bodyContext, int bodyStartPos)
         {
             if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called by IBodyNode implementations.");
 
@@ -133,27 +143,38 @@ namespace DKX.Compilation.Nodes
                 if (Code.ReadExact('}'))
                 {
                     bodyNode.BodySpan = new CodeSpan(bodyStartPos, Code.Span.Start);
-                    return;
+                    return true;
                 }
-                if (!ParseStatement(bodyContext))
+
+                if (!ReadStatement(bodyContext, out _))
                 {
                     Code.SkipToAfterExit(out var bodyEndPos);
                     bodyNode.BodySpan = new CodeSpan(bodyStartPos, bodyEndPos);
-                    return;
+                    return false;
                 }
             }
         }
 
-        internal bool ParseStatement(NodeBodyContext bodyContext)
+        internal bool ReadStatement(NodeBodyContext bodyContext, out CodeSpan stmtSpanOut)
         {
-            if (Code.ReadExact("return"))
+            var word = Code.PeekWordR();
+
+            Statement stmt;
+            switch (word)
             {
-                new ReturnStatement(this, Code.Span, bodyContext);
-                return true;
+                case "if":
+                    stmt = new IfStatement(this, Code.MovePeekedSpan(), bodyContext);
+                    stmtSpanOut = stmt.Span;
+                    return true;
+                case "return":
+                    stmt = new ReturnStatement(this, Code.MovePeekedSpan(), bodyContext);
+                    stmtSpanOut = stmt.Span;
+                    return true;
             }
 
             // Try for variable declaration
             var dataType = ReadDataTypeOrNull(out var dataTypeSpan);
+            var stmtSpan = dataTypeSpan;
             if (dataType != null)
             {
                 while (true)
@@ -161,6 +182,7 @@ namespace DKX.Compilation.Nodes
                     if (!Code.ReadWord())
                     {
                         ReportItem(dataTypeSpan, ErrorCode.ExpectedVariableName);
+                        stmtSpanOut = stmtSpan;
                         return true;
                     }
                     var name = Code.Text;
@@ -174,6 +196,7 @@ namespace DKX.Compilation.Nodes
                         initializer = ExpressionParser.ReadExpressionOrNull(bodyContext);
                         if (initializer == null) ReportItem(eqSpan, ErrorCode.ExpectedExpression);
                         initializerSpan = nameSpan.Envelope(initializer.Span);
+                        stmtSpan = stmtSpan.Envelope(initializerSpan);
                     }
 
                     if (CompileConstants.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
@@ -195,10 +218,15 @@ namespace DKX.Compilation.Nodes
                         }
                     }
 
-                    if (Code.ReadExact(';')) return true;
+                    if (Code.ReadExact(';'))
+                    {
+                        stmtSpanOut = stmtSpan.Envelope(Code.Span);
+                        return true;
+                    }
                     if (Code.ReadExact(',')) continue;
 
                     ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
+                    stmtSpanOut = stmtSpan;
                     return true;
                 }
             }
@@ -209,10 +237,12 @@ namespace DKX.Compilation.Nodes
                 exp.Report(this);
                 new ExpressionStatement(this, exp);
                 if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
+                stmtSpanOut = stmtSpan.Envelope(exp.Span);
                 return true;
             }
 
             ReportItem(Code.Position, ErrorCode.ExpectedStatement);
+            stmtSpanOut = default;
             return false;
         }
 
@@ -246,7 +276,20 @@ namespace DKX.Compilation.Nodes
             var variables = GetVariables(includeParents: false).Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
             if (variables.Length == 0) variables = null;
 
+            var bodyCode = GenerateStatementsOpCode(parentOffset);
+
+            return new ObjectBody
+            {
+                Variables = variables,
+                Code = bodyCode,
+                StartPosition = bodyNode.BodySpan.Start
+            };
+        }
+
+        protected string GenerateStatementsOpCode(int parentOffset)
+        {
             var bodyCode = new StringBuilder();
+
             foreach (var stmt in ChildNodes.Where(n => n is Statement).Cast<Statement>())
             {
                 var stmtCode = stmt.ToCode(parentOffset);
@@ -256,12 +299,7 @@ namespace DKX.Compilation.Nodes
                 bodyCode.Append(stmtCode);
             }
 
-            return new ObjectBody
-            {
-                Variables = variables,
-                Code = bodyCode.ToString(),
-                StartPosition = bodyNode.BodySpan.Start
-            };
+            return bodyCode.ToString();
         }
         #endregion
     }

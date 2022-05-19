@@ -46,7 +46,7 @@ namespace DKX.Compilation.CodeGeneration
                 var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(_dkxPathName, fileContext);
                 await _app.Log.InfoAsync("Generating: {0}", wbdkPathName);
                 var fileContent = await gen.GenerateCodeAsync(fileContext, wbdkPathName);
-                _app.FileSystem.WriteFileText(wbdkPathName, fileContent);
+                if (!_report.HasErrors) _app.FileSystem.WriteFileText(wbdkPathName, fileContent);
             }
         }
     }

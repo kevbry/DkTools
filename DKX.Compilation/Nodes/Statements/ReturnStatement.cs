@@ -3,7 +3,7 @@ using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.Expressions;
 using System;
 
-namespace DKX.Compilation.Nodes
+namespace DKX.Compilation.Nodes.Statements
 {
     class ReturnStatement : Statement
     {
@@ -30,7 +30,7 @@ namespace DKX.Compilation.Nodes
             return string.Concat(
                 OpCodeGenerator.GenerateOpCode("ret", parentOffset, Span),
                 "(",
-                _exp?.ToCode(Span.Start),
+                _exp?.ToOpCodes(Span.Start),
                 ")");
         }
     }

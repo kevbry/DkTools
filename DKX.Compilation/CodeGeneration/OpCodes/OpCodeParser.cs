@@ -23,6 +23,7 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
         }
 
         public int Position { get => _pos; set => _pos = value; }
+        public string RemainingSource => _source.Substring(_pos);
         public string Source => _source;
         public CodeSpan Span => _span;
         public string Text => _text.ToString();
@@ -192,7 +193,9 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
                 }
                 else
                 {
-                    _span = new CodeSpan(value / 100, value % 100) + _spanOffset;
+                    var start = value / 100;
+                    var end = start + value % 100;
+                    _span = new CodeSpan(start, end) + _spanOffset;
                 }
             }
             else

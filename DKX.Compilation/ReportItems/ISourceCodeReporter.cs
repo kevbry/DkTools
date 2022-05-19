@@ -7,5 +7,7 @@ namespace DKX.Compilation.ReportItems
         void ReportItem(int pos, ErrorCode code, params object[] args);
 
         void ReportItem(CodeSpan span, ErrorCode code, params object[] args);
+
+        bool HasErrors { get; }
     }
 }

@@ -50,5 +50,7 @@ namespace DKX.Compilation.ReportItems
             EnsureFileLoaded();
             _reportCollector.AddReportItem(new ReportItem(_sourcePathName, _source, span, code, args));
         }
+
+        public bool HasErrors => _reportCollector.HasErrors;
     }
 }

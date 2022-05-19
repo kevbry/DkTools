@@ -2,6 +2,7 @@
 using DKX.Compilation.Jobs;
 using DKX.Compilation.ReportItems;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests
@@ -24,5 +25,7 @@ namespace DKX.Compilation.Tests
         public void ReportItem(int pos, ErrorCode code, params object[] args) => ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
 
         public void ReportItem(CodeSpan span, ErrorCode code, params object[] args) => ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
+
+        public bool HasErrors => ReportItems?.Any(x => x.Severity == ErrorSeverity.Error) ?? false;
     }
 }

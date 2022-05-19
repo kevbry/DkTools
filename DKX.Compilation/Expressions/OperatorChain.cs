@@ -20,16 +20,16 @@ namespace DKX.Compilation.Expressions
             if (_right == null && !_op.IsUnaryPost()) throw new ArgumentNullException(nameof(right));
         }
 
-        public override string ToCode(int parentOffset)
+        public override string ToOpCodes(int parentOffset)
         {
             if (_right != null)
             {
                 return string.Concat(
                     OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
                     "(",
-                    _left.ToCode(Span.Start),
+                    _left.ToOpCodes(Span.Start),
                     ",",
-                    _right.ToCode(Span.Start),
+                    _right.ToOpCodes(Span.Start),
                     ")");
             }
             else
@@ -37,7 +37,7 @@ namespace DKX.Compilation.Expressions
                 return string.Concat(
                     OpCodeGenerator.GenerateOpCode(_op.GetOpCode(), parentOffset, Span),
                     "(",
-                    _left.ToCode(Span.Start),
+                    _left.ToOpCodes(Span.Start),
                     ")");
             }
         }

@@ -25,6 +25,8 @@ namespace DKX.Compilation
             _app = app ?? throw new ArgumentNullException(nameof(app));
         }
 
+        public IEnumerable<ReportItem> ReportItems => _reportItems;
+
         public async Task CompileAsync(CancellationToken cancel)
         {
             await DetermineWorkDirAsync();

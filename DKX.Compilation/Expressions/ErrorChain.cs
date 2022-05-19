@@ -27,6 +27,6 @@ namespace DKX.Compilation.Expressions
 
         public override void Report(ISourceCodeReporter reporter) => reporter.ReportItem(Span, _errorCode, _args);
 
-        public override string ToCode(int offset) => _innerChain?.ToCode(offset);
+        public override string ToOpCodes(int offset) => _innerChain?.ToOpCodes(offset);
     }
 }

@@ -63,6 +63,7 @@
     <Compile Include="Files\TestCompileFileJobFactory.cs" />
     <Compile Include="Files\TestObjectFileReader.cs" />
     <Compile Include="Files\TestObjectFileReaderFactory.cs" />
+    <Compile Include="FullCompileTests\IfStatementTests.cs" />
     <Compile Include="WbdkExports\ScanWbdExportFileJobTests.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportsJobTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -7,5 +7,7 @@ namespace DKX.Compilation.ReportItems
         void AddReportItem(ReportItem reportItem);
 
         void AddReportItems(IEnumerable<ReportItem> reportItems);
+
+        bool HasErrors { get; }
     }
 }

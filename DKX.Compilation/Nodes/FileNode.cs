@@ -26,7 +26,7 @@ namespace DKX.Compilation.Nodes
         }
 
         public string ClassName => _className;
-        public bool HasErrors => _reportItems.Any(i => i.Severity == ErrorSeverity.Error);
+        public override bool HasErrors => _reportItems.Any(i => i.Severity == ErrorSeverity.Error);
         public IEnumerable<MethodNode> Methods => ChildNodes.Where(n => n is MethodNode).Cast<MethodNode>();
         public IEnumerable<ReportItem> ReportItems => _reportItems;
 

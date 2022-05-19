@@ -85,6 +85,11 @@ namespace DKX.Compilation
                         try
                         {
                             task = jobToRun.ExecuteAsync(cancel);
+                            if (task.IsFaulted)
+                            {
+                                _reportItems.Add(new ReportItem(null, -1, -1, -1, -1, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, task.Exception));
+                                _haltErrors = true;
+                            }
 
                             await _jobLock.LockAsync();
                             try

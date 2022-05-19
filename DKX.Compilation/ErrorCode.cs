@@ -137,6 +137,9 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Operator '{0}' cannot be used with this data type.")]
         OperatorCannotBeUsedWithThisDataType = 1506,
+
+        [Description("If condition must produce a boolean result.")]
+        IfConditionMustBeBool = 1507,
         #endregion
     }
 
