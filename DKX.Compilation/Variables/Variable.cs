@@ -52,22 +52,5 @@ namespace DKX.Compilation.Variables
             FileContext = _fileContext,
             DataType = _dataType.ToCode()
         };
-
-        public ObjectVariable ToObjectVariable()
-        {
-            OpCodeGenerator code = null;
-            if (_initializer != null)
-            {
-                code = new OpCodeGenerator();
-                _initializer.ToCode(code, 0);
-            }
-
-            return new ObjectVariable
-            {
-                Name = _name,
-                DataType = _dataType.ToCode(),
-                InitializerCode = code?.ToString()
-            };
-        }
     }
 }

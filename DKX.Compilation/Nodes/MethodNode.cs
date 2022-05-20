@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace DKX.Compilation.Nodes
 {
-    class MethodNode : Node, INamedNode, IBodyNode
+    class MethodNode : Node, INamedNode, IBodyNode, IVariableScopeNode, IVariableDeclarationNode
     {
         private string _name;
         private DataType _returnDataType;
@@ -16,6 +16,8 @@ namespace DKX.Compilation.Nodes
         private Privacy _privacy;
         private FileContext _fileContext;
         private CodeSpan _bodySpan;
+        private List<VariableDeclaration> _variableDeclarations;
+        private VariableStore _variableStore;
 
         public MethodNode(Node parent, string name, DataType returnDataType, IEnumerable<Variable> args, Privacy privacy, FileContext fileContext, CodeSpan bodySpan)
             : base(parent)
@@ -26,6 +28,7 @@ namespace DKX.Compilation.Nodes
             _privacy = privacy;
             _fileContext = fileContext;
             _bodySpan = bodySpan;
+            _variableStore = new VariableStore(parent?.GetContainerOrNull<IVariableScopeNode>());
         }
 
         public string Name => _name;
@@ -41,5 +44,19 @@ namespace DKX.Compilation.Nodes
         };
 
         public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
+
+        public void AddVariableDeclaration(VariableDeclaration variableDeclaration)
+        {
+            if (_variableDeclarations == null) _variableDeclarations = new List<VariableDeclaration>();
+            _variableDeclarations.Add(variableDeclaration);
+        }
+
+        public IEnumerable<VariableDeclaration> GetVariableDeclarations()
+        {
+            if (_variableDeclarations == null) return VariableDeclaration.EmptyArray;
+            return _variableDeclarations;
+        }
+
+        public IVariableStore VariableStore => _variableStore;
     }
 }

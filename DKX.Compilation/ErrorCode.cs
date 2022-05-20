@@ -105,6 +105,9 @@ namespace DKX.Compilation
 
         [Description("Member variables must be private.")]
         MemberVariableMustBePrivate = 1405,
+
+        [Description("New variable must be initialized with a value.")]
+        VariableInitializationRequired = 1406,
         #endregion
 
         #region Expressions (1500-1599)

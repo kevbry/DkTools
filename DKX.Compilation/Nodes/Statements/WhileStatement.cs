@@ -1,19 +1,23 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Variables;
 
 namespace DKX.Compilation.Nodes.Statements
 {
-    class WhileStatement : Statement, IBodyNode
+    class WhileStatement : Statement, IBodyNode, IVariableScopeNode
     {
         private Chain _condition;
         private CodeSpan _bodySpan;
+        private VariableStore _variableStore;
 
         public WhileStatement(Node parent, CodeSpan keywordSpan, NodeBodyContext bodyContext)
             : base(parent, keywordSpan)
         {
             ReadConditionAndBody(bodyContext);
             if (!BodySpan.IsEmpty) Span = keywordSpan.Envelope(_bodySpan);
+
+            _variableStore = new VariableStore(parent?.GetContainerOrNull<IVariableScopeNode>());
         }
 
         public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
@@ -99,5 +103,7 @@ namespace DKX.Compilation.Nodes.Statements
         }
 
         public override bool IsEmptyCode => false;
+
+        public IVariableStore VariableStore => _variableStore;
     }
 }

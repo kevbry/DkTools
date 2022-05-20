@@ -1,6 +1,7 @@
 ﻿using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Files;
+using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,12 +49,14 @@ namespace DKX.Compilation.Nodes
         Setter
     }
 
-    class PropertyAccessorNode : Node, IReturnTargetNode, IBodyNode
+    class PropertyAccessorNode : Node, IReturnTargetNode, IBodyNode, IVariableScopeNode, IVariableDeclarationNode
     {
         private PropertyAccessorType _accessorType;
         private Privacy _privacy;
         private FileContext _fileContext;
         private CodeSpan _bodySpan;
+        private List<VariableDeclaration> _variableDeclarations;
+        private VariableStore _variableStore;
 
         public PropertyAccessorNode(PropertyNode property, PropertyAccessorType accessorType, Privacy privacy, FileContext fileContext, int bodyStartPos)
             : base(property)
@@ -62,25 +65,25 @@ namespace DKX.Compilation.Nodes
             _privacy = privacy;
             _fileContext = fileContext;
             _bodySpan = new CodeSpan(bodyStartPos, bodyStartPos);
+            _variableStore = new VariableStore(property.GetContainerOrNull<IVariableScopeNode>());
 
             if (accessorType == PropertyAccessorType.Setter)
             {
                 // Add the implicit argument 'value'.
-                AddVariable(new Variables.Variable(
+                _variableStore.AddVariable(new Variable(
                     name: DkxConst.Properties.SetterArgumentName,
                     wbdkName: DkxConst.Properties.SetterArgumentName,
                     dataType: property.DataType,
                     fileContext: fileContext,
-                    passType: Variables.ArgumentPassType.ByValue,
+                    passType: ArgumentPassType.ByValue,
                     initializer: null));
             }
         }
 
         public PropertyAccessorType AccessorType => _accessorType;
-
-        public DataType ReturnDataType => _accessorType == PropertyAccessorType.Getter ? GetContainerOrNull<PropertyNode>().DataType : DataType.Void;
-
         public CodeSpan BodySpan { get => _bodySpan; set => _bodySpan = value; }
+        public DataType ReturnDataType => _accessorType == PropertyAccessorType.Getter ? GetContainerOrNull<PropertyNode>().DataType : DataType.Void;
+        public IVariableStore VariableStore => _variableStore;
 
         public ObjectPropertyAccessor ToObjectPropertyAccessor() => new ObjectPropertyAccessor
         {
@@ -88,5 +91,17 @@ namespace DKX.Compilation.Nodes
             FileContext = _fileContext,
             Body = GenerateObjectBody(_bodySpan.Start)
         };
+
+        public void AddVariableDeclaration(VariableDeclaration variableDeclaration)
+        {
+            if (_variableDeclarations == null) _variableDeclarations = new List<VariableDeclaration>();
+            _variableDeclarations.Add(variableDeclaration);
+        }
+
+        public IEnumerable<VariableDeclaration> GetVariableDeclarations()
+        {
+            if (_variableDeclarations == null) return VariableDeclaration.EmptyArray;
+            return _variableDeclarations;
+        }
     }
 }

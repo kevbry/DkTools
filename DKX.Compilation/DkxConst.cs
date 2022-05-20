@@ -10,6 +10,9 @@ namespace DKX.Compilation
         public const string DkxObjectExtension = ".dkxx";
         public const string WbdkExportsExtension = ".wbdkx";
 
+        public static string[] EmptyStringArray = new string[0];
+        public static char[] EmptyCharArray = new char[0];
+
         /// <summary>
         /// A prefix prepended to a file name to indicate that this is a DKX compiled file.
         /// </summary>

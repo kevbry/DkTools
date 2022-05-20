@@ -6,6 +6,7 @@
         public const string If = "if";
         public const string Return = "ret";
         public const string While = "while";
+        public const string For = "for";
 
         // Operators
         public const string Assign = "mov";

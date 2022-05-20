@@ -90,7 +90,7 @@ namespace DKX.Compilation.CodeGeneration
 
                     var context = new CodeGenerationContext(_app, method.Body.Variables, _obj.Constants);
                     var codeGenerator = new CodeGenerator(method.Body.Code, method.Body.StartPosition, context, _code, _report);
-                    codeGenerator.GenerateBody(mustEndWithClose: false);
+                    codeGenerator.GenerateBody();
                 }
             }
 
@@ -99,9 +99,8 @@ namespace DKX.Compilation.CodeGeneration
 
         private void WriteDataType(string modelDataType)
         {
-            var dataType = DataType.Parse(modelDataType);
-            if (dataType == null || dataType.Value.BaseType == BaseType.Unsupported) throw new InvalidObjectFileException($"Invalid model data type '{modelDataType}'");
-            _code.Write(dataType.Value.ToDkCode());
+            if (!DataType.TryParse(modelDataType, out var dataType) || dataType.IsUnsupported) throw new InvalidObjectFileException($"Invalid model data type '{modelDataType}'");
+            _code.Write(dataType.ToDkCode());
         }
     }
 }

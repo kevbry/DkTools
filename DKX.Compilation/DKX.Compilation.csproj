@@ -89,11 +89,15 @@
     <Compile Include="Nodes\IBodyNode.cs" />
     <Compile Include="Nodes\INamedNode.cs" />
     <Compile Include="Nodes\IReturnTargetNode.cs" />
+    <Compile Include="Nodes\IVariableDeclarationNode.cs" />
+    <Compile Include="Nodes\IVariableScopeNode.cs" />
     <Compile Include="Nodes\MethodNode.cs" />
+    <Compile Include="Nodes\Modifiers.cs" />
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\NodeBodyContext.cs" />
     <Compile Include="Nodes\PropertyNode.cs" />
     <Compile Include="Nodes\Statements\EmptyStatement.cs" />
+    <Compile Include="Nodes\Statements\ForStatement.cs" />
     <Compile Include="Nodes\Statements\IfStatement.cs" />
     <Compile Include="Nodes\Statements\VariableInitializationStatement.cs" />
     <Compile Include="Nodes\Statements\WhileStatement.cs" />
@@ -116,6 +120,8 @@
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
     <Compile Include="Variables\Variable.cs" />
+    <Compile Include="Variables\VariableDeclaration.cs" />
+    <Compile Include="Variables\VariableStore.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReader.cs" />
     <Compile Include="WbdkExports\IWbdkExportsFileReaderFactory.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportFileJob.cs" />

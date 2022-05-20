@@ -29,7 +29,8 @@ namespace DKX.Compilation.Expressions
                         return ReadAfterValue(bodyContext, chain, leftPrec);
                 }
 
-                if (bodyContext.TryGetVariable(word, out var variable))
+                var variableStore = bodyContext.Body.GetContainerOrNull<IVariableScopeNode>()?.VariableStore;
+                if (variableStore != null && variableStore.TryGetVariable(word, includeParents: true, out var variable))
                 {
                     chain = new VariableChain(variable, wordSpan);
                     return ReadAfterValue(bodyContext, chain, leftPrec);

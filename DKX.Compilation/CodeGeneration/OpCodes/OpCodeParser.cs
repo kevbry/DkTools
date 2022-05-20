@@ -202,6 +202,7 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
 
                 if (_source[_pos] == ':')
                 {
+                    _pos++;
                     var value2 = 0;
                     while (_pos < _len && IsDigit(ch = _source[_pos]))
                     {

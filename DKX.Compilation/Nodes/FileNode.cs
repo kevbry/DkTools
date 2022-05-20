@@ -12,25 +12,27 @@ using System.Linq;
 
 namespace DKX.Compilation.Nodes
 {
-    class FileNode : Node
+    class FileNode : Node, IVariableScopeNode
     {
         private string _pathName;
         private List<ReportItem> _reportItems = new List<ReportItem>();
         private string _className;
+        private VariableStore _variableStore;
 
         public FileNode(DkAppContext app, string pathName, CodeParser code)
             : base(app, code)
         {
             _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
             _className = PathUtil.GetFileNameWithoutExtension(_pathName);
+            _variableStore = new VariableStore(parent: null);
         }
 
         public string ClassName => _className;
         public override bool HasErrors => _reportItems.Any(i => i.Severity == ErrorSeverity.Error);
         public IEnumerable<MethodNode> Methods => ChildNodes.Where(n => n is MethodNode).Cast<MethodNode>();
-        public IEnumerable<ReportItem> ReportItems => _reportItems;
-
         public override string PathName => _pathName;
+        public IEnumerable<ReportItem> ReportItems => _reportItems;
+        public IVariableStore VariableStore => _variableStore;
 
         public void Parse()
         {
@@ -38,7 +40,7 @@ namespace DKX.Compilation.Nodes
 
             while (true)
             {
-                var modifiers = ReadModifiers();
+                var modifiers = Modifiers.ReadModifiers(Code, this);
 
                 if (className == null && Code.ReadExactWholeWord("class"))
                 {
@@ -80,15 +82,13 @@ namespace DKX.Compilation.Nodes
 
         private void InsideClass(Modifiers classModifiers)
         {
-            DataType? dataType;
-
             while (true)
             {
                 if (Code.ReadExact('}')) break; // End of class
 
-                var modifiers = ReadModifiers();
+                var modifiers = Modifiers.ReadModifiers(Code, this);
 
-                if ((dataType = DataType.Parse(Code, out _)) != null) AfterDataType(dataType.Value, modifiers);
+                if (DataType.TryParse(Code, out var dataType)) AfterDataType(dataType, modifiers);
                 else if (Code.Read()) ReportItem(Code.Span, ErrorCode.UnexpectedToken, Code.Text);
                 else break;
             }
@@ -119,8 +119,7 @@ namespace DKX.Compilation.Nodes
                             if (Code.ReadExactWholeWord("ref")) argType = ArgumentPassType.ByReference;
                             else if (Code.ReadExactWholeWord("out")) argType = ArgumentPassType.Out;
 
-                            var argDataType = DataType.Parse(Code, out _);
-                            if (argDataType == null)
+                            if (!DataType.TryParse(Code, out var argDataType))
                             {
                                 ReportItem(Code.Position, ErrorCode.ExpectedArgumentDataType);
                                 argDataType = DataType.Unsupported;
@@ -137,7 +136,7 @@ namespace DKX.Compilation.Nodes
                             args.Add(new Variable(
                                 name: argName,
                                 wbdkName: argName,
-                                dataType: argDataType.Value,
+                                dataType: argDataType,
                                 fileContext: methodFileContext,
                                 passType: argType,
                                 initializer: null));
@@ -176,8 +175,14 @@ namespace DKX.Compilation.Nodes
                     // This is a property
                     modifiers.CheckForProperty(this);
 
-                    if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
-                    else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                    if (DkxConst.AllKeywords.Contains(name))
+                    {
+                        ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                    }
+                    else if (_variableStore.HasVariable(name, includeParents: true) || HasConstant(name) || HasProperty(name))
+                    {
+                        ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                    }
 
                     var prop = new PropertyNode(this, name, dataType);
                     var gotGetter = false;
@@ -186,7 +191,7 @@ namespace DKX.Compilation.Nodes
                     {
                         if (Code.ReadExact('}')) break;
                         
-                        var accessorModifiers = ReadModifiers();
+                        var accessorModifiers = Modifiers.ReadModifiers(Code, this);
                         accessorModifiers.CheckForPropertyAccessor(this, modifiers);
                         var accessorPrivacy = accessorModifiers.Privacy ?? modifiers.Privacy ?? Privacy.Public;
                         var accessorFileContext = accessorModifiers.FileContext ?? FileContext.NeutralClass;
@@ -286,9 +291,18 @@ namespace DKX.Compilation.Nodes
                                 ReportItem(nameSpan, ErrorCode.ConstantsMustHaveInitializer);
                             }
 
-                            if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
-                            else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
-                            else AddConstant(new Constant(name, dataType, initializer));
+                            if (DkxConst.AllKeywords.Contains(name))
+                            {
+                                ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                            }
+                            else if (_variableStore.HasVariable(name, includeParents: true) || HasConstant(name) || HasProperty(name))
+                            {
+                                ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                            }
+                            else
+                            {
+                                AddConstant(new Constant(name, dataType, initializer));
+                            }
 
                             if (Code.ReadExact(';')) break;
 
@@ -329,15 +343,24 @@ namespace DKX.Compilation.Nodes
                                 }
                             }
 
-                            if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
-                            else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
-                            else AddVariable(new Variable(
-                                name: name,
-                                wbdkName: name, // TODO: may need to decorate with the class name
-                                dataType: dataType,
-                                fileContext: modifiers.FileContext ?? FileContext.NeutralClass,
-                                passType: null, // Only arguments use passType
-                                initializer: initializer));
+                            if (DkxConst.AllKeywords.Contains(name))
+                            {
+                                ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                            }
+                            else if (_variableStore.HasVariable(name, includeParents: true) || HasConstant(name) || HasProperty(name))
+                            {
+                                ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                            }
+                            else
+                            {
+                                _variableStore.AddVariable(new Variable(
+                                    name: name,
+                                    wbdkName: name, // TODO: may need to decorate with the class name
+                                    dataType: dataType,
+                                    fileContext: modifiers.FileContext ?? FileContext.NeutralClass,
+                                    passType: null, // Only arguments use passType
+                                    initializer: initializer));
+                            }
 
                             if (Code.ReadExact(';')) break;
 
@@ -358,193 +381,6 @@ namespace DKX.Compilation.Nodes
                 }
             }
             else if (Code.Read()) ReportItem(Code.Span, ErrorCode.ExpectedMethodName, Code.Text);
-        }
-
-        private Modifiers ReadModifiers()
-        {
-            var privacy = null as Privacy?;
-            var privacySpan = CodeSpan.Empty;
-            var fileContext = null as FileContext?;
-            var fileContextSpan = CodeSpan.Empty;
-            var const_ = false;
-            var constSpan = CodeSpan.Empty;
-            var static_ = false;
-            var staticSpan = CodeSpan.Empty;
-
-            while (!Code.EndOfFile)
-            {
-                switch (Code.PeekWordR())
-                {
-                    case "public":
-                        var wordSpan = Code.MovePeekedSpan();
-                        if (privacy != null) ReportItem(wordSpan, ErrorCode.DuplicatePrivacyModifier);
-                        privacy = Privacy.Public;
-                        privacySpan = wordSpan;
-                        continue;
-                    case "protected":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (privacy != null) ReportItem(wordSpan, ErrorCode.DuplicatePrivacyModifier);
-                        privacy = Privacy.Protected;
-                        privacySpan = wordSpan;
-                        continue;
-                    case "private":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (privacy != null) ReportItem(wordSpan, ErrorCode.DuplicatePrivacyModifier);
-                        privacy = Privacy.Private;
-                        privacySpan = wordSpan;
-                        continue;
-                    case "neutral":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (fileContext != null) ReportItem(wordSpan, ErrorCode.DuplicateFileContextModifier);
-                        fileContext = FileContext.NeutralClass;
-                        fileContextSpan = wordSpan;
-                        continue;
-                    case "client":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (fileContext != null) ReportItem(wordSpan, ErrorCode.DuplicateFileContextModifier);
-                        if (Code.ReadExactWholeWord("trigger"))
-                        {
-                            fileContext = FileContext.ClientTrigger;
-                            fileContextSpan = wordSpan.Envelope(Code.Span);
-                        }
-                        else if (Code.ReadExactWholeWord("class"))
-                        {
-                            fileContext = FileContext.ClientClass;
-                            fileContextSpan = wordSpan.Envelope(Code.Span);
-                        }
-                        else if (Code.ReadExactWholeWord("program"))
-                        {
-                            fileContext = FileContext.GatewayProgram;
-                            fileContextSpan = wordSpan.Envelope(Code.Span);
-                        }
-                        else
-                        {
-                            fileContext = FileContext.ClientClass;
-                            fileContextSpan = wordSpan;
-                        }
-                        continue;
-                    case "server":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (fileContext != null) ReportItem(wordSpan, ErrorCode.DuplicateFileContextModifier);
-                        if (Code.ReadExactWholeWord("trigger"))
-                        {
-                            fileContext = FileContext.ServerTrigger;
-                            fileContextSpan = wordSpan.Envelope(Code.Span);
-                        }
-                        else if (Code.ReadExactWholeWord("class"))
-                        {
-                            fileContext = FileContext.ServerClass;
-                            fileContextSpan = wordSpan.Envelope(Code.Span);
-                        }
-                        else if (Code.ReadExactWholeWord("program"))
-                        {
-                            fileContext = FileContext.ServerProgram;
-                            fileContextSpan = wordSpan.Envelope(Code.Span);
-                        }
-                        else
-                        {
-                            fileContext = FileContext.ServerClass;
-                            fileContextSpan = wordSpan;
-                        }
-                        continue;
-                    case "const":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (const_) ReportItem(wordSpan, ErrorCode.DuplicateConstModifier);
-                        const_ = true;
-                        constSpan = wordSpan;
-                        break;
-                    case "static":
-                        wordSpan = Code.MovePeekedSpan();
-                        if (static_) ReportItem(wordSpan, ErrorCode.DuplicateStaticModifier);
-                        static_ = true;
-                        staticSpan = wordSpan;
-                        break;
-
-                }
-                break;
-            }
-
-            return new Modifiers(privacy, privacySpan, fileContext, fileContextSpan, const_, constSpan, static_, staticSpan);
-        }
-
-        private struct Modifiers
-        {
-            public Privacy? Privacy { get; private set; }
-            public CodeSpan PrivacySpan { get; private set; }
-            public FileContext? FileContext { get; private set; }
-            public CodeSpan FileContextSpan { get; private set; }
-            public bool Const { get; private set; }
-            public CodeSpan ConstSpan { get; private set; }
-            public bool Static { get; private set; }
-            public CodeSpan StaticSpan { get; private set; }
-
-            public Modifiers(
-                Privacy? privacy, CodeSpan privacySpan,
-                FileContext? fileContext, CodeSpan fileContextSpan,
-                bool const_, CodeSpan constSpan,
-                bool static_, CodeSpan staticSpan)
-            {
-                Privacy = privacy;
-                PrivacySpan = privacySpan;
-                FileContext = fileContext;
-                FileContextSpan = fileContextSpan;
-                Const = const_;
-                ConstSpan = constSpan;
-                Static = static_;
-                StaticSpan = staticSpan;
-            }
-
-            public bool IsEmpty => Privacy == null && FileContext == null && Const == false;
-
-            public void CheckForClass(ISourceCodeReporter report, CodeSpan classKeywordSpan)
-            {
-            }
-
-            public void CheckForMethod(ISourceCodeReporter report)
-            {
-                if (Const) report.ReportItem(ConstSpan, ErrorCode.InvalidConst);
-            }
-
-            public void CheckForProperty(ISourceCodeReporter report)
-            {
-                if (Const) report.ReportItem(ConstSpan, ErrorCode.InvalidConst);
-            }
-
-            public void CheckForPropertyAccessor(ISourceCodeReporter report, Modifiers propertyModifiers)
-            {
-                if (Const) report.ReportItem(ConstSpan, ErrorCode.InvalidConst);
-
-                if (FileContext != null)
-                {
-                    switch (FileContext)
-                    {
-                        case DK.Code.FileContext.ClientClass:
-                        case DK.Code.FileContext.NeutralClass:
-                        case DK.Code.FileContext.ServerClass:
-                            break;
-                        default:
-                            report.ReportItem(FileContextSpan, ErrorCode.InvalidFileContext);
-                            break;
-                    }
-                }
-
-                if (Privacy != null && propertyModifiers.Privacy != null)
-                {
-                    if (Privacy.Value < propertyModifiers.Privacy) report.ReportItem(PrivacySpan, ErrorCode.PropertyAccessorMoreAccessibleThanProperty);
-                }
-            }
-
-            public void CheckForMemberVariable(ISourceCodeReporter report)
-            {
-                if (Const) report.ReportItem(ConstSpan, ErrorCode.InvalidConst);
-
-                if (Privacy.HasValue && Privacy != Files.Privacy.Private) report.ReportItem(PrivacySpan, ErrorCode.MemberVariableMustBePrivate);
-            }
-
-            public void CheckForConstant(ISourceCodeReporter report)
-            {
-                if (FileContext != null) report.ReportItem(FileContextSpan, ErrorCode.InvalidFileContext);
-            }
         }
 
         protected override void OnReportItem(ReportItem error)

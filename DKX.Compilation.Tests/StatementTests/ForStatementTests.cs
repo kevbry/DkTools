@@ -1,29 +1,25 @@
 ﻿using DKX.Compilation.Files;
 using DKX.Compilation.ReportItems;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace DKX.Compilation.Tests.FullCompileTests
+namespace DKX.Compilation.Tests.StatementTests
 {
     [TestFixture]
-    class WhileStatementTest : CompileTestClass
+    class ForStatementTests : CompileTestClass
     {
         [Test]
-        public async Task SimpleWhile()
+        public async Task SimpleFor()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        int x = 0;
-        while (x < 10)
+        int i, j;
+        for (i = 0; i < 10; i++)
         {
-            x++;
+            j = i;
         }
     }
 }
@@ -44,32 +40,37 @@ class Test
                             StartPosition = 45,
                             Variables = new ObjectVariable[]
                             {
-                                new ObjectVariable { Name = "x", DataType = "int" }
+                                new ObjectVariable { Name = "i", DataType = "int" },
+                                new ObjectVariable { Name = "j", DataType = "int" }
                             },
-                            Code = "mov($x,0),while(lt($x,10),(inc($x)))"
+                            Code = "for((mov($i,0)),lt($i,10),inc($i),(mov($j,$i)))"
                         }
                     }
                 }
             }, @"
 void TestMethod()
 {
-    int x;
-    x = 0;
-    while x < 10 { x += 1; }
+    int i;
+    int j;
+    i = 0;
+    for (; i < 10; i += 1) { j = i; }
 }
 ");
         }
 
         [Test]
-        public async Task NoBody()
+        public async Task MultipleInitializers()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        int x = 0;
-        while (x < 10) x++;
+        int i, j;
+        for (i = 0, j = 0; i < 10; i++)
+        {
+            j = i;
+        }
     }
 }
 ", new ObjectFileModel
@@ -89,32 +90,34 @@ class Test
                             StartPosition = 45,
                             Variables = new ObjectVariable[]
                             {
-                                new ObjectVariable { Name = "x", DataType = "int" }
+                                new ObjectVariable { Name = "i", DataType = "int" },
+                                new ObjectVariable { Name = "j", DataType = "int" }
                             },
-                            Code = "mov($x,0),while(lt($x,10),(inc($x)))"
+                            Code = "for((mov($i,0),mov($j,0)),lt($i,10),inc($i),(mov($j,$i)))"
                         }
                     }
                 }
             }, @"
 void TestMethod()
 {
-    int x;
-    x = 0;
-    while x < 10 { x += 1; }
+    int i;
+    int j;
+    i = 0;
+    j = 0;
+    for (; i < 10; i += 1) { j = i; }
 }
 ");
         }
 
         [Test]
-        public async Task NoBrackets()
+        public async Task VariableDeclaration()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        int x = 0;
-        while x < 10 { x++; }
+        for (int i = 0; i < 10; i++) ;
     }
 }
 ", new ObjectFileModel
@@ -134,32 +137,31 @@ class Test
                             StartPosition = 45,
                             Variables = new ObjectVariable[]
                             {
-                                new ObjectVariable { Name = "x", DataType = "int" }
+                                new ObjectVariable { Name = "i", DataType = "int" }
                             },
-                            Code = "mov($x,0),while(lt($x,10),(inc($x)))"
+                            Code = "for((mov($i,0)),lt($i,10),inc($i),())"
                         }
                     }
                 }
             }, @"
 void TestMethod()
 {
-    int x;
-    x = 0;
-    while x < 10 { x += 1; }
+    int i;
+    i = 0;
+    for (; i < 10; i += 1) { }
 }
 ");
         }
 
         [Test]
-        public async Task EmptyStatement()
+        public async Task MultipleVariableDeclarations()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        int x = 0;
-        while x < 10 { }
+        for (int i = 0, ii = 10; i < ii; i++) { }
     }
 }
 ", new ObjectFileModel
@@ -179,32 +181,52 @@ class Test
                             StartPosition = 45,
                             Variables = new ObjectVariable[]
                             {
-                                new ObjectVariable { Name = "x", DataType = "int" }
+                                new ObjectVariable { Name = "i", DataType = "int" },
+                                new ObjectVariable { Name = "ii", DataType = "int" }
                             },
-                            Code = "mov($x,0),while(lt($x,10),())"
+                            Code = "for((mov($i,0),mov($ii,10)),lt($i,$ii),inc($i),())"
                         }
                     }
                 }
             }, @"
 void TestMethod()
 {
-    int x;
-    x = 0;
-    while x < 10 { }
+    int i;
+    int ii;
+    i = 0;
+    ii = 10;
+    for (; i < ii; i += 1) { }
 }
 ");
         }
 
         [Test]
-        public async Task EmptyStatement2()
+        public async Task VariableMustBeInitialized()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        int x = 0;
-        while (x < 10) ;
+        for (int i; i < 10; i++) ;
+    }
+}
+", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 18, 6, 19, ErrorCode.VariableInitializationRequired));
+        }
+
+        // TODO: Variable declaration with 'var'
+        // TODO: Cannot define more than 1 variable when using 'var'
+
+        [Test]
+        public async Task NoInitializer()
+        {
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+class Test
+{
+    void TestMethod()
+    {
+        int i;
+        for (; i < 10; i++) { }
     }
 }
 ", new ObjectFileModel
@@ -224,50 +246,49 @@ class Test
                             StartPosition = 45,
                             Variables = new ObjectVariable[]
                             {
-                                new ObjectVariable { Name = "x", DataType = "int" }
+                                new ObjectVariable { Name = "i", DataType = "int" }
                             },
-                            Code = "mov($x,0),while(lt($x,10),())"
+                            Code = "for((),lt($i,10),inc($i),())"
                         }
                     }
                 }
             }, @"
 void TestMethod()
 {
-    int x;
-    x = 0;
-    while x < 10 { }
+    int i;
+    for (; i < 10; i += 1) { }
 }
 ");
         }
 
         [Test]
-        public async Task ConditionNotBoolean()
+        public async Task NoCondition()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        while (1) ;
+        int i;
+        for (i = 0; ; i++) { }
     }
 }
-", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 16, 6, 17, ErrorCode.ConditionMustBeBool));
+", null, null, expectedError: ReportItem.FromOneBased(@"x:\src\test.dkx", 7, 21, ErrorCode.ExpectedExpression));
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public async Task ConditionIsBool(bool value)
+        [Test]
+        public async Task NoIteration()
         {
             await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
     {
-        int x = 0;
-        while (%1) x++;
+        int i;
+        for (i = 0; i < 10;) { i++; }
     }
 }
-".Replace("%1", value.ToString().ToLower()), new ObjectFileModel
+", new ObjectFileModel
             {
                 SourcePathName = @"x:\src\test.dkx",
                 ClassName = "Test",
@@ -284,20 +305,112 @@ class Test
                             StartPosition = 45,
                             Variables = new ObjectVariable[]
                             {
-                                new ObjectVariable { Name = "x", DataType = "int" }
+                                new ObjectVariable { Name = "i", DataType = "int" }
                             },
-                            Code = "mov($x,0),while(%1,(inc($x)))".Replace("%1", value ? "!T" : "!F")
+                            Code = "for((mov($i,0)),lt($i,10),,(inc($i)))"
                         }
                     }
                 }
             }, @"
 void TestMethod()
 {
-    int x;
-    x = 0;
-    while %1 { x += 1; }
+    int i;
+    i = 0;
+    for (; i < 10; ) { i += 1; }
 }
-".Replace("%1", value ? "1" : "0"));
+");
+        }
+
+        [Test]
+        public async Task MultipleIteration()
+        {
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+class Test
+{
+    void TestMethod()
+    {
+        int i;
+        int j;
+        for (i = 0, j = 0; i < 10; i++, j++) { }
+    }
+}
+", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 8, 39, ErrorCode.ExpectedToken, ')'));
+        }
+
+        [Test]
+        public async Task NestedLoops()
+        {
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+class Test
+{
+    void TestMethod()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+            }
+        }
+    }
+}
+", new ObjectFileModel
+            {
+                SourcePathName = @"x:\src\test.dkx",
+                ClassName = "Test",
+                Methods = new ObjectMethod[]
+                {
+                    new ObjectMethod
+                    {
+                        Name = "TestMethod",
+                        Privacy = Privacy.Public,
+                        FileContext = DK.Code.FileContext.NeutralClass,
+                        ReturnDataType = "void",
+                        Body = new ObjectBody
+                        {
+                            StartPosition = 45,
+                            Variables = new ObjectVariable[]
+                            {
+                                new ObjectVariable { Name = "i", DataType = "int" },
+                                new ObjectVariable { Name = "j", DataType = "int" }
+                            },
+                            Code = "for((mov($i,0)),lt($i,10),inc($i),(for((mov($j,0)),lt($j,10),inc($j),())))"
+                        }
+                    }
+                }
+            }, @"
+void TestMethod()
+{
+    int i;
+    int j;
+    i = 0;
+    for (; i < 10; i += 1)
+    {
+        j = 0;
+        for (; j < 10; j += 1)
+        {
+        }
+    }
+}
+");
+        }
+
+        [Test]
+        public async Task NestedConditionIsNotBool()
+        {
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+class Test
+{
+    void TestMethod()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; 1; j++)
+            {
+            }
+        }
+    }
+}
+", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 8, 29, 8, 30, ErrorCode.ConditionMustBeBool));
         }
     }
 }

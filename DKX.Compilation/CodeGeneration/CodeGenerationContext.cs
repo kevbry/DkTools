@@ -35,7 +35,7 @@ namespace DKX.Compilation.CodeGeneration
 
         public DataType ResolveDataType(string code)
         {
-            var dataType = DataType.Parse(code) ?? DataType.Unsupported;
+            if (!DataType.TryParse(code, out var dataType)) return DataType.Unsupported;
             if (dataType.IsUnresolved) return ResolveDataType(dataType);
             return dataType;
         }
@@ -52,14 +52,14 @@ namespace DKX.Compilation.CodeGeneration
                     var name = dataType.Options[0];
                     if (_variables != null && _variables.TryGetValue(name, out var variable))
                     {
-                        var variableDataType = DataType.Parse(variable.DataType) ?? DataType.Unsupported;
+                        if (!DataType.TryParse(variable.DataType, out var variableDataType)) return DataType.Unsupported;
                         if (variableDataType.IsUnresolved) return ResolveDataType(variableDataType, (stack ?? DataType.EmptyArray).Concat(new DataType[] { dataType }).ToArray());
                         return variableDataType;
                     }
 
                     if (_constants != null && _constants.TryGetValue(name, out var constant))
                     {
-                        var constDataType = DataType.Parse(constant.DataType) ?? DataType.Unsupported;
+                        if (!DataType.TryParse(constant.DataType, out var constDataType)) return DataType.Unsupported;
                         if (constDataType.IsUnresolved) return ResolveDataType(constDataType, (stack ?? DataType.EmptyArray).Concat(new DataType[] { dataType }).ToArray());
                         return constDataType;
                     }
@@ -76,7 +76,7 @@ namespace DKX.Compilation.CodeGeneration
                         var col = table.GetColumn(childName);
                         if (col != null)
                         {
-                            var colDataType = DataType.Parse(col.DataType.Source.ToString()) ?? DataType.Unsupported;
+                            if (!DataType.TryParse(col.DataType.Source.ToString(), out var colDataType)) return DataType.Unsupported;
                             if (colDataType.IsUnresolved) return ResolveDataType(colDataType, (stack ?? DataType.EmptyArray).Concat(new DataType[] { dataType }).ToArray());
                             return colDataType;
                         }
@@ -92,7 +92,7 @@ namespace DKX.Compilation.CodeGeneration
         {
             if (_variables != null && _variables.TryGetValue(identName, out var variable))
             {
-                var variableDataType = DataType.Parse(variable.DataType) ?? DataType.Unsupported;
+                if (!DataType.TryParse(variable.DataType, out var variableDataType)) variableDataType = DataType.Unsupported;
                 if (variableDataType.IsUnresolved) variableDataType = ResolveDataType(variableDataType);
 
                 return new CodeFragment(variable.Name, variableDataType, OpPrec.None, terminated: false, identSpan, readOnly: false);
@@ -100,7 +100,7 @@ namespace DKX.Compilation.CodeGeneration
 
             if (_constants != null && _constants.TryGetValue(identName, out var constant))
             {
-                var constDataType = DataType.Parse(constant.DataType) ?? DataType.Unsupported;
+                if (!DataType.TryParse(constant.DataType, out var constDataType)) constDataType = DataType.Unsupported;
                 if (constDataType.IsUnresolved) constDataType = ResolveDataType(constDataType);
             }
 
@@ -109,15 +109,14 @@ namespace DKX.Compilation.CodeGeneration
 
         public bool TryGetVariable(string name, out string wbdkNameOut, out DataType dataTypeOut)
         {
-            if (_variables.TryGetValue(name, out var obj))
+            if (_variables != null && _variables.TryGetValue(name, out var obj))
             {
-                var varDataType = DataType.Parse(obj.DataType);
-                if (varDataType != null)
+                if (DataType.TryParse(obj.DataType, out var varDataType))
                 {
-                    if (varDataType.Value.IsUnresolved) varDataType = ResolveDataType(varDataType.Value);
+                    if (varDataType.IsUnresolved) varDataType = ResolveDataType(varDataType);
 
                     wbdkNameOut = name; // TODO: this might need to be decorated
-                    dataTypeOut = varDataType.Value;
+                    dataTypeOut = varDataType;
                     return true;
                 }
             }

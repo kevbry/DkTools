@@ -36,7 +36,12 @@ namespace DKX.Compilation.CodeGeneration
 
         public bool EndOfCode => _ops.EndOfFile;
 
-        public void GenerateBody(bool mustEndWithClose)
+        public void GenerateBody()
+        {
+            GenerateBody(mustEndWithClose: false, _codeOffset);
+        }
+
+        private void GenerateBody(bool mustEndWithClose, int parentOffset)
         {
             var first = true;
             while (true)
@@ -53,7 +58,7 @@ namespace DKX.Compilation.CodeGeneration
                 if (first) first = false;
                 else _ops.ReadDelim();
 
-                GenerateStatement(_codeOffset);
+                GenerateStatement(parentOffset);
             }
         }
 
@@ -71,6 +76,9 @@ namespace DKX.Compilation.CodeGeneration
                 {
                     switch (op)
                     {
+                        case OpCode.For:
+                            Statement_For(_ops.Span);
+                            return;
                         case OpCode.If:
                             Statement_If(_ops.Span);
                             return;
@@ -273,7 +281,7 @@ namespace DKX.Compilation.CodeGeneration
                     _ops.ReadOpen();
                     using (_writer.Indent())
                     {
-                        GenerateBody(mustEndWithClose: true);
+                        GenerateBody(mustEndWithClose: true, keywordSpan.Start);
                     }
                     _writer.WriteLine();
 
@@ -297,7 +305,7 @@ namespace DKX.Compilation.CodeGeneration
                     _ops.ReadOpen();
                     using (_writer.Indent())
                     {
-                        GenerateBody(mustEndWithClose: true);
+                        GenerateBody(mustEndWithClose: true, keywordSpan.Start);
                     }
                     _writer.WriteLine();
                 }
@@ -321,7 +329,46 @@ namespace DKX.Compilation.CodeGeneration
             _writer.WriteLine();
             using (_writer.Indent())
             {
-                GenerateBody(mustEndWithClose: true);
+                GenerateBody(mustEndWithClose: true, keywordSpan.Start);
+            }
+            _writer.WriteLine();
+
+            _ops.ReadClose();
+        }
+
+        private void Statement_For(CodeSpan keywordSpan)
+        {
+            _ops.ReadOpen();
+
+            // Initializer
+            _ops.ReadOpen();
+            GenerateBody(mustEndWithClose: true, keywordSpan.Start);
+            _ops.ReadDelim();
+
+            _writer.Write("for (; ");
+
+            // Condition
+            var condition = GenerateFragment(keywordSpan.Start);
+            if (condition.DataType.BaseType != BaseType.Bool) _reporter.ReportItem(condition.SourceSpan, ErrorCode.ConditionMustBeBool);
+            _writer.Write(condition);
+            _writer.Write("; ");
+            _ops.ReadDelim();
+
+            // Iteration
+            if (!_ops.ReadDelim(throwOnError: false))
+            {
+                var iteration = GenerateFragment(keywordSpan.Start);
+                _writer.Write(iteration);
+                _ops.ReadDelim();
+            }
+            _writer.Write(')');
+            _writer.WriteLine();
+
+            // Body
+            _ops.ReadOpen();
+            using (_writer.Indent())
+            {
+                GenerateBody(mustEndWithClose: true, keywordSpan.Start);
             }
             _writer.WriteLine();
 

@@ -270,160 +270,184 @@ namespace DKX.Compilation.DataTypes
         #endregion
 
         #region Code Parsing
-        public static DataType? Parse(string code)
-        {
-            var parser = new CodeParser(code);
-            return Parse(parser, out _);
-        }
+        public static bool TryParse(string code, out DataType dataTypeOut) => TryParse(new CodeParser(code), out dataTypeOut, out _);
 
-        public static DataType? Parse(CodeParser code, out CodeSpan spanOut)
+        public static bool TryParse(CodeParser code, out DataType dataTypeOut) => TryParse(code, out dataTypeOut, out _);
+
+        public static bool TryParse(CodeParser code, out DataType dataTypeOut, out CodeSpan spanOut)
         {
             var startPos = code.Position;
 
             if (code.ReadWord())
             {
-                var dataType = ParseWord(code, code.Text, code.Span, out spanOut);
-                if (dataType == null)
+                if (!TryParseWord(code, code.Text, code.Span, out dataTypeOut, out spanOut))
                 {
                     code.Position = startPos;
-                    return null;
+                    return false;
                 }
 
-                return dataType;
+                return true;
             }
 
-            spanOut = CodeSpan.Empty;
-            return null;
+            dataTypeOut = default;
+            spanOut = default;
+            return false;
         }
 
-        private static DataType? ParseWord(CodeParser code, string word, CodeSpan wordSpan, out CodeSpan spanOut)
+        private static bool TryParseWord(CodeParser code, string word, CodeSpan wordSpan, out DataType dataTypeOut, out CodeSpan spanOut)
         {
             switch (word)
             {
                 case "unsupported":
+                    dataTypeOut = Unsupported;
                     spanOut = wordSpan;
-                    return Unsupported;
+                    return true;
 
                 case "void":
+                    dataTypeOut = Void;
                     spanOut = wordSpan;
-                    return Void;
+                    return true;
 
                 case "bool":
+                    dataTypeOut = Bool;
                     spanOut = wordSpan;
-                    return Bool;
+                    return true;
 
                 case "short":
+                    dataTypeOut = Short;
                     spanOut = wordSpan;
-                    return Short;
+                    return true;
 
                 case "ushort":
+                    dataTypeOut = UShort;
                     spanOut = wordSpan;
-                    return UShort;
+                    return true;
 
                 case "int":
+                    dataTypeOut = Int;
                     spanOut = wordSpan;
-                    return Int;
+                    return true;
 
                 case "uint":
+                    dataTypeOut = UInt;
                     spanOut = wordSpan;
-                    return UInt;
+                    return true;
 
                 case "numeric":
                     if (!code.ReadExact('('))
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
                     if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < MinNumericWidth || width > MaxNumericWidth)
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
                     byte scale = 0;
                     if (code.ReadExact(','))
                     {
                         if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale)
                         {
-                            spanOut = CodeSpan.Empty;
-                            return null;
+                            dataTypeOut = default;
+                            spanOut = default;
+                            return false;
                         }
                     }
                     if (!code.ReadExact(')'))
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
+                    dataTypeOut = new DataType(BaseType.Numeric, width: width, scale: scale);
                     spanOut = wordSpan.Envelope(code.Span);
-                    return new DataType(BaseType.Numeric, width: width, scale: scale);
+                    return true;
 
                 case "unsigned":
                     if (!code.ReadExact('('))
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
                     if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth)
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
                     scale = 0;
                     if (code.ReadExact(','))
                     {
                         if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale)
                         {
-                            spanOut = CodeSpan.Empty;
-                            return null;
+                            dataTypeOut = default;
+                            spanOut = default;
+                            return false;
                         }
                     }
                     if (!code.ReadExact(')'))
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
+                    dataTypeOut = new DataType(BaseType.UNumeric, width: width, scale: scale);
                     spanOut = wordSpan.Envelope(code.Span);
-                    return new DataType(BaseType.UNumeric, width: width, scale: scale);
+                    return true;
 
                 case "char":
+                    dataTypeOut = Char;
                     spanOut = wordSpan;
-                    return Char;
+                    return true;
 
                 case "uchar":
+                    dataTypeOut = UChar;
                     spanOut = wordSpan;
-                    return UChar;
+                    return true;
 
                 case "string":
                     if (code.ReadExact('('))
                     {
                         if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinStringLength || width > MaxStringLength)
                         {
-                            spanOut = CodeSpan.Empty;
-                            return null;
+                            dataTypeOut = default;
+                            spanOut = default;
+                            return false;
                         }
                         if (!code.ReadExact(')'))
                         {
-                            spanOut = CodeSpan.Empty;
-                            return null;
+                            dataTypeOut = default;
+                            spanOut = default;
+                            return false;
                         }
+                        dataTypeOut = new DataType(BaseType.String, width: width);
                         spanOut = wordSpan.Envelope(code.Span);
-                        return new DataType(BaseType.String, width: width);
+                        return true;
                     }
+                    dataTypeOut = String255;
                     spanOut = wordSpan;
-                    return String255;
+                    return true;
 
                 case "date":
+                    dataTypeOut = Date;
                     spanOut = wordSpan;
-                    return Date;
+                    return true;
 
                 case "time":
+                    dataTypeOut = Time;
                     spanOut = wordSpan;
-                    return Time;
+                    return true;
 
                 case "enum":
                     if (!code.ReadExact('{'))
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
                     var options = new List<string>();
                     while (true)
@@ -432,39 +456,46 @@ namespace DKX.Compilation.DataTypes
                         else if (code.ReadStringLiteral()) options.Add(CodeParser.StringLiteralToString(code.Text));
                         else
                         {
-                            spanOut = CodeSpan.Empty;
-                            return null;
+                            dataTypeOut = default;
+                            spanOut = default;
+                            return false;
                         }
 
                         if (code.ReadExact('}'))
                         {
+                            dataTypeOut = new DataType(BaseType.Enum, options.ToArray());
                             spanOut = wordSpan.Envelope(code.Span);
-                            return new DataType(BaseType.Enum, options.ToArray());
+                            return true;
                         }
 
                         if (code.ReadExact(',')) continue;
 
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
 
                 case "table":
+                    dataTypeOut = Table;
                     spanOut = wordSpan;
-                    return Table;
+                    return true;
 
                 case "indrel":
+                    dataTypeOut = Indrel;
                     spanOut = wordSpan;
-                    return Indrel;
+                    return true;
 
                 case "variant":
+                    dataTypeOut = Variant;
                     spanOut = wordSpan;
-                    return Variant;
+                    return true;
 
                 case "like":
                     if (!code.ReadWord())
                     {
-                        spanOut = CodeSpan.Empty;
-                        return null;
+                        dataTypeOut = default;
+                        spanOut = default;
+                        return false;
                     }
                     var word1 = code.Text;
                     var word1Span = code.Span;
@@ -472,18 +503,22 @@ namespace DKX.Compilation.DataTypes
                     {
                         if (!code.ReadWord())
                         {
-                            spanOut = CodeSpan.Empty;
-                            return null;
+                            dataTypeOut = default;
+                            spanOut = default;
+                            return false;
                         }
+                        dataTypeOut = new DataType(BaseType.Like2, new string[] { word1, code.Text });
                         spanOut = wordSpan.Envelope(code.Span);
-                        return new DataType(BaseType.Like2, new string[] { word1, code.Text });
+                        return true;
                     }
+                    dataTypeOut = new DataType(BaseType.Like1, new string[] { word1 });
                     spanOut = wordSpan.Envelope(word1Span);
-                    return new DataType(BaseType.Like1, new string[] { word1 });
+                    return true;
             }
 
-            spanOut = CodeSpan.Empty;
-            return null;
+            dataTypeOut = default;
+            spanOut = default;
+            return false;
         }
         #endregion
 

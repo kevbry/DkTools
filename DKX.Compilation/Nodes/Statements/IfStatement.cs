@@ -1,14 +1,19 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Variables;
 
 namespace DKX.Compilation.Nodes.Statements
 {
-    class IfStatement : Statement
+    class IfStatement : Statement, IVariableScopeNode
     {
+        private VariableStore _variableStore;
+
         public IfStatement(Node parent, CodeSpan keywordSpan, NodeBodyContext bodyContext)
             : base(parent, keywordSpan)
         {
+            _variableStore = new VariableStore(parent?.GetContainerOrNull<IVariableScopeNode>());
+
             if (!ReadIfConditionAndBody(bodyContext)) return;
             while (true)
             {
@@ -152,5 +157,7 @@ namespace DKX.Compilation.Nodes.Statements
 
             public override bool IsEmptyCode => false;
         }
+
+        public IVariableStore VariableStore => _variableStore;
     }
 }

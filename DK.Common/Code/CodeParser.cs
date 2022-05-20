@@ -709,6 +709,17 @@ namespace DK.Code
             return true;
         }
 
+        public bool PeekWord()
+        {
+            var pos = _pos;
+            if (ReadWord())
+            {
+                _pos = pos;
+                return true;
+            }
+            return false;
+        }
+
         public string ReadWordR()
         {
             if (!ReadWord()) return string.Empty;
@@ -866,6 +877,32 @@ namespace DK.Code
             _tokenTextStr = null;
             _tokenType = CodeType.Unknown;
             return true;
+        }
+
+        public bool ReadExactAny(char[] expecting)
+        {
+            if (!SkipWhiteSpace()) return false;
+
+            if (_pos < _length)
+            {
+                var ch = _source[_pos];
+                foreach (var expectingCh in expecting)
+                {
+                    if (ch == expectingCh)
+                    {
+                        _tokenStartPos = _pos;
+                        _pos++;
+
+                        _tokenText.Clear();
+                        _tokenText.Append(ch);
+                        _tokenTextStr = null;
+                        _tokenType = CodeType.Unknown;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public bool ReadPattern(Regex rx)

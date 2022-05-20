@@ -1,10 +1,6 @@
 ﻿using DK.Code;
 using DKX.Compilation.Variables;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Nodes
 {
@@ -17,19 +13,18 @@ namespace DKX.Compilation.Nodes
             _body = body ?? throw new ArgumentNullException(nameof(body));
         }
 
+        public Node Body => _body;
         public CodeParser Code => _body.Code;
 
-        public bool TryGetVariable(string name, out Variable variableOut)
+        public void PublishVariable(Variable variable)
         {
-            var variable = _body.GetVariable(name);
-            if (variable != null)
-            {
-                variableOut = variable;
-                return true;
-            }
+            var scope = _body.GetContainerOrNull<IVariableScopeNode>();
+            if (scope == null) throw new InvalidOperationException("No variable scope is available.");
+            scope.VariableStore.AddVariable(variable);
 
-            variableOut = default;
-            return false;
+            var declarationScope = _body.GetContainerOrNull<IVariableDeclarationNode>();
+            if (declarationScope == null) throw new InvalidOperationException("No variable declaration scope is available.");
+            declarationScope.AddVariableDeclaration(new VariableDeclaration(variable.Name, variable.WbdkName, variable.DataType.ToCode()));
         }
 
         public bool TryGetConstant(string name, out Constant constantOut)

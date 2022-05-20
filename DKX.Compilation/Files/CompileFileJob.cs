@@ -52,7 +52,7 @@ namespace DKX.Compilation.Files
                 var properties = fileNode.Properties.Select(p => p.ToObjectProperty()).ToArray();
                 if (properties.Length == 0) properties = null;
 
-                var memberVariables = fileNode.GetVariables(includeParents: false).Select(v => v.ToObjectMemberVariable()).ToArray();
+                var memberVariables = fileNode.VariableStore.GetVariables(includeParents: false).Select(v => v.ToObjectMemberVariable()).ToArray();
                 if (memberVariables.Length == 0) memberVariables = null;
 
                 var constants = fileNode.Constants.Select(c => c.ToObjectConstant()).ToArray();

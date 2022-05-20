@@ -63,45 +63,8 @@ namespace DKX.Compilation.Nodes
         public virtual bool HasErrors => _parent.HasErrors;
         #endregion
 
-        #region Variables
-        private Dictionary<string, Variable> _vars;
-
-        public bool HasVariable(string name)
-        {
-            if (_vars != null && _vars.ContainsKey(name)) return true;
-            return _parent?.HasVariable(name) ?? false;
-        }
-
+        #region Properties
         public virtual bool HasProperty(string name) => _parent.HasProperty(name);
-
-        public Variable GetVariable(string name)
-        {
-            if (_vars != null)
-            {
-                if (_vars.TryGetValue(name, out var variable)) return variable;
-            }
-
-            return _parent?.GetVariable(name);
-        }
-
-        public void AddVariable(Variable variable)
-        {
-            if (_vars == null) _vars = new Dictionary<string, Variable>();
-            _vars[variable.Name] = variable;
-        }
-
-        public IEnumerable<Variable> GetVariables(bool includeParents)
-        {
-            if (includeParents && _parent != null)
-            {
-                foreach (var v in _parent.GetVariables(true)) yield return v;
-            }
-
-            if (_vars != null)
-            {
-                foreach (var v in _vars.Values) yield return v;
-            }
-        }
         #endregion
 
         #region Constants
@@ -128,6 +91,8 @@ namespace DKX.Compilation.Nodes
         #endregion
 
         #region Statements
+        internal IEnumerable<Statement> Statements => _childNodes.Where(x => x is Statement).Cast<Statement>();
+
         /// <summary>
         /// Reads code between braces { }.
         /// This method will read the closing '}'.
@@ -155,82 +120,50 @@ namespace DKX.Compilation.Nodes
             }
         }
 
-        internal bool ReadStatement(NodeBodyContext bodyContext, out CodeSpan stmtSpanOut)
+        internal bool ReadStatement(
+            NodeBodyContext bodyContext,
+            out CodeSpan stmtSpanOut,
+            bool allowControlStatements = true,
+            bool allowVariableDeclarations = true,
+            bool tryReadStatementEndToken = true)
         {
             var word = Code.PeekWordR();
 
-            Statement stmt;
-            switch (word)
+            if (allowControlStatements)
             {
-                case "if":
-                    stmt = new IfStatement(this, Code.MovePeekedSpan(), bodyContext);
-                    stmtSpanOut = stmt.Span;
-                    return true;
-                case "return":
-                    stmt = new ReturnStatement(this, Code.MovePeekedSpan(), bodyContext);
-                    stmtSpanOut = stmt.Span;
-                    return true;
-                case "while":
-                    stmt = new WhileStatement(this, Code.MovePeekedSpan(), bodyContext);
-                    stmtSpanOut = stmt.Span;
-                    return true;
+                Statement stmt;
+                switch (word)
+                {
+                    case "for":
+                        stmt = new ForStatement(this, Code.MovePeekedSpan(), bodyContext);
+                        stmtSpanOut = stmt.Span;
+                        return true;
+                    case "if":
+                        stmt = new IfStatement(this, Code.MovePeekedSpan(), bodyContext);
+                        stmtSpanOut = stmt.Span;
+                        return true;
+                    case "return":
+                        stmt = new ReturnStatement(this, Code.MovePeekedSpan(), bodyContext);
+                        stmtSpanOut = stmt.Span;
+                        return true;
+                    case "while":
+                        stmt = new WhileStatement(this, Code.MovePeekedSpan(), bodyContext);
+                        stmtSpanOut = stmt.Span;
+                        return true;
+                }
             }
 
-            // Try for variable declaration
-            var dataType = ReadDataTypeOrNull(out var dataTypeSpan);
-            var stmtSpan = dataTypeSpan;
-            if (dataType != null)
+            if (allowVariableDeclarations)
             {
-                while (true)
+                if (TryReadDataType(out var dataType, out var dataTypeSpan))
                 {
-                    if (!Code.ReadWord())
-                    {
-                        ReportItem(dataTypeSpan, ErrorCode.ExpectedVariableName);
-                        stmtSpanOut = stmtSpan;
-                        return true;
-                    }
-                    var name = Code.Text;
-                    var nameSpan = Code.Span;
-                    Chain initializer = null;
-                    var initializerSpan = nameSpan;
+                    ReadSpecificVariableDeclaration(
+                        bodyContext: bodyContext,
+                        dataType: dataType,
+                        dataTypeSpan: dataTypeSpan,
+                        requireAllVariablesToBeInitialized: false,
+                        stmtSpanOut: out var stmtSpan);
 
-                    if (Code.ReadExact('='))
-                    {
-                        var eqSpan = Code.Span;
-                        initializer = ExpressionParser.ReadExpressionOrNull(bodyContext);
-                        if (initializer == null) ReportItem(eqSpan, ErrorCode.ExpectedExpression);
-                        initializerSpan = nameSpan.Envelope(initializer.Span);
-                        stmtSpan = stmtSpan.Envelope(initializerSpan);
-                    }
-
-                    if (DkxConst.AllKeywords.Contains(name)) ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
-                    else if (HasVariable(name) || HasConstant(name) || HasProperty(name)) ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
-                    else
-                    {
-                        var variable = new Variable(
-                            name: name,
-                            wbdkName: name,
-                            dataType: dataType.Value,
-                            fileContext: FileContext.NeutralClass,  // Variables don't use a file context as that's up to the parent method / property accessor.
-                            passType: null,                         // Variables don't use a pass type; that's only for arguments.
-                            initializer: null);                     // Variables don't use an initializer; they add the initialization statement into the code directly where they are declared.
-
-                        AddVariable(variable);
-                        if (initializer != null)
-                        {
-                            new VariableInitializationStatement(this, variable, initializer, initializerSpan);
-                            initializer.Report(this);
-                        }
-                    }
-
-                    if (Code.ReadExact(';'))
-                    {
-                        stmtSpanOut = stmtSpan.Envelope(Code.Span);
-                        return true;
-                    }
-                    if (Code.ReadExact(',')) continue;
-
-                    ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
                     stmtSpanOut = stmtSpan;
                     return true;
                 }
@@ -241,17 +174,34 @@ namespace DKX.Compilation.Nodes
             {
                 exp.Report(this);
                 new ExpressionStatement(this, exp);
-                if (!Code.ReadExact(';')) ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
-                stmtSpanOut = exp.Span;
-                return true;
+                if (tryReadStatementEndToken)
+                {
+                    if (!Code.ReadExact(';'))
+                    {
+                        ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
+                    }
+                    else
+                    {
+                        stmtSpanOut = exp.Span.Envelope(Code.Span);
+                        return true;
+                    }
+                }
+                else
+                {
+                    stmtSpanOut = exp.Span;
+                    return true;
+                }
             }
             else
             {
-                if (Code.ReadExact(';'))
+                if (tryReadStatementEndToken)
                 {
-                    new EmptyStatement(this, Code.Span);
-                    stmtSpanOut = Code.Span;
-                    return true;
+                    if (Code.ReadExact(';'))
+                    {
+                        new EmptyStatement(this, Code.Span);
+                        stmtSpanOut = Code.Span;
+                        return true;
+                    }
                 }
             }
 
@@ -260,25 +210,26 @@ namespace DKX.Compilation.Nodes
             return false;
         }
 
-        protected DataType? ReadDataTypeOrNull(out CodeSpan spanOut)
+        protected bool TryReadDataType(out DataType dataTypeOut, out CodeSpan spanOut)
         {
-            var dataType = DataType.Parse(Code, out var dataTypeSpan);
-            if (dataType != null)
+            if (DataType.TryParse(Code, out var dataType, out var dataTypeSpan))
             {
+                dataTypeOut = dataType;
                 spanOut = dataTypeSpan;
-                return dataType;
+                return true;
             }
 
-            if (Code.ReadWord())
+            DataType? typedefDataType;
+            if (Code.PeekWord() && (typedefDataType = GetTypedefDataType(Code.Text)) != null)
             {
-                dataType = GetTypedefDataType(Code.Text);
-                if (dataType == null) Code.Position = Code.Span.Start;
-                spanOut = Code.Span;
-                return dataType;
+                dataTypeOut = typedefDataType.Value;
+                spanOut = Code.MovePeekedSpan();
+                return true;
             }
 
-            spanOut = CodeSpan.Empty;
-            return null;
+            dataTypeOut = default;
+            spanOut = default;
+            return false;
         }
 
         protected virtual DataType? GetTypedefDataType(string typedefName) => _parent.GetTypedefDataType(typedefName);
@@ -287,7 +238,8 @@ namespace DKX.Compilation.Nodes
         {
             if (!(this is IBodyNode bodyNode)) throw new InvalidOperationException("This method may only be called for an IBodyNode implementation.");
 
-            var variables = GetVariables(includeParents: false).Where(v => v.IsArgument == false).Select(v => v.ToObjectVariable()).ToArray();
+            ObjectVariable[] variables = null;
+            if (this is IVariableDeclarationNode varDeclNode) variables = varDeclNode.GetVariableDeclarations().Select(x => x.ToObjectVariable()).ToArray();
             if (variables.Length == 0) variables = null;
 
             var generator = new OpCodeGenerator();
@@ -309,6 +261,82 @@ namespace DKX.Compilation.Nodes
                 if (first) first = false;
                 else code.WriteDelim();
                 stmt.ToCode(code, parentOffset);
+            }
+        }
+
+        internal void ReadSpecificVariableDeclaration(
+            NodeBodyContext bodyContext,
+            DataType dataType,
+            CodeSpan dataTypeSpan,
+            bool requireAllVariablesToBeInitialized,
+            out CodeSpan stmtSpanOut)
+        {
+            var stmtSpan = dataTypeSpan;
+
+            while (true)
+            {
+                if (!Code.ReadWord())
+                {
+                    ReportItem(dataTypeSpan, ErrorCode.ExpectedVariableName);
+                    stmtSpanOut = stmtSpan;
+                    return;
+                }
+                var name = Code.Text;
+                var nameSpan = Code.Span;
+                stmtSpan = stmtSpan.Envelope(nameSpan);
+                Chain initializer = null;
+                var initializerSpan = nameSpan;
+
+                if (Code.ReadExact('='))
+                {
+                    var eqSpan = Code.Span;
+                    initializer = ExpressionParser.ReadExpressionOrNull(bodyContext);
+                    if (initializer == null) ReportItem(eqSpan, ErrorCode.ExpectedExpression);
+                    initializerSpan = nameSpan.Envelope(initializer.Span);
+                    stmtSpan = stmtSpan.Envelope(initializerSpan);
+                }
+                else if (requireAllVariablesToBeInitialized)
+                {
+                    ReportItem(nameSpan, ErrorCode.VariableInitializationRequired);
+                }
+
+                if (DkxConst.AllKeywords.Contains(name))
+                {
+                    ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
+                }
+                else if (GetContainerOrNull<IVariableScopeNode>()?.VariableStore.HasVariable(name, includeParents: true) == true ||
+                    HasConstant(name) || HasProperty(name))
+                {
+                    ReportItem(nameSpan, ErrorCode.DuplicateVariable, name);
+                }
+                else
+                {
+                    var variable = new Variable(
+                        name: name,
+                        wbdkName: name,
+                        dataType: dataType,
+                        fileContext: FileContext.NeutralClass,  // Variables don't use a file context as that's up to the parent method / property accessor.
+                        passType: null,                         // Variables don't use a pass type; that's only for arguments.
+                        initializer: null);                     // Variables don't use an initializer; they add the initialization statement into the code directly where they are declared.
+
+                    bodyContext.PublishVariable(variable);
+                    if (initializer != null)
+                    {
+                        new VariableInitializationStatement(this, variable, initializer, initializerSpan);
+                        initializer.Report(this);
+                    }
+                }
+
+                if (Code.ReadExact(';'))
+                {
+                    stmtSpanOut = stmtSpan.Envelope(Code.Span);
+                    return;
+                }
+                if (Code.ReadExact(',')) continue;
+
+                ReportItem(Code.Position, ErrorCode.ExpectedToken, ';');
+                stmtSpanOut = stmtSpan;
+                return;
             }
         }
         #endregion
