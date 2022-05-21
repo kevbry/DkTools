@@ -56,6 +56,9 @@
     <Compile Include="CodeGeneration\OpCodes\OpCodeGenerator.cs" />
     <Compile Include="CodeGeneration\OpCodes\OpCodeParser.cs" />
     <Compile Include="CodeGeneration\ScanForGenerateCodeJob.cs" />
+    <Compile Include="Code\DkxCodeParser.cs" />
+    <Compile Include="Code\DkxToken.cs" />
+    <Compile Include="Code\DkxTokenCollection.cs" />
     <Compile Include="DkxConst.cs" />
     <Compile Include="DataTypes\DkDataTypeParser.cs" />
     <Compile Include="DataTypes\BaseType.cs" />

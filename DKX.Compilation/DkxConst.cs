@@ -27,13 +27,14 @@ namespace DKX.Compilation
         public static class Keywords
         {
             public static readonly HashSet<string> AllKeywords = StringHelper.ParseWordList(
-                "and bool char class const date enum false if indrel int like numeric or private program protected public" +
-                "short static switch string table time trigger true uint unsigned unsupported ushort var variant void while");
+                "and bool char class const date enum false if indrel int like namespace numeric or private program protected public " +
+                "return short static switch string table time trigger true uint unsigned unsupported ushort var variant void while");
 
             public static readonly HashSet<string> DataTypeKeyword = StringHelper.ParseWordList(
                 "bool char date enum indrel int like numeric short string table time uint unsigned unsupported ushort variant void");
 
             public const string Class = "class";
+            public const string Namespace = "namespace";
         }
 
         public static class Properties

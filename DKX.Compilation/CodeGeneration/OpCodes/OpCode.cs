@@ -19,6 +19,8 @@
         public const string CompareGE = "ge";
 
         public const string Not = "not";
+        public const string And = "and";
+        public const string Or = "or";
 
         public const string Increment = "inc";
         public const string Decrement = "dec";
@@ -37,5 +39,7 @@
         public const string AssignModulus = "modto";
 
         public const string Dot = "dot";    // For accessing children
+
+        public const string Ternary = "trn";
     }
 }

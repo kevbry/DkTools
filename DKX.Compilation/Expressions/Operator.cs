@@ -19,8 +19,10 @@ namespace DKX.Compilation.Expressions
         Modulus,
 
         Not,
-        Negative,
+        And,
+        Or,
 
+        Negative,
         Increment,
         Decrement,
 
@@ -31,15 +33,21 @@ namespace DKX.Compilation.Expressions
         LessThan,
         LessEqual,
         GreaterThan,
-        GreaterEqual
+        GreaterEqual,
+
+        Ternary1,
+        Ternary2
     }
 
-    enum OpPrec
+    public enum OpPrec
     {
         // Lowest
         None,
         Compare,
         Assign,
+        Or,
+        And,
+        Ternary,
         AddSub,
         MulDiv,
         Not,
@@ -49,7 +57,7 @@ namespace DKX.Compilation.Expressions
         // Highest
     }
 
-    static class OperatorUtil
+    public static class OperatorUtil
     {
         public static OpPrec GetPrecedence(this Operator op)
         {
@@ -71,6 +79,13 @@ namespace DKX.Compilation.Expressions
                 case Operator.Add:
                 case Operator.Subtract:
                     return OpPrec.AddSub;
+                case Operator.Ternary1:
+                case Operator.Ternary2:
+                    return OpPrec.Ternary;
+                case Operator.And:
+                    return OpPrec.And;
+                case Operator.Or:
+                    return OpPrec.Or;
                 case Operator.Assign:
                 case Operator.AssignAdd:
                 case Operator.AssignSubtract:
@@ -102,7 +117,7 @@ namespace DKX.Compilation.Expressions
                 case Operator.Modulus: return "%";
                 case Operator.Add: return "+";
                 case Operator.Subtract: return "-";
-                case Operator.Assign: return "==";
+                case Operator.Assign: return "=";
                 case Operator.AssignAdd: return "+=";
                 case Operator.AssignSubtract: return "-=";
                 case Operator.AssignMultiply: return "*=";
@@ -116,6 +131,10 @@ namespace DKX.Compilation.Expressions
                 case Operator.GreaterEqual: return ">=";
                 case Operator.Negative: return "-";
                 case Operator.Not: return "!";
+                case Operator.And: return "&&";
+                case Operator.Or: return "||";
+                case Operator.Ternary1: return "?";
+                case Operator.Ternary2: return ":";
                 default: throw new InvalidOperatorException();
             }
         }
@@ -146,6 +165,9 @@ namespace DKX.Compilation.Expressions
                 case Operator.GreaterEqual: return OpCode.CompareGE;
                 case Operator.Negative: return OpCode.Negate;
                 case Operator.Not: return OpCode.Not;
+                case Operator.And: return OpCode.And;
+                case Operator.Or: return OpCode.Or;
+                case Operator.Ternary1: return OpCode.Ternary;
                 default: throw new InvalidOperatorException();
             }
         }
@@ -197,6 +219,8 @@ namespace DKX.Compilation.Expressions
                 case Operator.GreaterThan:
                 case Operator.GreaterEqual:
                 case Operator.Not:
+                case Operator.And:
+                case Operator.Or:
                     return true;
                 default:
                     return false;
