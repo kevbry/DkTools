@@ -3,7 +3,7 @@ using System;
 
 namespace DKX.Compilation.Expressions
 {
-    enum Operator
+    public enum Operator
     {
         Assign,
         AssignAdd,
@@ -181,6 +181,23 @@ namespace DKX.Compilation.Expressions
                 case Operator.Decrement:
                     return true;
 
+                default:
+                    return false;
+            }
+        }
+
+        public static bool YieldsBoolean(this Operator op)
+        {
+            switch (op)
+            {
+                case Operator.Equal:
+                case Operator.NotEqual:
+                case Operator.LessThan:
+                case Operator.LessEqual:
+                case Operator.GreaterThan:
+                case Operator.GreaterEqual:
+                case Operator.Not:
+                    return true;
                 default:
                     return false;
             }

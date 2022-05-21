@@ -1,5 +1,6 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 
 namespace DKX.Compilation.Expressions
@@ -31,5 +32,9 @@ namespace DKX.Compilation.Expressions
         public override void ToCode(OpCodeGenerator code, int parentOffset) => _innerChain?.ToCode(code, parentOffset);
 
         public override bool IsEmptyCode => _innerChain?.IsEmptyCode ?? true;
+
+        public override DataType DataType => _innerChain?.DataType ?? DataType.Int;
+
+        public override DataType InferredDataType => _innerChain?.InferredDataType ?? DataType.Int;
     }
 }

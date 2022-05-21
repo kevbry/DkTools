@@ -1,4 +1,5 @@
 ﻿using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using System;
 
@@ -39,6 +40,24 @@ namespace DKX.Compilation.Expressions
         {
             _left.Report(reporter);
             _right?.Report(reporter);
+        }
+
+        public override DataType DataType
+        {
+            get
+            {
+                if (_op.YieldsBoolean()) return DataType.Bool;
+                return _left.DataType;
+            }
+        }
+
+        public override DataType InferredDataType
+        {
+            get
+            {
+                if (_op.YieldsBoolean()) return DataType.Bool;
+                return _left.InferredDataType;
+            }
         }
     }
 }

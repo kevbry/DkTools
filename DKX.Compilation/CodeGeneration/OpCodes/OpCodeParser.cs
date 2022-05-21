@@ -72,18 +72,17 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
                 while (_pos < _len)
                 {
                     ch = _source[_pos++];
-                    if (ch == startCh)
-                    {
-                        _pos++;
-                        break;
-                    }
-                    else if (ch == '\\')
+                    if (ch == startCh) break;
+                    if (ch == '\\')
                     {
                         if (_pos < _len)
                         {
                             ch = _source[_pos++];
                             switch (ch)
                             {
+                                case 't':
+                                    _text.Append('\t');
+                                    break;
                                 case 'r':
                                     _text.Append('\r');
                                     break;
@@ -122,7 +121,7 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
                 while (_pos < _len)
                 {
                     ch = _source[_pos];
-                    if (gotDot && ch == '.')
+                    if (!gotDot && ch == '.')
                     {
                         _text.Append('.');
                         gotDot = true;
@@ -200,7 +199,7 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
                     _pos++;
                 }
 
-                if (_source[_pos] == ':')
+                if (_pos < _len && _source[_pos] == ':')
                 {
                     _pos++;
                     var value2 = 0;

@@ -48,8 +48,46 @@ namespace DKX.Compilation.CodeGeneration.OpCodes
 
         public void WriteStringLiteral(string rawText, int parentOffset, CodeSpan literalSpan)
         {
-            _code.Append(CodeParser.StringToStringLiteral(rawText));
+            _code.Append('\"');
+            foreach (var ch in rawText) EscapeChar(ch);
+            _code.Append('\"');
             WriteSpan(parentOffset, literalSpan);
+        }
+
+        public void WriteCharLiteral(char ch, int parentOffset, CodeSpan literalSpan)
+        {
+            _code.Append('\'');
+            EscapeChar(ch);
+            _code.Append('\'');
+            WriteSpan(parentOffset, literalSpan);
+        }
+
+        private void EscapeChar(char ch)
+        {
+            switch (ch)
+            {
+                case '\\':
+                    _code.Append("\\\\");
+                    break;
+                case '\"':
+                    _code.Append("\\\"");
+                    break;
+                case '\'':
+                    _code.Append("\\\'");
+                    break;
+                case '\t':
+                    _code.Append("\\t");
+                    break;
+                case '\r':
+                    _code.Append("\\r");
+                    break;
+                case '\n':
+                    _code.Append("\\n");
+                    break;
+                default:
+                    _code.Append(ch);
+                    break;
+            }
         }
 
         public void WriteNumberLiteral(string numberText, int parentOffset, CodeSpan literalSpan)

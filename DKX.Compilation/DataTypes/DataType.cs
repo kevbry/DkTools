@@ -576,6 +576,33 @@ namespace DKX.Compilation.DataTypes
         #endregion
 
         #region Capabilities
+        public bool IsSuitableForVariable
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Bool:
+                    case BaseType.Short:
+                    case BaseType.UShort:
+                    case BaseType.Int:
+                    case BaseType.UInt:
+                    case BaseType.Numeric:
+                    case BaseType.UNumeric:
+                    case BaseType.Char:
+                    case BaseType.UChar:
+                    case BaseType.String:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                    case BaseType.Variant:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
         public bool IsSuitableForIncDec
         {
             get

@@ -175,7 +175,7 @@ namespace DKX.Compilation.Nodes
                     // This is a property
                     modifiers.CheckForProperty(this);
 
-                    if (DkxConst.AllKeywords.Contains(name))
+                    if (DkxConst.Keywords.AllKeywords.Contains(name))
                     {
                         ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                     }
@@ -291,7 +291,7 @@ namespace DKX.Compilation.Nodes
                                 ReportItem(nameSpan, ErrorCode.ConstantsMustHaveInitializer);
                             }
 
-                            if (DkxConst.AllKeywords.Contains(name))
+                            if (DkxConst.Keywords.AllKeywords.Contains(name))
                             {
                                 ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                             }
@@ -343,7 +343,7 @@ namespace DKX.Compilation.Nodes
                                 }
                             }
 
-                            if (DkxConst.AllKeywords.Contains(name))
+                            if (DkxConst.Keywords.AllKeywords.Contains(name))
                             {
                                 ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                             }

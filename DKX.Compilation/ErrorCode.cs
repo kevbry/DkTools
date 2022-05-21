@@ -31,6 +31,9 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Unexpected '{0}'.")]
         UnexpectedToken = 1002,
+
+        [Description("Char literals must contain exactly 1 character.")]
+        CharLiteralIsNotSingleCharacter = 1003,
         #endregion
 
         #region Classes (1100-1199)
@@ -106,8 +109,11 @@ namespace DKX.Compilation
         [Description("Member variables must be private.")]
         MemberVariableMustBePrivate = 1405,
 
-        [Description("New variable must be initialized with a value.")]
+        [Description("Variable must be initialized with a value.")]
         VariableInitializationRequired = 1406,
+
+        [Description("Invalid data type for a variable.")]
+        InvalidVariableDataType = 1407,
         #endregion
 
         #region Expressions (1500-1599)

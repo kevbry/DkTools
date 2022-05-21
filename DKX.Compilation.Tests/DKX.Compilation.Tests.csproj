@@ -65,6 +65,7 @@
     <Compile Include="Files\TestObjectFileReaderFactory.cs" />
     <Compile Include="StatementTests\ForStatementTests.cs" />
     <Compile Include="StatementTests\IfStatementTests.cs" />
+    <Compile Include="StatementTests\VarStatementTests.cs" />
     <Compile Include="StatementTests\WhileStatementTest.cs" />
     <Compile Include="WbdkExports\ScanWbdExportFileJobTests.cs" />
     <Compile Include="WbdkExports\ScanWbdkExportsJobTests.cs" />

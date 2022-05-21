@@ -66,6 +66,7 @@
     <Compile Include="Exceptions\CompilerException.cs" />
     <Compile Include="Expressions\BooleanLiteralChain.cs" />
     <Compile Include="Expressions\Chain.cs" />
+    <Compile Include="Expressions\CharLiteralChain.cs" />
     <Compile Include="Expressions\ConstantChain.cs" />
     <Compile Include="Expressions\ErrorChain.cs" />
     <Compile Include="Expressions\ExpressionParser.cs" />
@@ -100,6 +101,7 @@
     <Compile Include="Nodes\Statements\ForStatement.cs" />
     <Compile Include="Nodes\Statements\IfStatement.cs" />
     <Compile Include="Nodes\Statements\VariableInitializationStatement.cs" />
+    <Compile Include="Nodes\Statements\VarStatement.cs" />
     <Compile Include="Nodes\Statements\WhileStatement.cs" />
     <Compile Include="ReportItems\IReportItemCollector.cs" />
     <Compile Include="ReportItems\ISourceCodeReporter.cs" />

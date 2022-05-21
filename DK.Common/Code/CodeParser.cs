@@ -649,6 +649,9 @@ namespace DK.Code
         {
             switch (ch)
             {
+                case '\\':
+                    output.Append("\\\\");
+                    break;
                 case '\t':
                     output.Append("\\t");
                     break;
@@ -1001,6 +1004,7 @@ namespace DK.Code
             _tokenType = CodeType.Number;
 
             var gotDot = false;
+            var index = 0;
             while (_pos < _length)
             {
                 ch = _source[_pos];
@@ -1015,7 +1019,13 @@ namespace DK.Code
                     _pos++;
                     gotDot = true;
                 }
+                else if (ch == '-' && index == 0)
+                {
+                    _tokenText.Append('-');
+                    _pos++;
+                }
                 else break;
+                index++;
             }
 
             return true;

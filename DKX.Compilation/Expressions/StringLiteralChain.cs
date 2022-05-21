@@ -1,5 +1,6 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using System;
 
@@ -20,5 +21,9 @@ namespace DKX.Compilation.Expressions
         public override bool IsEmptyCode => false;
 
         public override void Report(ISourceCodeReporter reporter) { }
+
+        public override DataType DataType => new DataType(BaseType.String, width: (byte)(_text.Length == 0 ? 1 : _text.Length));
+
+        public override DataType InferredDataType => DataType.String255;
     }
 }

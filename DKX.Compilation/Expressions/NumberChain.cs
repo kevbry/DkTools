@@ -46,5 +46,16 @@ namespace DKX.Compilation.Expressions
         public override bool IsEmptyCode => false;
 
         public override void Report(ISourceCodeReporter reporter) { }
+
+        public override DataType DataType => _dataType;
+
+        public override DataType InferredDataType
+        {
+            get
+            {
+                if (_dataType.Scale == 0 && _dataType.Width <= DkxConst.Numeric.MaxInt4Digits) return DataType.Int;
+                return _dataType;
+            }
+        }
     }
 }

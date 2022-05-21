@@ -47,8 +47,20 @@ namespace DKX.Compilation.Expressions
             }
             else if (code.ReadStringLiteral())
             {
-                var chain = new StringLiteralChain(CodeParser.StringLiteralToString(code.Text), code.Span);
-                return ReadAfterValue(bodyContext, chain, leftPrec);
+                var text = code.Text;
+                if (text[0] == '\'')
+                {
+                    Chain chain;
+                    var rawText = CodeParser.StringLiteralToString(text);
+                    if (rawText.Length != 1) chain = new ErrorChain(null, code.Span, ErrorCode.CharLiteralIsNotSingleCharacter);
+                    else chain = new CharLiteralChain(rawText[0], code.Span);
+                    return ReadAfterValue(bodyContext, chain, leftPrec);
+                }
+                else
+                {
+                    var chain = new StringLiteralChain(CodeParser.StringLiteralToString(text), code.Span);
+                    return ReadAfterValue(bodyContext, chain, leftPrec);
+                }
             }
             else if (code.ReadNumber())
             {

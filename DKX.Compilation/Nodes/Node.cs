@@ -146,6 +146,10 @@ namespace DKX.Compilation.Nodes
                         stmt = new ReturnStatement(this, Code.MovePeekedSpan(), bodyContext);
                         stmtSpanOut = stmt.Span;
                         return true;
+                    case "var":
+                        stmt = new VarStatement(this, Code.MovePeekedSpan(), bodyContext);
+                        stmtSpanOut = stmt.Span;
+                        return true;
                     case "while":
                         stmt = new WhileStatement(this, Code.MovePeekedSpan(), bodyContext);
                         stmtSpanOut = stmt.Span;
@@ -300,7 +304,7 @@ namespace DKX.Compilation.Nodes
                     ReportItem(nameSpan, ErrorCode.VariableInitializationRequired);
                 }
 
-                if (DkxConst.AllKeywords.Contains(name))
+                if (DkxConst.Keywords.AllKeywords.Contains(name))
                 {
                     ReportItem(nameSpan, ErrorCode.InvalidVariableName, name);
                 }
@@ -326,6 +330,8 @@ namespace DKX.Compilation.Nodes
                         initializer.Report(this);
                     }
                 }
+
+                if (!dataType.IsSuitableForVariable) ReportItem(dataTypeSpan, ErrorCode.InvalidVariableDataType);
 
                 if (Code.ReadExact(';'))
                 {

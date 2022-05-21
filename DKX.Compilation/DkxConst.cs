@@ -24,16 +24,36 @@ namespace DKX.Compilation
         /// </summary>
         public const int WbdkFileTitleMaxLength = 12;
 
-        public static readonly HashSet<string> AllKeywords = StringHelper.ParseWordList(
-            "and bool char class const date enum if indrel int like numeric or private program protected public" +
-            "short switch string table time trigger uint unsigned unsupported ushort variant void while");
+        public static class Keywords
+        {
+            public static readonly HashSet<string> AllKeywords = StringHelper.ParseWordList(
+                "and bool char class const date enum false if indrel int like numeric or private program protected public" +
+                "short static switch string table time trigger true uint unsigned unsupported ushort var variant void while");
 
-        public static readonly HashSet<string> DataTypeKeyword = StringHelper.ParseWordList(
-            "bool char date enum indrel int like numeric short string table time uint unsigned unsupported ushort variant void");
+            public static readonly HashSet<string> DataTypeKeyword = StringHelper.ParseWordList(
+                "bool char date enum indrel int like numeric short string table time uint unsigned unsupported ushort variant void");
+
+            public const string Class = "class";
+        }
 
         public static class Properties
         {
             public const string SetterArgumentName = "value";
+        }
+
+        public static class Numeric
+        {
+            public const int MaxInt1Digits = 2;
+            public const int MaxInt2Digits = 4;
+            public const int MaxInt4Digits = 9;
+            public const int MaxInt6Digits = 14;
+            public const int MaxInt8Digits = 18;
+            public const int MaxInt9Digits = 38;
+
+            public const int MaxWidth = 38;
+            public const int MinWidth = 1;
+            public const int MaxScale = 18;
+            public const int MinScale = 1;
         }
     }
 }
