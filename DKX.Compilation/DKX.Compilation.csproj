@@ -56,9 +56,13 @@
     <Compile Include="CodeGeneration\OpCodes\OpCodeGenerator.cs" />
     <Compile Include="CodeGeneration\OpCodes\OpCodeParser.cs" />
     <Compile Include="CodeGeneration\ScanForGenerateCodeJob.cs" />
-    <Compile Include="Code\DkxCodeParser.cs" />
-    <Compile Include="Code\DkxToken.cs" />
-    <Compile Include="Code\DkxTokenCollection.cs" />
+    <Compile Include="Scopes\ClassScope.cs" />
+    <Compile Include="Scopes\FileScope.cs" />
+    <Compile Include="Scopes\MethodScope.cs" />
+    <Compile Include="Scopes\Scope.cs" />
+    <Compile Include="Tokens\DkxCodeParser.cs" />
+    <Compile Include="Tokens\DkxToken.cs" />
+    <Compile Include="Tokens\DkxTokenCollection.cs" />
     <Compile Include="DkxConst.cs" />
     <Compile Include="DataTypes\DkDataTypeParser.cs" />
     <Compile Include="DataTypes\BaseType.cs" />
@@ -90,6 +94,7 @@
     <Compile Include="Files\ObjectFileReaderHelper.cs" />
     <Compile Include="Files\Privacy.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
+    <Compile Include="Scopes\NamespaceScope.cs" />
     <Compile Include="Nodes\IBodyNode.cs" />
     <Compile Include="Nodes\INamedNode.cs" />
     <Compile Include="Nodes\IReturnTargetNode.cs" />
@@ -122,6 +127,7 @@
     <Compile Include="Nodes\Statements\ReturnStatement.cs" />
     <Compile Include="Nodes\Statements\Statement.cs" />
     <Compile Include="TestApproachAttribute.cs" />
+    <Compile Include="Tokens\TokenUseTracker.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
     <Compile Include="Variables\Variable.cs" />

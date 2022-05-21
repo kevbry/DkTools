@@ -1,13 +1,7 @@
-﻿using DK.Code;
-using DKX.Compilation.Code;
-using DKX.Compilation.DataTypes;
+﻿using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Tokens;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests.Code
 {
@@ -97,11 +91,11 @@ namespace Util
                 {
                     // StringHelper class
                     c.Keyword("public", 1);
-                    c.DataTypeKeyword("string", 1);
+                    c.DataType(DataType.String255, 6, 1);
                     c.Identifier("Trim", 0);
                     c.Arguments(0, a =>
                     {
-                        a.DataTypeKeyword("string", 1);
+                        a.DataType(DataType.String255, 6, 1);
                         a.Identifier("str", 0);
                     }, 1);
                     c.Scope(1, f =>
@@ -125,11 +119,11 @@ namespace Util
 
                     // CharHelper.ToLower()
                     c.Keyword("public", 1);
-                    c.DataTypeKeyword("char", 1);
+                    c.DataType(DataType.Char, 4, 1);
                     c.Identifier("ToLower", 0);
                     c.Arguments(0, a =>
                     {
-                        a.DataTypeKeyword("char", 1);
+                        a.DataType(DataType.Char, 4, 1);
                         a.Identifier("ch", 0);
                     }, 1);
                     c.Scope(1, f =>
@@ -153,11 +147,11 @@ namespace Util
 
                     // CharHelper.ToUpper()
                     c.Keyword("public", 1);
-                    c.DataTypeKeyword("char", 1);
+                    c.DataType(DataType.Char, 4, 1);
                     c.Identifier("ToUpper", 0);
                     c.Arguments(0, a =>
                     {
-                        a.DataTypeKeyword("char", 1);
+                        a.DataType(DataType.Char, 4, 1);
                         a.Identifier("ch", 0);
                     }, 1);
                     c.Scope(1, f =>
@@ -214,7 +208,7 @@ The end.
                 ns.Scope(10, cls =>
                 {
                     cls.Keyword("public", 1);
-                    cls.DataTypeKeyword("void", 1);
+                    cls.DataType(DataType.Void, 4, 1);
                     cls.Identifier("TestMethod", 0);
                     cls.Arguments(0, null, 10);
                     cls.Scope(14, meth =>
@@ -227,6 +221,28 @@ The end.
                     }, 6);
                 }, 2);
             }, 2);
+        }
+
+        [TestCase("int", BaseType.Int, 0, 0)]
+        [TestCase("uint", BaseType.UInt, 0, 0)]
+        [TestCase("short", BaseType.Short, 0, 0)]
+        [TestCase("ushort", BaseType.UShort, 0, 0)]
+        [TestCase("numeric9", BaseType.Numeric, 9, 0)]
+        [TestCase("numeric11.2", BaseType.Numeric, 11, 2)]
+        [TestCase("unsigned5", BaseType.UNumeric, 5, 0)]
+        [TestCase("unsigned19", BaseType.UNumeric, 19, 0)]
+        [TestCase("unsigned13.2", BaseType.UNumeric, 13, 2)]
+        public void DataTypes(string dataTypeText, BaseType baseType, byte width, byte scale)
+        {
+            var cp = new DkxCodeParser(dataTypeText);
+            var tokens = cp.ReadAll().Tokens;
+
+            Assert.AreEqual(1, tokens.Count);
+
+            var token = tokens[0];
+            Assert.AreEqual(baseType, token.DataType.BaseType);
+            Assert.AreEqual(width, token.DataType.Width);
+            Assert.AreEqual(scale, token.DataType.Scale);
         }
     }
 }

@@ -4,7 +4,7 @@ using DKX.Compilation.Expressions;
 using System;
 using System.Collections.Generic;
 
-namespace DKX.Compilation.Code
+namespace DKX.Compilation.Tokens
 {
     public struct DkxToken
     {
@@ -35,6 +35,7 @@ namespace DKX.Compilation.Code
         public bool HasError => _hasError;
         public bool IsGroup => _type == DkxTokenType.Arguments || _type == DkxTokenType.Array || _type == DkxTokenType.Scope;
         public bool IsNone => _type == DkxTokenType.None;
+        public int Position => _span.Start;
         public CodeSpan Span => _span;
         public DkxTokenType Type => _type;
 
@@ -42,8 +43,8 @@ namespace DKX.Compilation.Code
             new DkxToken(DkxTokenType.Identifier, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
         public static DkxToken CreateKeyword(string keyword, CodeSpan span) =>
             new DkxToken(DkxTokenType.Keyword, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
-        public static DkxToken CreateDataTypeKeyword(string keyword, CodeSpan span) =>
-            new DkxToken(DkxTokenType.DataTypeKeyword, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
+        public static DkxToken CreateDataType(DataType dataType, CodeSpan span) =>
+            new DkxToken(DkxTokenType.DataType, span, null, default, dataType, hasError: false);
         public static DkxToken CreateNumber(decimal number, DataType dataType, CodeSpan span) =>
             new DkxToken(DkxTokenType.Number, span, null, number, dataType, hasError: false);
         public static DkxToken CreateString(string rawText, CodeSpan span, bool hasError) =>
@@ -84,7 +85,7 @@ namespace DKX.Compilation.Code
                 switch (_type)
                 {
                     case DkxTokenType.Keyword:
-                    case DkxTokenType.DataTypeKeyword:
+                    case DkxTokenType.DataType:
                     case DkxTokenType.Identifier:
                     case DkxTokenType.String:
                         break;
@@ -179,17 +180,16 @@ namespace DKX.Compilation.Code
                 case DkxTokenType.None:
                     return "(none)";
                 case DkxTokenType.Invalid:
-                    return $"(invalid: {CodeParser.CharToCharLiteral((char)_number)})";
+                    return DkxCodeParser.CharToCharLiteral((char)_number);
                 case DkxTokenType.Keyword:
-                case DkxTokenType.DataTypeKeyword:
                 case DkxTokenType.Identifier:
                     return _text;
                 case DkxTokenType.Number:
                     return _number.ToString();
                 case DkxTokenType.String:
-                    return CodeParser.StringToStringLiteral(_text);
+                    return DkxCodeParser.StringToStringLiteral(_text);
                 case DkxTokenType.Char:
-                    return CodeParser.CharToCharLiteral((char)_number);
+                    return DkxCodeParser.CharToCharLiteral((char)_number);
                 case DkxTokenType.Operator:
                     return ((Operator)_number).GetText();
                 case DkxTokenType.Delimiter:
@@ -197,11 +197,11 @@ namespace DKX.Compilation.Code
                 case DkxTokenType.StatementEnd:
                     return ";";
                 case DkxTokenType.Arguments:
-                    return $"({string.Join(string.Empty, _tokens)})";
+                    return $"({string.Join(" ", _tokens)})";
                 case DkxTokenType.Array:
-                    return $"[{string.Join(string.Empty, _tokens)}]";
+                    return $"[{string.Join(", ", _tokens)}]";
                 case DkxTokenType.Scope:
-                    return $"{{{string.Join(string.Empty, _tokens)}}}";
+                    return $"{{{string.Join(" ", _tokens)}}}";
                 default:
                     return string.Empty;
             }
@@ -213,7 +213,7 @@ namespace DKX.Compilation.Code
         None,
         Invalid,
         Keyword,
-        DataTypeKeyword,
+        DataType,
         Identifier,
         Number,
         String,

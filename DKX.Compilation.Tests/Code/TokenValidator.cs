@@ -1,7 +1,7 @@
 ﻿using DK.Code;
-using DKX.Compilation.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Tokens;
 using NUnit.Framework;
 using System;
 
@@ -46,12 +46,12 @@ namespace DKX.Compilation.Tests.Code
             CheckSpan(token, keyword.Length, spacer);
         }
 
-        public void DataTypeKeyword(string keyword, int spacer)
+        public void DataType(DataType dataType, int length, int spacer)
         {
             var token = GetToken();
-            Assert.AreEqual(DkxTokenType.DataTypeKeyword, token.Type);
-            Assert.AreEqual(keyword, token.Text);
-            CheckSpan(token, keyword.Length, spacer);
+            Assert.AreEqual(DkxTokenType.DataType, token.Type);
+            Assert.AreEqual(dataType, token.DataType);
+            CheckSpan(token, length, spacer);
         }
 
         public void Identifier(string name, int spacer)
@@ -76,7 +76,7 @@ namespace DKX.Compilation.Tests.Code
             Assert.AreEqual(DkxTokenType.String, token.Type);
             Assert.AreEqual(rawText, token.Text);
             Assert.AreEqual(hasError, token.HasError);
-            Assert.AreEqual(DataType.String255, token.DataType);
+            Assert.AreEqual(DataTypes.DataType.String255, token.DataType);
             CheckSpan(token, width, spacer);
         }
 
@@ -86,7 +86,7 @@ namespace DKX.Compilation.Tests.Code
             Assert.AreEqual(DkxTokenType.Char, token.Type);
             Assert.AreEqual(ch, token.Char);
             Assert.AreEqual(hasError, token.HasError);
-            Assert.AreEqual(DataType.Char, token.DataType);
+            Assert.AreEqual(DataTypes.DataType.Char, token.DataType);
             CheckSpan(token, width, spacer);
         }
 

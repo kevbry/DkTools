@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace DKX.Compilation.Code
+namespace DKX.Compilation.Tokens
 {
     public class DkxTokenCollection : IEnumerable<DkxToken>, IEnumerable
     {
@@ -19,6 +19,54 @@ namespace DKX.Compilation.Code
         public void Add(DkxToken token) => _tokens.Add(token);
 
         public void AddRange(IEnumerable<DkxToken> tokens) => _tokens.AddRange(tokens);
+
+        public IEnumerable<int> FindIndices(Func<DkxToken,bool> callback)
+        {
+            var index = 0;
+            foreach (var token in _tokens)
+            {
+                if (callback(token)) yield return index;
+                index++;
+            }
+        }
+
+        public IEnumerable<int> FindIndices(Func<DkxToken,int,bool> callback)
+        {
+            var index = 0;
+            foreach (var token in _tokens)
+            {
+                if (callback(token, index)) yield return index;
+                index++;
+            }
+        }
+
+        public IEnumerable<DkxToken> GetUnused(TokenUseTracker used)
+        {
+            foreach (var token in _tokens)
+            {
+                if (!used.IsUsed(token)) yield return token;
+            }
+        }
+
+        public IEnumerable<DkxTokenCollection> SplitByType(DkxTokenType type)
+        {
+            var current = new DkxTokenCollection();
+
+            foreach (var token in _tokens)
+            {
+                if (token.Type == type)
+                {
+                    yield return current;
+                    current = new DkxTokenCollection();
+                }
+                else
+                {
+                    current.Add(token);
+                }
+            }
+
+            yield return current;
+        }
 
         public class DkxTokenEnumerator : IEnumerator<DkxToken>, IEnumerator
         {

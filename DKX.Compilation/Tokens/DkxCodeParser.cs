@@ -3,8 +3,9 @@ using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using System;
 using System.Text;
+using System.Text.RegularExpressions;
 
-namespace DKX.Compilation.Code
+namespace DKX.Compilation.Tokens
 {
     public class DkxCodeParser
     {
@@ -72,6 +73,9 @@ namespace DKX.Compilation.Code
             while (TryRead(out var token)) root.Add(token);
             return root;
         }
+
+        private static readonly Regex _numericDataTypeRegex = new Regex(@"^(numeric|unsigned)(\d{1,2})$");
+        private static readonly Regex _stringDataTypeRegex = new Regex(@"^string(\d{1,3})$");
 
         public bool TryRead(out DkxToken tokenOut)
         {
@@ -186,7 +190,7 @@ namespace DKX.Compilation.Code
                     if (IsWordChar(ch, true))
                     {
                         _sb.Clear();
-                        while (IsWordChar(ch = _source[_pos], false))
+                        while (_pos < _len && IsWordChar(ch = _source[_pos], false))
                         {
                             _sb.Append(ch);
                             _pos++;
@@ -194,8 +198,91 @@ namespace DKX.Compilation.Code
 
                         var word = _sb.ToString();
                         var span = new CodeSpan(startPos, _pos);
-                        if (DkxConst.Keywords.DataTypeKeyword.Contains(word)) tokenOut = DkxToken.CreateDataTypeKeyword(word, span);
-                        else if (DkxConst.Keywords.AllKeywords.Contains(word)) tokenOut = DkxToken.CreateKeyword(word, span);
+
+                        // Numeric types are defined as: numeric9  numeric11.2  unsigned19  unsigned12.2
+                        Match match;
+                        if ((match = _numericDataTypeRegex.Match(word)).Success)
+                        {
+                            var keyword = match.Groups[1].Value;
+                            var width = int.Parse(match.Groups[2].Value);
+                            if (width >= DkxConst.Numeric.MinWidth && width <= DkxConst.Numeric.MaxWidth)
+                            {
+                                if (_pos < _len && _source[_pos] == '.')
+                                {
+                                    _pos++;
+                                    var scale = 0;
+                                    while (_pos < _len && IsDigit(_source[_pos])) { scale *= 10; scale += _source[_pos++] - '0'; }
+                                    if (scale >= DkxConst.Numeric.MinScale && scale <= DkxConst.Numeric.MaxScale && scale <= width)
+                                    {
+                                        tokenOut = DkxToken.CreateDataType(new DataType(keyword == "unsigned" ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: (byte)scale), new CodeSpan(startPos, _pos));
+                                        return true;
+                                    }
+                                    else
+                                    {
+                                        // Scale is out of bounds. Fall back to just the width.
+                                        _pos = span.End;
+                                    }
+                                }
+                                else
+                                {
+                                    tokenOut = DkxToken.CreateDataType(new DataType(keyword == "unsigned" ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: 0), span);
+                                    return true;
+                                }
+                            }
+                            else
+                            {
+                                tokenOut = DkxToken.CreateDataType(new DataType(keyword == "unsigned" ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: 0), span);
+                                return true;
+                            }
+                        }
+                        else if ((match = _stringDataTypeRegex.Match(word)).Success)
+                        {
+                            var width = int.Parse(match.Groups[1].Value);
+                            if (width <= DkxConst.String.MaxLength)
+                            {
+                                tokenOut = DkxToken.CreateDataType(new DataType(BaseType.String, width: (byte)width), span);
+                                return true;
+                            }
+                        }
+
+                        switch (word)
+                        {
+                            case DkxConst.Keywords.Void:
+                                tokenOut = DkxToken.CreateDataType(DataType.Void, span);
+                                return true;
+                            case DkxConst.Keywords.Bool:
+                                tokenOut = DkxToken.CreateDataType(DataType.Bool, span);
+                                return true;
+                            case DkxConst.Keywords.Char:
+                                tokenOut = DkxToken.CreateDataType(DataType.Char, span);
+                                return true;
+                            case DkxConst.Keywords.Date:
+                                tokenOut = DkxToken.CreateDataType(DataType.Date, span);
+                                return true;
+                            case DkxConst.Keywords.Time:
+                                tokenOut = DkxToken.CreateDataType(DataType.Time, span);
+                                return true;
+                            case DkxConst.Keywords.Int:
+                                tokenOut = DkxToken.CreateDataType(DataType.Int, span);
+                                return true;
+                            case DkxConst.Keywords.UInt:
+                                tokenOut = DkxToken.CreateDataType(DataType.UInt, span);
+                                return true;
+                            case DkxConst.Keywords.Short:
+                                tokenOut = DkxToken.CreateDataType(DataType.Short, span);
+                                return true;
+                            case DkxConst.Keywords.UShort:
+                                tokenOut = DkxToken.CreateDataType(DataType.UShort, span);
+                                return true;
+                            case DkxConst.Keywords.String:
+                                tokenOut = DkxToken.CreateDataType(DataType.String255, span);
+                                return true;
+                            case DkxConst.Keywords.Variant:
+                                tokenOut = DkxToken.CreateDataType(DataType.Variant, span);
+                                return true;
+                        }
+
+                        if (DkxConst.Keywords.AllKeywords.Contains(word)) tokenOut = DkxToken.CreateKeyword(word, span);
                         else tokenOut = DkxToken.CreateIdentifier(word, span);
                         return true;
                     }

@@ -65,6 +65,7 @@
     <Compile Include="Files\TestCompileFileJobFactory.cs" />
     <Compile Include="Files\TestObjectFileReader.cs" />
     <Compile Include="Files\TestObjectFileReaderFactory.cs" />
+    <Compile Include="Scopes\ScopesTests.cs" />
     <Compile Include="StatementTests\ForStatementTests.cs" />
     <Compile Include="StatementTests\IfStatementTests.cs" />
     <Compile Include="StatementTests\VarStatementTests.cs" />

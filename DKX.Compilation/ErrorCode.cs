@@ -66,6 +66,24 @@ namespace DKX.Compilation
 
         [Description("Classes must be declared 'static'.")]
         ClassMustBeStatic = 1109,
+
+        /// <summary>
+        /// {0} = file name without extension
+        /// </summary>
+        [Description("Namespace name must match the file name '{0}'.")]
+        NamespaceNameMustMatchFileName = 1110,
+
+        /// <summary>
+        /// {0} = max number of characters
+        /// </summary>
+        [Description("Namespace name cannot exceed {0} characters.")]
+        NamespaceNameTooLong = 1111,
+
+        /// <summary>
+        /// {0} = class name
+        /// </summary>
+        [Description("Duplicate class '{0}'.")]
+        DuplicateClass = 1112,
         #endregion
 
         #region Methods (1200-1299)
@@ -114,6 +132,12 @@ namespace DKX.Compilation
 
         [Description("Invalid data type for a variable.")]
         InvalidVariableDataType = 1407,
+
+        [Description("Method contains empty arguments.")]
+        MethodContainsEmptyArguments = 1408,
+
+        [Description("Duplicate argument name.")]
+        DuplicateArgumentName = 1409,
         #endregion
 
         #region Expressions (1500-1599)
