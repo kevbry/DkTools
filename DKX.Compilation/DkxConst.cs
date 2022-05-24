@@ -12,23 +12,12 @@ namespace DKX.Compilation
         public static string[] EmptyStringArray = new string[0];
         public static char[] EmptyCharArray = new char[0];
 
-        /// <summary>
-        /// A prefix prepended to a file name to indicate that this is a DKX compiled file.
-        /// </summary>
-        public const string WbdkFilePrefix = "__";
-
-        /// <summary>
-        /// Maximum length of a WBDK file name, without the extension.
-        /// For example, "__StringHelper.nc" would get truncated to "__StringHe.nc"
-        /// </summary>
-        public const int WbdkFileTitleMaxLength = 12;
-
         public const char StatementEndToken = ';';
         public const char DelimiterToken = ',';
 
         public static class Namespaces
         {
-            public const int MaxNamespaceLength = 10;
+            public const int MaxNamespaceLength = 12;
         }
 
         public static class Properties

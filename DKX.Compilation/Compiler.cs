@@ -1,9 +1,9 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
 using DKX.Compilation.Files;
+using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Schema;
-using DKX.Compilation.WbdkExports;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +15,8 @@ namespace DKX.Compilation
     public class Compiler
     {
         private DkAppContext _app;
-        private string _workDir;
+        private string _objectDir;
+        private string _targetSourceDir;
         private List<ReportItem> _reportItems = new List<ReportItem>();
         private bool _haltErrors;
 
@@ -30,30 +31,17 @@ namespace DKX.Compilation
         {
             await DetermineWorkDirAsync();
 
-            // Scan legacy files for exports
-            await _app.Log.InfoAsync("Checking WBDK exports");
-            var queue = new CompileQueue(_app, "WBDK Exports Scan Queue");
+            // Scan for DKX files to be compiled.
             var tableHashProvider = new TableHashProvider(_app);
-            await queue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, queue, _workDir,
-                new WbdkExportsFileReaderFactory(_app),
-                tableHashProvider));
-
-            await queue.ProcessQueueToCompletionAsync(cancel);
-
-            ImportReportItems(queue.ReportItems);
-            if (HasErrors)
-            {
-                await ReportAsync();
-                return;
-            }
-
-            queue = new CompileQueue(_app, "DKX Compilation Queue");
+            var queue = new CompileQueue(_app, "DKX Compilation Queue");
             await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
                 app: _app,
-                workDir: _workDir,
+                objectDir: _objectDir,
+                targetSourceDir: _targetSourceDir,
                 compileQueue: queue,
-                compileFileJobFactory: new CompileFileJobFactory(_app, queue),
-                tableHashProvider: tableHashProvider));
+                compileFileJobFactory: new CompileFileJobFactory(_app, queue, _targetSourceDir),
+                tableHashProvider: tableHashProvider,
+                objectFileReaderFactory: new ObjectFileReaderFactory(_app)));
 
             await queue.ProcessQueueToCompletionAsync(cancel);
 
@@ -63,43 +51,38 @@ namespace DKX.Compilation
                 await ReportAsync();
                 return;
             }
-
-            // TODO: This may not be required in the future
-
-            //queue = new CompileQueue(_app, "WBDK Code Generator Queue");
-            //var objectFileReaderFactory = new ObjectFileReaderFactory(_app);
-            //var reporterFactory = new SourceCodeReporterFactory(_app, queue);
-            //await queue.EnqueueCompileJobAsync(new ScanForGenerateCodeJob(
-            //    app: _app,
-            //    workDir: _workDir,
-            //    compileQueue: queue,
-            //    generateCodeJobFactory: new GenerateCodeJobFactory(_app, queue, objectFileReaderFactory, reporterFactory),
-            //    objectFileReaderFactory: objectFileReaderFactory));
-
-            //await queue.ProcessQueueToCompletionAsync(cancel);
-
-            //ImportReportItems(queue.ReportItems);
-            //if (HasErrors)
-            //{
-            //    await ReportAsync();
-            //    return;
-            //}
         }
 
         private async Task DetermineWorkDirAsync()
         {
-            _workDir = _app.Settings.ExeDirs.FirstOrDefault();
-            if (_workDir == null) throw new InvalidAppSettingsException("No executable directory is configured.");
-            if (!_app.FileSystem.DirectoryExists(_workDir))
+            // Object Dir
+            _objectDir = _app.Settings.ExeDirs.FirstOrDefault();
+            if (_objectDir == null) throw new InvalidAppSettingsException("No executable directory is configured.");
+            _objectDir = PathUtil.CombinePath(_objectDir, DkxConst.WorkDirectoryName);
+
+            if (!_app.FileSystem.DirectoryExists(_objectDir))
             {
-                await _app.Log.InfoAsync("Creating directory: {0}", _workDir);
-                _app.FileSystem.CreateDirectory(_workDir);
+                await _app.Log.InfoAsync("Creating object directory: {0}", _objectDir);
+                _app.FileSystem.CreateDirectoryRecursive(_objectDir);
             }
-            _workDir = _app.FileSystem.CombinePath(_workDir, DkxConst.WorkDirectoryName);
-            if (!_app.FileSystem.DirectoryExists(_workDir))
+
+            // Target Source Dir
+            _targetSourceDir = null;
+            foreach (var sourceDir in _app.Settings.SourceDirs)
             {
-                await _app.Log.InfoAsync("Creating directory: {0}", _workDir);
-                _app.FileSystem.CreateDirectory(_workDir);
+                if (sourceDir.EndsWith(DkxConst.WorkDirectoryName, StringComparison.OrdinalIgnoreCase))
+                {
+                    _targetSourceDir = sourceDir;
+                    break;
+                }
+            }
+
+            if (_targetSourceDir == null) throw new InvalidAppSettingsException($"There must be a source directory configured ending with '{DkxConst.WorkDirectoryName}'.");
+
+            if (!_app.FileSystem.DirectoryExists(_targetSourceDir))
+            {
+                await _app.Log.InfoAsync("Creating WBDK target directory: {0}", _targetSourceDir);
+                _app.FileSystem.CreateDirectoryRecursive(_targetSourceDir);
             }
         }
 

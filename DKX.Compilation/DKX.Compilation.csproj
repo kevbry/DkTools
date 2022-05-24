@@ -47,6 +47,11 @@
     <Compile Include="CodeGeneration\CodeFragment.cs" />
     <Compile Include="CodeGeneration\CodeWriter.cs" />
     <Compile Include="Conversions\ConversionValidator.cs" />
+    <Compile Include="ObjectFiles\IObjectFileReader.cs" />
+    <Compile Include="ObjectFiles\IObjectFileReaderFactory.cs" />
+    <Compile Include="ObjectFiles\ObjectFileModel.cs" />
+    <Compile Include="ObjectFiles\ObjectFileReader.cs" />
+    <Compile Include="ObjectFiles\ObjectFileReaderFactory.cs" />
     <Compile Include="Resolving\IEntity.cs" />
     <Compile Include="Resolving\IResolver.cs" />
     <Compile Include="Scopes\ClassScope.cs" />

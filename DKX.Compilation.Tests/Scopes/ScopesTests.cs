@@ -1,16 +1,19 @@
 ﻿using DK.Code;
+using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.Scopes;
+using DKX.Compilation.Tests.Files;
 using DKX.Compilation.Tokens;
 using NUnit.Framework;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests.Scopes
 {
     [TestFixture]
-    class ScopesTests
+    class ScopesTests : CompileTestClass
     {
         [Test]
-        public void MemberClass()
+        public async Task MemberClass()
         {
             var dkxCode = @"
 namespace Test
@@ -45,21 +48,15 @@ void Member_SetData(int no, char(255) name)
     Member__name = name;
 }
 ";
-            var cp = new DkxCodeParser(dkxCode);
-            var fileScope = new FileScope(@"x:\src\test.dkx", cp, ProcessingDepth.Full);
-            fileScope.ProcessTokens(cp.ReadAll().Tokens);
+            var objectModel = new ObjectFileModel
+            {
+                FileContexts = new ObjectFileContext[]
+                {
+                    new ObjectFileContext { Context = FileContext.NeutralClass }
+                }
+            };
 
-            foreach (var ri in fileScope.ReportItems) TestContext.Out.WriteLine(ri.ToString());
-            Assert.IsFalse(fileScope.HasErrors, "Compiler returned errors.");
-
-            var fileContexts = fileScope.GetFileContexts().ToArray();
-            Assert.AreEqual(1, fileContexts.Length);
-            Assert.AreEqual(FileContext.NeutralClass, fileContexts[0]);
-
-            var actualWbdkCode = fileScope.GenerateWbdkCode(fileContexts[0]);
-            TestContext.Out.WriteLine($"Expected WBDK Code:\n{wbdkCode}");
-            TestContext.Out.WriteLine($"Actual WBDK Code:\n{actualWbdkCode}");
-            WbdkCodeValidator.Validate(wbdkCode, actualWbdkCode);
+            await SetupCompileSingle(@"x:\src\Test.dkx", @"x:\gen\.dkx\Test.nc", @"x:\bin\.dkx\Test.dkxx", dkxCode, wbdkCode, objectModel);
         }
     }
 }

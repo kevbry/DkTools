@@ -51,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Files\ObjectModelValidator.cs" />
     <Compile Include="WbdkCodeValidator.cs" />
     <Compile Include="Code\CodeParsingTests.cs" />
     <Compile Include="Code\TokenValidator.cs" />

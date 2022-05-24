@@ -1,8 +1,14 @@
 ﻿using DK.AppEnvironment;
+using DK.Code;
 using DK.Diagnostics;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Scopes;
+using DKX.Compilation.Tokens;
+using Newtonsoft.Json;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,18 +18,24 @@ namespace DKX.Compilation.Files
     {
         private DkAppContext _app;
         private string _dkxPathName;
+        private string _relPath;
         private string _objPathName;
+        private string _targetPath;
         private IReportItemCollector _reportCollector;
 
         public CompileFileJob(
             DkAppContext app,
             string dkxPathName,
+            string relPath,
             string objPathName,
+            string targetPath,
             IReportItemCollector reportCollector)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _dkxPathName = dkxPathName ?? throw new ArgumentNullException(nameof(dkxPathName));
+            _relPath = relPath ?? throw new ArgumentNullException(nameof(relPath));
             _objPathName = objPathName ?? throw new ArgumentNullException(nameof(objPathName));
+            _targetPath = targetPath ?? throw new ArgumentNullException(nameof(targetPath));
             _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
         }
 
@@ -33,44 +45,32 @@ namespace DKX.Compilation.Files
         {
             await _app.Log.InfoAsync("Compiling: {0}", _dkxPathName);
 
-            // TODO: This needs to be replaced
+            var source = _app.FileSystem.GetFileText(_dkxPathName);
+            var cp = new DkxCodeParser(source);
+            var fileScope = new FileScope(_dkxPathName, cp, ProcessingDepth.Full);
+            fileScope.ProcessFile();
 
-            //var source = _app.FileSystem.GetFileText(_dkxPathName);
-            //var code = new CodeParser(source);
-            //var fileNode = new FileNode(_app, _dkxPathName, code);
-            //fileNode.Parse();
+            var reportItems = fileScope.ReportItems.ToList();
+            _reportCollector.AddReportItems(reportItems);
+            if (!reportItems.Any(e => e.Severity == ErrorSeverity.Error))
+            {
+                var objectModel = fileScope.CreateObjectModel();
 
-            //var reportItems = fileNode.ReportItems.ToList();
-            //_reportCollector.AddReportItems(reportItems);
-            //if (!reportItems.Any(e => e.Severity == ErrorSeverity.Error))
-            //{
-            //    var methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray();
-            //    if (methods.Length == 0) methods = null;
+                await _app.Log.DebugAsync("Writing: {0}", _objPathName);
+                _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(_objPathName));
+                _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(objectModel, Formatting.Indented));
 
-            //    var properties = fileNode.Properties.Select(p => p.ToObjectProperty()).ToArray();
-            //    if (properties.Length == 0) properties = null;
+                foreach (var fileContext in objectModel.FileContexts?.Select(x => x.Context) ?? FileContextHelper.EmptyArray)
+                {
+                    var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(_dkxPathName, _relPath, _targetPath, fileContext);
+                    var cw = new CodeWriter();
+                    fileScope.GenerateWbdkCode(cw);
 
-            //    var memberVariables = fileNode.VariableStore.GetVariables(includeParents: false).Select(v => v.ToObjectMemberVariable()).ToArray();
-            //    if (memberVariables.Length == 0) memberVariables = null;
-
-            //    var constants = fileNode.Constants.Select(c => c.ToObjectConstant()).ToArray();
-            //    if (constants.Length == 0) constants = null;
-
-            //    var obj = new ObjectFileModel
-            //    {
-            //        SourcePathName = _dkxPathName,
-            //        ClassName = fileNode.ClassName,
-            //        FileDependencies = null,    // TODO
-            //        TableDependencies = null,   // TODO
-            //        Methods = methods,
-            //        Properties = properties,
-            //        MemberVariables = memberVariables,
-            //        Constants = constants
-            //    };
-
-            //    _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(_objPathName));
-            //    _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj, Formatting.Indented));
-            //}
+                    await _app.Log.DebugAsync("Writing: {0}", wbdkPathName);
+                    _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(wbdkPathName));
+                    _app.FileSystem.WriteFileText(wbdkPathName, cw.Code);
+                }
+            }
         }
     }
 }

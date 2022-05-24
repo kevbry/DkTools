@@ -16,22 +16,10 @@ namespace DKX.Compilation.Files
             FileContext.ServerTrigger
         };
 
-        public static string DkxPathNameToWbdkPathName(string dkxPathName, FileContext fileContext)
+        public static string DkxPathNameToWbdkPathName(string dkxPathName, string relDir, string targetDir, FileContext fileContext)
         {
-            var dir = PathUtil.GetDirectoryName(dkxPathName);
-
-            string fileName;
-            switch (fileContext)
-            {
-                case FileContext.GatewayProgram:
-                case FileContext.ServerProgram:
-                    fileName = PathUtil.GetFileNameWithoutExtension(dkxPathName) + fileContext.GetExtension();
-                    break;
-                default:
-                    fileName = DkxConst.WbdkFilePrefix + PathUtil.GetFileNameWithoutExtension(dkxPathName) + fileContext.GetExtension();
-                    break;
-            }
-
+            var dir = PathUtil.CombinePath(targetDir, relDir);
+            var fileName = PathUtil.GetFileNameWithoutExtension(dkxPathName) + fileContext.GetExtension();
             return PathUtil.CombinePath(dir, fileName);
         }
     }

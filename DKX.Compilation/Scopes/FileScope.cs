@@ -2,6 +2,7 @@
 using DK.AppEnvironment;
 using DK.Code;
 using DKX.Compilation.CodeGeneration;
+using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Tokens;
 using System;
@@ -29,9 +30,9 @@ namespace DKX.Compilation.Scopes
         public IEnumerable<ReportItem> ReportItems => _reportItems;
         public NamespaceScope Namespace => _namespace;
 
-        public void ProcessTokens(DkxTokenCollection fileTokens)
+        public void ProcessFile()
         {
-            var root = _cp.ReadAll().Tokens;
+            var fileTokens = _cp.ReadAll().Tokens;
             var used = new TokenUseTracker();
 
             foreach (var nsIndex in fileTokens.FindIndices((t,i) =>
@@ -78,8 +79,6 @@ namespace DKX.Compilation.Scopes
 
         public override bool HasErrors => _reportItems.Any(x => x.Severity == ErrorSeverity.Error);
 
-        public IEnumerable<FileContext> GetFileContexts() => _namespace?.GetFileContexts() ?? FileContextHelper.EmptyArray;
-
         public string GenerateWbdkCode(FileContext fileContext)
         {
             var cw = new CodeWriter();
@@ -90,6 +89,16 @@ namespace DKX.Compilation.Scopes
         internal override void GenerateWbdkCode(CodeWriter cw)
         {
             _namespace?.GenerateWbdkCode(cw);
+        }
+
+        public ObjectFileModel CreateObjectModel()
+        {
+            return new ObjectFileModel
+            {
+                FileDependencies = null,    // TODO
+                TableDependencies = null,   // TODO
+                FileContexts = _namespace?.GetFileContexts().Select(x => new ObjectFileContext { Context = x }).ToArray() ?? ObjectFileContext.EmptyArray
+            };
         }
     }
 

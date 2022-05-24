@@ -2,7 +2,10 @@
 using DK.AppEnvironment;
 using DK.Implementation.Virtual;
 using DK.Repository;
+using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Tests.Files;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -41,7 +44,7 @@ namespace DKX.Compilation.Tests
             {
                 switch (path)
                 {
-                    case WbdkAppPath.SourcePaths: return @"x:\src";
+                    case WbdkAppPath.SourcePaths: return @"x:\src;x:\gen\.dkx";
                     case WbdkAppPath.IncludePaths: return @"x:\src\include;x:\platform\include";
                     case WbdkAppPath.LibPaths: return @"x:\src\lib";
                     case WbdkAppPath.ExecutablePaths: return @"x:\bin";
@@ -93,6 +96,8 @@ namespace DKX.Compilation.Tests
         {
             app.FileSystem.CreateDirectory(@"x:\bin");
             app.FileSystem.CreateDirectory(@"x:\bin\.dkx");
+            app.FileSystem.CreateDirectory(@"x:\gen");
+            app.FileSystem.CreateDirectory(@"x:\gen\.dkx");
             app.FileSystem.CreateDirectory(@"x:\platform");
             app.FileSystem.CreateDirectory(@"x:\platform\include");
             app.FileSystem.CreateDirectory(@"x:\src");
@@ -134,6 +139,12 @@ namespace DKX.Compilation.Tests
         protected async Task SetupCompileSingle(string dkxPathName, string wbdkPathName,
             string dkxSource, string wbdkCode, ReportItem? expectedError = null)
         {
+            await SetupCompileSingle(dkxPathName, wbdkPathName, objPathName: null, dkxSource, wbdkCode, objectModel: null, expectedError);
+        }
+
+        protected async Task SetupCompileSingle(string dkxPathName, string wbdkPathName, string objPathName,
+            string dkxSource, string wbdkCode, ObjectFileModel objectModel, ReportItem? expectedError = null)
+        {
             var app = CreateApp();
             SetupCompile(app);
             app.LoadAppSettings();
@@ -147,6 +158,7 @@ namespace DKX.Compilation.Tests
 
             TestContext.Out.WriteLine($"DKX Source:\n{dkxSource}");
             if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{app.FileSystem.GetFileText(wbdkPathName)}");
+            if (objPathName != null && app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object Model Generated:\n{app.FileSystem.GetFileText(objPathName)}");
 
             if (expectedError.HasValue)
             {
@@ -165,6 +177,13 @@ namespace DKX.Compilation.Tests
 
             Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
             WbdkCodeValidator.Validate(wbdkCode, app.FileSystem.GetFileText(wbdkPathName));
+
+            if (objPathName != null && objectModel != null)
+            {
+                Assert.IsTrue(app.FileSystem.FileExists(objPathName), "Object file was not created.");
+                var actualModel = JsonConvert.DeserializeObject<ObjectFileModel>(app.FileSystem.GetFileText(objPathName));
+                ObjectModelValidator.ValidateModel(objectModel, actualModel);
+            }
         }
     }
 }
