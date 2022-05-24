@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DK.Code;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -20,9 +21,29 @@ namespace DKX.Compilation.Tokens
 
         public void AddRange(IEnumerable<DkxToken> tokens) => _tokens.AddRange(tokens);
 
-        public IEnumerable<int> FindIndices(Func<DkxToken,bool> callback)
+        public int FindIndex(Func<DkxToken,bool> callback, int startIndex = 0)
         {
-            var index = 0;
+            var index = startIndex;
+            foreach (var token in _tokens)
+            {
+                if (callback(token)) return index;
+            }
+            return -1;
+        }
+
+        public int FindIndex(Func<DkxToken,int,bool> callback, int startIndex = 0)
+        {
+            var index = startIndex;
+            foreach (var token in _tokens)
+            {
+                if (callback(token, index)) return index;
+            }
+            return -1;
+        }
+
+        public IEnumerable<int> FindIndices(Func<DkxToken,bool> callback, int startIndex = 0)
+        {
+            var index = startIndex;
             foreach (var token in _tokens)
             {
                 if (callback(token)) yield return index;
@@ -30,14 +51,24 @@ namespace DKX.Compilation.Tokens
             }
         }
 
-        public IEnumerable<int> FindIndices(Func<DkxToken,int,bool> callback)
+        public IEnumerable<int> FindIndices(Func<DkxToken,int,bool> callback, int startIndex = 0)
         {
-            var index = 0;
+            var index = startIndex;
             foreach (var token in _tokens)
             {
                 if (callback(token, index)) yield return index;
                 index++;
             }
+        }
+
+        public DkxTokenCollection GetRange(int start, int count)
+        {
+            var ret = new DkxTokenCollection();
+            for (int i = 0, ii = start + count; i < ii; i++)
+            {
+                if (i >= 0 && i < _tokens.Count) ret.Add(_tokens[i]);
+            }
+            return ret;
         }
 
         public IEnumerable<DkxToken> GetUnused(TokenUseTracker used)
@@ -67,6 +98,20 @@ namespace DKX.Compilation.Tokens
 
             yield return current;
         }
+
+        public CodeSpan Span
+        {
+            get
+            {
+                if (_tokens.Count == 0) return CodeSpan.Empty;
+
+                var span = _tokens[0].Span;
+                for (int i = 1, ii = _tokens.Count; i < ii; i++) span = span.Envelope(_tokens[i].Span);
+                return span;
+            }
+        }
+
+        public DkxTokenStream ToStream() => new DkxTokenStream(this);
 
         public class DkxTokenEnumerator : IEnumerator<DkxToken>, IEnumerator
         {

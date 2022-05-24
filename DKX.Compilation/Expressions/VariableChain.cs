@@ -1,5 +1,5 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
@@ -17,14 +17,20 @@ namespace DKX.Compilation.Expressions
             _variable = variable ?? throw new ArgumentNullException(nameof(variable));
         }
 
-        public override void ToCode(OpCodeGenerator code, int parentOffset) => code.WriteVariable(_variable.WbdkName, parentOffset, Span);
-
         public override bool IsEmptyCode => false;
-
-        public override void Report(ISourceCodeReporter reporter) { }
 
         public override DataType DataType => _variable.DataType;
 
         public override DataType InferredDataType => _variable.DataType;
+
+        public override CodeFragment ToWbdkCode_Read(ISourceCodeReporter report)
+        {
+            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, readOnly: false);
+        }
+
+        public override CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report)
+        {
+            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, readOnly: false);
+        }
     }
 }

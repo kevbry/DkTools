@@ -27,17 +27,30 @@ namespace DKX.Compilation.Tokens
             _hasError = false;
             _dataType = dataType;
 
-            if (type == DkxTokenType.Arguments || type == DkxTokenType.Array || type == DkxTokenType.Scope) _tokens = new DkxTokenCollection();
+            if (type == DkxTokenType.Brackets || type == DkxTokenType.Array || type == DkxTokenType.Scope) _tokens = new DkxTokenCollection();
             else _tokens = null;
         }
 
         public DataType DataType => _dataType;
         public bool HasError => _hasError;
-        public bool IsGroup => _type == DkxTokenType.Arguments || _type == DkxTokenType.Array || _type == DkxTokenType.Scope;
-        public bool IsNone => _type == DkxTokenType.None;
+        public bool IsArray => _type == DkxTokenType.Array;
+        public bool IsBrackets => _type == DkxTokenType.Brackets;
+        public bool IsChar => _type == DkxTokenType.Char;
+        public bool IsDataType => _type == DkxTokenType.DataType;
+        public bool IsDefault => _type == DkxTokenType.None;
+        public bool IsDelimiter => _type == DkxTokenType.Delimiter;
+        public bool IsGroup => _type == DkxTokenType.Brackets || _type == DkxTokenType.Array || _type == DkxTokenType.Scope;
+        public bool IsIdentifier => _type == DkxTokenType.Identifier;
+        public bool IsNumber => _type == DkxTokenType.Number;
+        public bool IsScope => _type == DkxTokenType.Scope;
+        public bool IsStatementEnd => _type == DkxTokenType.StatementEnd;
+        public bool IsString => _type == DkxTokenType.String;
         public int Position => _span.Start;
         public CodeSpan Span => _span;
         public DkxTokenType Type => _type;
+
+        public bool IsKeyword(string keyword) => _type == DkxTokenType.Keyword && _text == keyword;
+        public bool IsOperator(Operator op) => _type == DkxTokenType.Operator && _number == (decimal)op;
 
         public static DkxToken CreateIdentifier(string keyword, CodeSpan span) =>
             new DkxToken(DkxTokenType.Identifier, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
@@ -58,7 +71,7 @@ namespace DKX.Compilation.Tokens
         public static DkxToken CreateStatementEnd(CodeSpan span) =>
             new DkxToken(DkxTokenType.StatementEnd, span, null, default, DataType.Void, hasError: false);
         public static DkxToken CreateArguments(CodeSpan openSpan) =>
-            new DkxToken(DkxTokenType.Arguments, openSpan, null, default, DataType.Void, hasError: false);
+            new DkxToken(DkxTokenType.Brackets, openSpan, null, default, DataType.Void, hasError: false);
         public static DkxToken CreateArray(CodeSpan openSpan) =>
             new DkxToken(DkxTokenType.Array, openSpan, null, default, DataType.Void, hasError: false);
         public static DkxToken CreateScope(CodeSpan openSpan) =>
@@ -196,7 +209,7 @@ namespace DKX.Compilation.Tokens
                     return ",";
                 case DkxTokenType.StatementEnd:
                     return ";";
-                case DkxTokenType.Arguments:
+                case DkxTokenType.Brackets:
                     return $"({string.Join(" ", _tokens)})";
                 case DkxTokenType.Array:
                     return $"[{string.Join(", ", _tokens)}]";
@@ -221,7 +234,7 @@ namespace DKX.Compilation.Tokens
         Operator,
         Delimiter,
         StatementEnd,
-        Arguments,
+        Brackets,
         Array,
         Scope
     }

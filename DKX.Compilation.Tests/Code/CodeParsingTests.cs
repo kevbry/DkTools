@@ -14,7 +14,7 @@ namespace DKX.Compilation.Tests.Code
             var cp = new DkxCodeParser("class TestClass { }");
             var root = cp.ReadAll();
 
-            Assert.IsFalse(root.IsNone);
+            Assert.IsFalse(root.IsDefault);
             Assert.IsTrue(root.IsGroup);
             Assert.AreEqual(3, root.Tokens.Count);
 
@@ -37,7 +37,7 @@ namespace DKX.Compilation.Tests.Code
             var cp = new DkxCodeParser("class TestClass {");
             var root = cp.ReadAll();
 
-            Assert.IsFalse(root.IsNone);
+            Assert.IsFalse(root.IsDefault);
             Assert.IsTrue(root.IsGroup);
             Assert.AreEqual(3, root.Tokens.Count);
 
@@ -74,7 +74,7 @@ namespace Util
 ");
             var root = cp.ReadAll();
 
-            Assert.IsFalse(root.IsNone);
+            Assert.IsFalse(root.IsDefault);
             Assert.IsTrue(root.IsGroup);
             Assert.AreEqual(3, root.Tokens.Count);
 
@@ -93,7 +93,7 @@ namespace Util
                     c.Keyword("public", 1);
                     c.DataType(DataType.String255, 6, 1);
                     c.Identifier("Trim", 0);
-                    c.Arguments(0, a =>
+                    c.Brackets(0, a =>
                     {
                         a.DataType(DataType.String255, 6, 1);
                         a.Identifier("str", 0);
@@ -121,7 +121,7 @@ namespace Util
                     c.Keyword("public", 1);
                     c.DataType(DataType.Char, 4, 1);
                     c.Identifier("ToLower", 0);
-                    c.Arguments(0, a =>
+                    c.Brackets(0, a =>
                     {
                         a.DataType(DataType.Char, 4, 1);
                         a.Identifier("ch", 0);
@@ -149,7 +149,7 @@ namespace Util
                     c.Keyword("public", 1);
                     c.DataType(DataType.Char, 4, 1);
                     c.Identifier("ToUpper", 0);
-                    c.Arguments(0, a =>
+                    c.Brackets(0, a =>
                     {
                         a.DataType(DataType.Char, 4, 1);
                         a.Identifier("ch", 0);
@@ -210,7 +210,7 @@ The end.
                     cls.Keyword("public", 1);
                     cls.DataType(DataType.Void, 4, 1);
                     cls.Identifier("TestMethod", 0);
-                    cls.Arguments(0, null, 10);
+                    cls.Brackets(0, null, 10);
                     cls.Scope(14, meth =>
                     {
                         meth.Keyword("var", 1);

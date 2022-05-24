@@ -3,7 +3,7 @@ using System.Text;
 
 namespace DKX.Compilation.CodeGeneration
 {
-    class CodeWriter
+    internal class CodeWriter
     {
         private StringBuilder _code = new StringBuilder();
         private int _indent;
@@ -80,6 +80,7 @@ namespace DKX.Compilation.CodeGeneration
                 if (!string.IsNullOrEmpty(_endString))
                 {
                     _code.Write(_endString);
+                    _code.WriteLine();
                 }
             }
         }

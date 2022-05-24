@@ -1,12 +1,8 @@
 ﻿using DK.AppEnvironment;
-using DK.Code;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
-using DKX.Compilation.Nodes;
 using DKX.Compilation.ReportItems;
-using Newtonsoft.Json;
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,42 +33,44 @@ namespace DKX.Compilation.Files
         {
             await _app.Log.InfoAsync("Compiling: {0}", _dkxPathName);
 
-            var source = _app.FileSystem.GetFileText(_dkxPathName);
-            var code = new CodeParser(source);
-            var fileNode = new FileNode(_app, _dkxPathName, code);
-            fileNode.Parse();
+            // TODO: This needs to be replaced
 
-            var reportItems = fileNode.ReportItems.ToList();
-            _reportCollector.AddReportItems(reportItems);
-            if (!reportItems.Any(e => e.Severity == ErrorSeverity.Error))
-            {
-                var methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray();
-                if (methods.Length == 0) methods = null;
+            //var source = _app.FileSystem.GetFileText(_dkxPathName);
+            //var code = new CodeParser(source);
+            //var fileNode = new FileNode(_app, _dkxPathName, code);
+            //fileNode.Parse();
 
-                var properties = fileNode.Properties.Select(p => p.ToObjectProperty()).ToArray();
-                if (properties.Length == 0) properties = null;
+            //var reportItems = fileNode.ReportItems.ToList();
+            //_reportCollector.AddReportItems(reportItems);
+            //if (!reportItems.Any(e => e.Severity == ErrorSeverity.Error))
+            //{
+            //    var methods = fileNode.Methods.Select(m => m.ToObjectFile()).ToArray();
+            //    if (methods.Length == 0) methods = null;
 
-                var memberVariables = fileNode.VariableStore.GetVariables(includeParents: false).Select(v => v.ToObjectMemberVariable()).ToArray();
-                if (memberVariables.Length == 0) memberVariables = null;
+            //    var properties = fileNode.Properties.Select(p => p.ToObjectProperty()).ToArray();
+            //    if (properties.Length == 0) properties = null;
 
-                var constants = fileNode.Constants.Select(c => c.ToObjectConstant()).ToArray();
-                if (constants.Length == 0) constants = null;
+            //    var memberVariables = fileNode.VariableStore.GetVariables(includeParents: false).Select(v => v.ToObjectMemberVariable()).ToArray();
+            //    if (memberVariables.Length == 0) memberVariables = null;
 
-                var obj = new ObjectFileModel
-                {
-                    SourcePathName = _dkxPathName,
-                    ClassName = fileNode.ClassName,
-                    FileDependencies = null,    // TODO
-                    TableDependencies = null,   // TODO
-                    Methods = methods,
-                    Properties = properties,
-                    MemberVariables = memberVariables,
-                    Constants = constants
-                };
+            //    var constants = fileNode.Constants.Select(c => c.ToObjectConstant()).ToArray();
+            //    if (constants.Length == 0) constants = null;
 
-                _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(_objPathName));
-                _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj, Formatting.Indented));
-            }
+            //    var obj = new ObjectFileModel
+            //    {
+            //        SourcePathName = _dkxPathName,
+            //        ClassName = fileNode.ClassName,
+            //        FileDependencies = null,    // TODO
+            //        TableDependencies = null,   // TODO
+            //        Methods = methods,
+            //        Properties = properties,
+            //        MemberVariables = memberVariables,
+            //        Constants = constants
+            //    };
+
+            //    _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(_objPathName));
+            //    _app.FileSystem.WriteFileText(_objPathName, JsonConvert.SerializeObject(obj, Formatting.Indented));
+            //}
         }
     }
 }

@@ -10,6 +10,16 @@ namespace DKX.Compilation.Tokens
         {
             foreach (var token in tokens)
             {
+                if (token.IsDefault) continue;
+                if (!_indices.Contains(token.Position)) _indices.Add(token.Position);
+            }
+        }
+
+        public void Use(DkxTokenCollection tokens)
+        {
+            foreach (var token in tokens)
+            {
+                if (token.IsDefault) continue;
                 if (!_indices.Contains(token.Position)) _indices.Add(token.Position);
             }
         }

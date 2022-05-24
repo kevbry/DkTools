@@ -1,6 +1,7 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 
 namespace DKX.Compilation.Expressions
@@ -15,14 +16,20 @@ namespace DKX.Compilation.Expressions
             _value = value;
         }
 
-        public override void ToCode(OpCodeGenerator code, int parentOffset) => code.WriteBoolLiteral(_value, parentOffset, Span);
-
         public override bool IsEmptyCode => false;
-
-        public override void Report(ISourceCodeReporter reporter) { }
 
         public override DataType DataType => DataType.Bool;
 
         public override DataType InferredDataType => DataType.Bool;
+
+        public override CodeFragment ToWbdkCode_Read(ISourceCodeReporter report)
+        {
+            return new CodeFragment(_value ? "1" : "0", DataType.Bool, OpPrec.None, Span, readOnly: true);
+        }
+
+        public override CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report)
+        {
+            throw new CodeException(Span, ErrorCode.LiteralsCannotBeWrittenTo);
+        }
     }
 }

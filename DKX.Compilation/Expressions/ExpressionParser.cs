@@ -1,173 +1,136 @@
-﻿using DK.Code;
-using DKX.Compilation.Nodes;
+﻿using DKX.Compilation.Scopes;
+using DKX.Compilation.Tokens;
 
 namespace DKX.Compilation.Expressions
 {
     static class ExpressionParser
     {
-        public static Chain ReadExpressionOrNull(NodeBodyContext bodyContext)
+        public static Chain ReadExpressionOrNull(Scope scope, DkxTokenStream stream)
         {
-            return ReadValueOrNull(bodyContext, 0);
+            var chain = ReadValueOrNull(scope, stream, 0);
+            if (chain == null) return null;
+            return chain;
         }
 
-        private static Chain ReadValueOrNull(NodeBodyContext bodyContext, OpPrec leftPrec)
+        private static Chain ReadValueOrNull(Scope scope, DkxTokenStream stream, OpPrec leftPrec)
         {
-            var code = bodyContext.Code;
-            if (code.ReadWord())
+            var startPos = stream.Position;
+            var token = stream.Read();
+            if (token.Type == DkxTokenType.Keyword)
             {
-                var word = code.Text;
-                var wordSpan = code.Span;
                 Chain chain;
 
-                switch (word)
+                switch (token.Text)
                 {
-                    case "false":
-                        chain = new BooleanLiteralChain(false, wordSpan);
-                        return ReadAfterValue(bodyContext, chain, leftPrec);
-                    case "true":
-                        chain = new BooleanLiteralChain(true, wordSpan);
-                        return ReadAfterValue(bodyContext, chain, leftPrec);
+                    case DkxConst.Keywords.False:
+                        chain = new BooleanLiteralChain(false, token.Span);
+                        return ReadAfterValue(scope, stream, chain, leftPrec);
+                    case DkxConst.Keywords.True:
+                        chain = new BooleanLiteralChain(true, token.Span);
+                        return ReadAfterValue(scope, stream, chain, leftPrec);
+                    default:
+                        scope.ReportItem(token.Span, ErrorCode.SyntaxError);
+                        return new ErrorChain(innerChainOrNull: null, token.Span);
+                }
+            }
+            else if (token.IsIdentifier)
+            {
+                Chain chain;
+
+                var variableStore = scope.GetScope<IVariableScope>()?.VariableStore;
+                if (variableStore != null && variableStore.TryGetVariable(token.Text, includeParents: true, out var variable))
+                {
+                    chain = new VariableChain(variable, token.Span);
+                    return ReadAfterValue(scope, stream, chain, leftPrec);
                 }
 
-                var variableStore = bodyContext.Body.GetContainerOrNull<IVariableScopeNode>()?.VariableStore;
-                if (variableStore != null && variableStore.TryGetVariable(word, includeParents: true, out var variable))
+                var constantStore = scope.GetScope<IConstantScope>()?.ConstantStore;
+                if (constantStore != null && constantStore.TryGetConstant(token.Text, out var constant))
                 {
-                    chain = new VariableChain(variable, wordSpan);
-                    return ReadAfterValue(bodyContext, chain, leftPrec);
+                    chain = new ConstantChain(constant, token.Span);
+                    return ReadAfterValue(scope, stream, chain, leftPrec);
                 }
-                else if (bodyContext.TryGetConstant(word, out var constant))
-                {
-                    chain = new ConstantChain(constant, wordSpan);
-                    return ReadAfterValue(bodyContext, chain, leftPrec);
-                }
-                else
-                {
-                    return new ErrorChain(innerChainOrNull: null, wordSpan, ErrorCode.UnknownIdentifier, word);
-                }
+
+                scope.ReportItem(token.Span, ErrorCode.UnknownIdentifier, token.Text);
+                return new ErrorChain(innerChainOrNull: null, token.Span);
             }
-            else if (code.ReadStringLiteral())
+            else if (token.IsString)
             {
-                var text = code.Text;
-                if (text[0] == '\'')
-                {
-                    Chain chain;
-                    var rawText = CodeParser.StringLiteralToString(text);
-                    if (rawText.Length != 1) chain = new ErrorChain(null, code.Span, ErrorCode.CharLiteralIsNotSingleCharacter);
-                    else chain = new CharLiteralChain(rawText[0], code.Span);
-                    return ReadAfterValue(bodyContext, chain, leftPrec);
-                }
-                else
-                {
-                    var chain = new StringLiteralChain(CodeParser.StringLiteralToString(text), code.Span);
-                    return ReadAfterValue(bodyContext, chain, leftPrec);
-                }
+                if (token.HasError) scope.ReportItem(token.Span, ErrorCode.InvalidStringLiteral);
+                var chain = new StringLiteralChain(token.Text, token.Span);
+                return ReadAfterValue(scope, stream, chain, leftPrec);
             }
-            else if (code.ReadNumber())
+            else if (token.IsChar)
             {
-                var chain = new NumberChain(code.Text, code.Span);
-                return ReadAfterValue(bodyContext, chain, leftPrec);
+                if (token.HasError) scope.ReportItem(token.Span, ErrorCode.InvalidCharLiteral);
+                var chain = new CharLiteralChain(token.Char, token.Span);
+                return ReadAfterValue(scope, stream, chain, leftPrec);
             }
-            else if (code.ReadExact('('))
+            else if (token.IsNumber)
             {
-                var chain = ReadValueOrNull(bodyContext, 0);
-                if (!code.ReadExact(')'))
-                {
-                    return new ErrorChain(chain, code.Position, ErrorCode.ExpectedToken, ')');
-                }
-                else
-                {
-                    return ReadAfterValue(bodyContext, chain, leftPrec);
-                }
+                var chain = new NumericLiteralChain(token.Number, token.DataType, token.Span);
+                return ReadAfterValue(scope, stream, chain, leftPrec);
             }
-            else return null;
+            else if (token.IsBrackets)
+            {
+                var subStream = new DkxTokenStream(token.Tokens);
+                var chain = ReadValueOrNull(scope, subStream, 0);
+                if (chain == null)
+                {
+                    scope.ReportItem(token.Span, ErrorCode.ExpectedExpression);
+                    return new ErrorChain(null, token.Span);
+                }
+                return ReadAfterValue(scope, stream, chain, leftPrec);
+            }
+            else
+            {
+                stream.Position = startPos;
+                return null;
+            }
         }
 
-        private static Chain ReadAfterValue(NodeBodyContext bodyContext, Chain chain, OpPrec leftPrec)
+        private static Chain ReadAfterValue(Scope scope, DkxTokenStream stream, Chain chain, OpPrec leftPrec)
         {
-            var code = bodyContext.Code;
-            var startPos = code.Position;
-            var op = ReadOperatorOrNull(code);
-            if (op != null)
+            var startPos = stream.Position;
+            var token = stream.Read();
+            if (token.Type == DkxTokenType.Operator)
             {
-                var opPrec = op.Value.op.GetPrecedence();
+                var op = token.Operator;
+                var opPrec = op.GetPrecedence();
                 if (leftPrec >= opPrec)
                 {
-                    code.Position = startPos;
+                    // The left expression takes priority over the new operator,
+                    // so don't consume the right operator at this time.
+                    stream.Position = startPos;
                     return chain;
                 }
 
-                if (op.Value.op.IsUnaryPost())
+                if (op.IsUnaryPost())
                 {
-                    var newChain = new OperatorChain(op.Value.op, chain, right: null);
-                    return ReadAfterValue(bodyContext, newChain, leftPrec);
+                    var newChain = new OperatorChain(op, chain, right: null);
+                    return ReadAfterValue(scope, stream, newChain, leftPrec);
                 }
                 else
                 {
-                    var right = ReadValueOrNull(bodyContext, opPrec);
+                    var right = ReadValueOrNull(scope, stream, opPrec);
                     if (right == null)
                     {
-                        code.Position = startPos;
-                        return new ErrorChain(chain, chain.Span.Envelope(op.Value.span), ErrorCode.OperatorExpectsValueOnRight, op.Value.op.GetText());
+                        // Was unable to read a value to the right of the operator, so stop the expression before this operator.
+                        stream.Position = startPos;
+                        scope.ReportItem(chain.Span.Envelope(token.Span), ErrorCode.OperatorExpectsValueOnRight, op.GetText());
+                        return chain;
                     }
                     else
                     {
-                        var newChain = new OperatorChain(op.Value.op, chain, ReadAfterValue(bodyContext, right, opPrec));
-                        return ReadAfterValue(bodyContext, newChain, leftPrec);
+                        var newChain = new OperatorChain(op, chain, right);
+                        return ReadAfterValue(scope, stream, newChain, leftPrec);
                     }
                 }
             }
             else
             {
+                stream.Position = startPos;
                 return chain;
-            }
-        }
-
-        private static OpReadResult? ReadOperatorOrNull(CodeParser code)
-        {
-            // Unary-pre (not, negative) operators will not be read here because this method is only called after a value.
-
-            if (code.ReadExact('.')) return new OpReadResult(Operator.Dot, code.Span);
-
-            if (code.ReadExact("+=")) return new OpReadResult(Operator.AssignAdd, code.Span);
-            if (code.ReadExact("++")) return new OpReadResult(Operator.Increment, code.Span);
-            if (code.ReadExact('+')) return new OpReadResult(Operator.Add, code.Span);
-
-            if (code.ReadExact("-=")) return new OpReadResult(Operator.AssignSubtract, code.Span);
-            if (code.ReadExact("-+")) return new OpReadResult(Operator.Decrement, code.Span);
-            if (code.ReadExact('-')) return new OpReadResult(Operator.Subtract, code.Span);
-
-            if (code.ReadExact("*=")) return new OpReadResult(Operator.AssignMultiply, code.Span);
-            if (code.ReadExact('*')) return new OpReadResult(Operator.Multiply, code.Span);
-
-            if (code.ReadExact("/=")) return new OpReadResult(Operator.AssignDivide, code.Span);
-            if (code.ReadExact('/')) return new OpReadResult(Operator.Divide, code.Span);
-
-            if (code.ReadExact("%=")) return new OpReadResult(Operator.AssignModulus, code.Span);
-            if (code.ReadExact('%')) return new OpReadResult(Operator.Modulus, code.Span);
-
-            if (code.ReadExact("==")) return new OpReadResult(Operator.Equal, code.Span);
-            if (code.ReadExact('=')) return new OpReadResult(Operator.Assign, code.Span);
-
-            if (code.ReadExact("!=")) return new OpReadResult(Operator.NotEqual, code.Span);
-
-            if (code.ReadExact("<=")) return new OpReadResult(Operator.LessEqual, code.Span);
-            if (code.ReadExact('<')) return new OpReadResult(Operator.LessThan, code.Span);
-
-            if (code.ReadExact(">=")) return new OpReadResult(Operator.GreaterEqual, code.Span);
-            if (code.ReadExact('>')) return new OpReadResult(Operator.GreaterThan, code.Span);
-
-            return null;
-        }
-
-        private struct OpReadResult
-        {
-            public Operator op;
-            public CodeSpan span;
-
-            public OpReadResult(Operator op, CodeSpan span)
-            {
-                this.op = op;
-                this.span = span;
             }
         }
     }

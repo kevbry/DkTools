@@ -15,7 +15,7 @@ namespace DKX.Compilation.Tests.StatementTests
         [Test]
         public async Task Int()
         {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
@@ -23,30 +23,7 @@ class Test
         var x = 0;
     }
 }
-", new ObjectFileModel
-            {
-                SourcePathName = @"x:\src\test.dkx",
-                ClassName = "Test",
-                Methods = new ObjectMethod[]
-                {
-                    new ObjectMethod
-                    {
-                        Name = "TestMethod",
-                        Privacy = Privacy.Public,
-                        FileContext = DK.Code.FileContext.NeutralClass,
-                        ReturnDataType = "void",
-                        Body = new ObjectBody
-                        {
-                            StartPosition = 45,
-                            Variables = new ObjectVariable[]
-                            {
-                                new ObjectVariable { Name = "x", DataType = "int" }
-                            },
-                            Code = "mov($x,0)"
-                        }
-                    }
-                }
-            }, @"
+", @"
 void TestMethod()
 {
     int x;
@@ -58,7 +35,7 @@ void TestMethod()
         [Test]
         public async Task NoInitializer()
         {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
@@ -66,13 +43,13 @@ class Test
         var x;
     }
 }
-", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 13, 6, 14, ErrorCode.VariableInitializationRequired));
+", null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 13, 6, 14, ErrorCode.VariableInitializationRequired));
         }
 
         [Test]
         public async Task MultipleVariablesInOneStatement()
         {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
@@ -80,13 +57,13 @@ class Test
         var x = 0, y = 0;
     }
 }
-", null, null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 18, ErrorCode.ExpectedToken, ';'));
+", null, ReportItem.FromOneBased(@"x:\src\test.dkx", 6, 18, ErrorCode.ExpectedToken, ';'));
         }
 
         [Test]
         public async Task VarNotAtTop()
         {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
@@ -96,31 +73,7 @@ class Test
         var y = x;
     }
 }
-", new ObjectFileModel
-            {
-                SourcePathName = @"x:\src\test.dkx",
-                ClassName = "Test",
-                Methods = new ObjectMethod[]
-                {
-                    new ObjectMethod
-                    {
-                        Name = "TestMethod",
-                        Privacy = Privacy.Public,
-                        FileContext = DK.Code.FileContext.NeutralClass,
-                        ReturnDataType = "void",
-                        Body = new ObjectBody
-                        {
-                            StartPosition = 45,
-                            Variables = new ObjectVariable[]
-                            {
-                                new ObjectVariable { Name = "x", DataType = "int" },
-                                new ObjectVariable { Name = "y", DataType = "int" }
-                            },
-                            Code = "mov($x,0),inc($x),mov($y,$x)"
-                        }
-                    }
-                }
-            }, @"
+", @"
 void TestMethod()
 {
     int x;
@@ -173,7 +126,7 @@ void TestMethod()
         //[TestCase(":235959", "time", ":235959", "time", "\"23:59:58\"")]
         public async Task Literals(string literal, string expectedType, string opCodeLiteral, string wbdkType, string wbdkLiteral)
         {
-            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\bin\.dkx\test.dkxx", @"x:\src\__test.nc", @"
+            await SetupCompileSingle(@"x:\src\test.dkx", @"x:\src\__test.nc", @"
 class Test
 {
     void TestMethod()
@@ -181,30 +134,7 @@ class Test
         var x = %1;
     }
 }
-".Replace("%1", literal), new ObjectFileModel
-            {
-                SourcePathName = @"x:\src\test.dkx",
-                ClassName = "Test",
-                Methods = new ObjectMethod[]
-                {
-                    new ObjectMethod
-                    {
-                        Name = "TestMethod",
-                        Privacy = Privacy.Public,
-                        FileContext = DK.Code.FileContext.NeutralClass,
-                        ReturnDataType = "void",
-                        Body = new ObjectBody
-                        {
-                            StartPosition = 45,
-                            Variables = new ObjectVariable[]
-                            {
-                                new ObjectVariable { Name = "x", DataType = expectedType }
-                            },
-                            Code = "mov($x,%1)".Replace("%1", opCodeLiteral)
-                        }
-                    }
-                }
-            }, @"
+".Replace("%1", literal), @"
 void TestMethod()
 {
     %2 x;

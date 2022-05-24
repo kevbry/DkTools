@@ -199,7 +199,7 @@ namespace DKX.Compilation.DataTypes
             }
         }
 
-        public string ToDkCode()
+        public string ToWbdkCode()
         {
             switch (_baseType)
             {
@@ -604,6 +604,30 @@ namespace DKX.Compilation.DataTypes
         }
 
         public bool IsSuitableForIncDec
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Char:
+                    case BaseType.UChar:
+                    case BaseType.Short:
+                    case BaseType.UShort:
+                    case BaseType.Int:
+                    case BaseType.UInt:
+                    case BaseType.Numeric:
+                    case BaseType.UNumeric:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        public bool IsSuitableForNumericMath
         {
             get
             {

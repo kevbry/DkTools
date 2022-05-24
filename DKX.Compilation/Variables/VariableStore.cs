@@ -1,14 +1,14 @@
-﻿using DKX.Compilation.Nodes;
+﻿using DKX.Compilation.Scopes;
 using System.Collections.Generic;
 
 namespace DKX.Compilation.Variables
 {
     class VariableStore : IVariableStore
     {
-        private IVariableScopeNode _parent;
+        private IVariableScope _parent;
         private Dictionary<string, Variable> _variables;
 
-        public VariableStore(IVariableScopeNode parent)
+        public VariableStore(IVariableScope parent)
         {
             _parent = parent;
         }
@@ -17,6 +17,11 @@ namespace DKX.Compilation.Variables
         {
             if (_variables == null) _variables = new Dictionary<string, Variable>();
             _variables[variable.Name] = variable;
+        }
+
+        public void AddVariables(IEnumerable<Variable> variables)
+        {
+            foreach (var variable in variables) AddVariable(variable);
         }
 
         public bool HasVariable(string name, bool includeParents)

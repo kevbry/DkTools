@@ -34,6 +34,12 @@ namespace DKX.Compilation
 
         [Description("Char literals must contain exactly 1 character.")]
         CharLiteralIsNotSingleCharacter = 1003,
+
+        [Description("Invalid char literal.")]
+        InvalidCharLiteral = 1004,
+
+        [Description("Invalid string literal.")]
+        InvalidStringLiteral = 1005,
         #endregion
 
         #region Classes (1100-1199)
@@ -100,6 +106,12 @@ namespace DKX.Compilation
 
         [Description("Property accessor is more accessible than the property.")]
         PropertyAccessorMoreAccessibleThanProperty = 1302,
+
+        [Description("Duplicate property 'getter'.")]
+        DuplicatePropertyGetter = 1303,
+
+        [Description("Duplicate property 'setter'.")]
+        DuplicatePropertySetter = 1304,
         #endregion
 
         #region Variables/Arguments (1400-1499)
@@ -156,6 +168,9 @@ namespace DKX.Compilation
         [Description("Expected statement.")]
         ExpectedStatement = 1503,
 
+        /// <summary>
+        /// {0} = operator text
+        /// </summary>
         [Description("Operator '{0}' expected a writeable value on the left.")]
         OperatorExpectsWriteableValueOnLeft = 1504,
 
@@ -173,6 +188,24 @@ namespace DKX.Compilation
 
         [Description("Condition expression must yield a boolean result.")]
         ConditionMustBeBool = 1507,
+
+        [Description("Expected condition expression.")]
+        ExpectedCondition = 1508,
+
+        [Description("Statement is not terminated with ';'.")]
+        StatementNotTerminated = 1509,
+
+        /// <summary>
+        /// {0} = operator text
+        /// </summary>
+        [Description("Operator '{0}' result cannot be written to.")]
+        OperatorResultCannotBeWrittenTo = 1510,
+
+        [Description("Literal values cannot be written to.")]
+        LiteralsCannotBeWrittenTo = 1511,
+
+        [Description("Constant values cannot be written to.")]
+        ConstantsCannotBeWrittenTo = 1512,
         #endregion
     }
 

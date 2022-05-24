@@ -1,6 +1,7 @@
 ﻿using DK.Code;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
-using DKX.Compilation.Nodes;
+using DKX.Compilation.Scopes.Statements;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
 using System;
@@ -10,27 +11,46 @@ using System.Text;
 
 namespace DKX.Compilation.Scopes
 {
-    public class MethodScope : Scope
+    public class MethodScope : Scope, IReturnScope, IVariableScope
     {
+        private string _className;
         private string _name;
         private CodeSpan _nameSpan;
+        private string _wbdkName;
         private DataType _returnDataType;
-        private Modifiers _modifiers;
-        private List<Variable> _variables;
-        private DkxTokenCollection _bodyTokens;
+        private VariableStore _variableStore;
+        private FileContext _fileContext;
+        private Privacy _privacy;
+        private bool _static;
+        private string _signature;  // Initially null; lazy generated
+        private Statement[] _statements;
 
-        public MethodScope(Scope parent, string name, CodeSpan nameSpan, DataType returnDataType, DkxTokenCollection argumentTokens, Modifiers modifiers, DkxTokenCollection bodyTokens)
+        public MethodScope(Scope parent, string className, string name, CodeSpan nameSpan, DataType returnDataType, DkxTokenCollection argumentTokens, Modifiers modifiers, DkxTokenCollection bodyTokens)
             : base(parent)
         {
+            _className = className ?? throw new ArgumentNullException(nameof(className));
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _nameSpan = nameSpan;
             _returnDataType = returnDataType;
-            _modifiers = modifiers;
-            _bodyTokens = bodyTokens;
-            _variables = ProcessArguments(argumentTokens).ToList();
+            _variableStore = new VariableStore(parent.GetScope<IVariableScope>());
+            _variableStore.AddVariables(ProcessArguments(argumentTokens).ToList());
+
+            _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
+            _privacy = modifiers.Privacy ?? Privacy.Public;
+            _static = modifiers.Static;
+
+            _wbdkName = string.Concat(_className, "_", _name);
+
+            if (bodyTokens != null)
+            {
+                _statements = StatementParser.SplitTokensIntoStatements(this, bodyTokens);
+            }
         }
 
-        public IEnumerable<Variable> Arguments => _variables.Where(v => v.ArgumentType.HasValue);
+        public IEnumerable<Variable> Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue);
+        public FileContext FileContext => _fileContext;
+        public DataType ReturnDataType => _returnDataType;
+        public IVariableStore VariableStore => _variableStore;
 
         private IEnumerable<Variable> ProcessArguments(DkxTokenCollection tokens)
         {
@@ -105,9 +125,23 @@ namespace DKX.Compilation.Scopes
                 if (_signature == null)
                 {
                     var sb = new StringBuilder();
-                    sb.Append(_modifiers.ToSignature());
-
-                    if (sb.Length > 0) sb.Append(' ');
+                    sb.Append(_privacy.ToKeyword());
+                    sb.Append(' ');
+                    if (_fileContext.IsClientSide())
+                    {
+                        sb.Append(DkxConst.Keywords.Client);
+                        sb.Append(' ');
+                    }
+                    else if (_fileContext.IsServerSide())
+                    {
+                        sb.Append(DkxConst.Keywords.Server);
+                        sb.Append(' ');
+                    }
+                    if (_static)
+                    {
+                        sb.Append(DkxConst.Keywords.Static);
+                        sb.Append(' ');
+                    }
                     sb.Append(_returnDataType.ToCode());
                     sb.Append(' ');
                     sb.Append(_name);
@@ -134,7 +168,32 @@ namespace DKX.Compilation.Scopes
                 return _signature;
             }
         }
-        private string _signature;
 
+        internal override void GenerateWbdkCode(CodeWriter cw)
+        {
+            cw.Write(_returnDataType.ToWbdkCode());
+            cw.Write(' ');
+            cw.Write(_wbdkName);
+            cw.Write('(');
+            var firstArg = true;
+            foreach (var arg in Arguments)
+            {
+                if (firstArg) firstArg = false;
+                else cw.Write(", ");
+                cw.Write(arg.DataType.ToWbdkCode());
+                cw.Write(' ');
+                if (arg.ArgumentType == ArgumentPassType.ByReference || arg.ArgumentType == ArgumentPassType.Out) cw.Write('&');
+                cw.Write(arg.WbdkName);
+            }
+            cw.Write(')');
+            cw.WriteLine();
+            using (cw.Indent())
+            {
+                foreach (var statement in _statements ?? Statement.EmptyArray)
+                {
+                    statement.GenerateWbdkCode(cw);
+                }
+            }
+        }
     }
 }

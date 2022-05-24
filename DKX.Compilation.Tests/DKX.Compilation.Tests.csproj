@@ -51,20 +51,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CodeGeneration\CodeGenerationTests.cs" />
-    <Compile Include="CodeGeneration\OpCodeStringValidator.cs" />
-    <Compile Include="CodeGeneration\WbdkCodeValidator.cs" />
+    <Compile Include="WbdkCodeValidator.cs" />
     <Compile Include="Code\CodeParsingTests.cs" />
     <Compile Include="Code\TokenValidator.cs" />
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />
-    <Compile Include="Files\CompileFileJobTests.cs" />
-    <Compile Include="Files\ObjectModelValidator.cs" />
-    <Compile Include="Files\ScanForCompileJobTests.cs" />
     <Compile Include="Files\TestCompileFileJob.cs" />
     <Compile Include="Files\TestCompileFileJobFactory.cs" />
-    <Compile Include="Files\TestObjectFileReader.cs" />
-    <Compile Include="Files\TestObjectFileReaderFactory.cs" />
     <Compile Include="Scopes\ScopesTests.cs" />
     <Compile Include="StatementTests\ForStatementTests.cs" />
     <Compile Include="StatementTests\IfStatementTests.cs" />

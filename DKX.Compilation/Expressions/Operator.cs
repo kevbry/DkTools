@@ -1,5 +1,4 @@
-﻿using DKX.Compilation.CodeGeneration.OpCodes;
-using System;
+﻿using System;
 
 namespace DKX.Compilation.Expressions
 {
@@ -135,39 +134,6 @@ namespace DKX.Compilation.Expressions
                 case Operator.Or: return "||";
                 case Operator.Ternary1: return "?";
                 case Operator.Ternary2: return ":";
-                default: throw new InvalidOperatorException();
-            }
-        }
-
-        public static string GetOpCode(this Operator op)
-        {
-            switch (op)
-            {
-                case Operator.Dot: return OpCode.Dot;
-                case Operator.Increment: return OpCode.Increment;
-                case Operator.Decrement: return OpCode.Decrement;
-                case Operator.Multiply: return OpCode.Multiply;
-                case Operator.Divide: return OpCode.Divide;
-                case Operator.Modulus: return OpCode.Modulus;
-                case Operator.Add: return OpCode.Add;
-                case Operator.Subtract: return OpCode.Subtract;
-                case Operator.Assign: return OpCode.Assign;
-                case Operator.AssignAdd: return OpCode.AssignAdd;
-                case Operator.AssignSubtract: return OpCode.AssignSubtract;
-                case Operator.AssignMultiply: return OpCode.AssignMultiply;
-                case Operator.AssignDivide: return OpCode.AssignDivide;
-                case Operator.AssignModulus: return OpCode.AssignModulus;
-                case Operator.Equal: return OpCode.CompareEQ;
-                case Operator.NotEqual: return OpCode.CompareNE;
-                case Operator.LessThan: return OpCode.CompareLT;
-                case Operator.LessEqual: return OpCode.CompareLE;
-                case Operator.GreaterThan: return OpCode.CompareGT;
-                case Operator.GreaterEqual: return OpCode.CompareGE;
-                case Operator.Negative: return OpCode.Negate;
-                case Operator.Not: return OpCode.Not;
-                case Operator.And: return OpCode.And;
-                case Operator.Or: return OpCode.Or;
-                case Operator.Ternary1: return OpCode.Ternary;
                 default: throw new InvalidOperatorException();
             }
         }

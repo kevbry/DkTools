@@ -1,8 +1,6 @@
 ﻿using DK;
-using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
-using DKX.Compilation.Files;
 using System;
 
 namespace DKX.Compilation.Variables
@@ -25,19 +23,5 @@ namespace DKX.Compilation.Variables
         public string Name => _name;
         public DataType DataType => _dataType;
         public Chain Value => _value;
-
-        public ObjectConstant ToObjectConstant()
-        {
-            var code = new OpCodeGenerator();
-            _value.ToCode(code, _value.Span.Start);
-
-            return new ObjectConstant
-            {
-                Name = _name,
-                DataType = _dataType.ToCode(),
-                Code = code.ToString(),
-                CodeStartPosition = _value.Span.Start
-            };
-        }
     }
 }

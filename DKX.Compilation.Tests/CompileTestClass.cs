@@ -2,11 +2,7 @@
 using DK.AppEnvironment;
 using DK.Implementation.Virtual;
 using DK.Repository;
-using DKX.Compilation.Files;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Tests.CodeGeneration;
-using DKX.Compilation.Tests.Files;
-using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -135,8 +131,8 @@ namespace DKX.Compilation.Tests
             app.FileSystem.WriteFileText(pathName, content);
         }
 
-        protected async Task SetupCompileSingle(string dkxPathName, string objPathName, string wbdkPathName,
-            string dkxSource, ObjectFileModel objModel, string wbdkCode, ReportItem? expectedError = null)
+        protected async Task SetupCompileSingle(string dkxPathName, string wbdkPathName,
+            string dkxSource, string wbdkCode, ReportItem? expectedError = null)
         {
             var app = CreateApp();
             SetupCompile(app);
@@ -150,7 +146,6 @@ namespace DKX.Compilation.Tests
             if (expectedError.HasValue) TestContext.Out.WriteLine($"Expected Error: {expectedError.ToString()}");
 
             TestContext.Out.WriteLine($"DKX Source:\n{dkxSource}");
-            if (app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object File:\n{app.FileSystem.GetFileText(objPathName)}");
             if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{app.FileSystem.GetFileText(wbdkPathName)}");
 
             if (expectedError.HasValue)
@@ -167,9 +162,6 @@ namespace DKX.Compilation.Tests
             {
                 Assert.IsFalse(compiler.HasErrors, "Compiler returned errors.");
             }
-
-            Assert.IsTrue(app.FileSystem.FileExists(objPathName), "Object file was not created.");
-            ObjectModelValidator.ValidateModel(objModel, JsonConvert.DeserializeObject<ObjectFileModel>(app.FileSystem.GetFileText(objPathName)));
 
             Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
             WbdkCodeValidator.Validate(wbdkCode, app.FileSystem.GetFileText(wbdkPathName));

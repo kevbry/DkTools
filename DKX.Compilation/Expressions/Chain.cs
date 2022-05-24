@@ -1,5 +1,5 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 
@@ -7,11 +7,11 @@ namespace DKX.Compilation.Expressions
 {
     abstract class Chain
     {
-        public abstract void ToCode(OpCodeGenerator code, int parentOffset);
-        public abstract bool IsEmptyCode { get; }
-        public abstract void Report(ISourceCodeReporter reporter);
         public abstract DataType DataType { get; }
         public abstract DataType InferredDataType { get; }
+        public abstract CodeFragment ToWbdkCode_Read(ISourceCodeReporter report);
+        public abstract CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report);
+        public abstract bool IsEmptyCode { get; }
 
         private CodeSpan _span;
 

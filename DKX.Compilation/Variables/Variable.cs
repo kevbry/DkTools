@@ -1,9 +1,7 @@
 ﻿using DK;
 using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
-using DKX.Compilation.Files;
 using System;
 
 namespace DKX.Compilation.Variables
@@ -38,19 +36,5 @@ namespace DKX.Compilation.Variables
         public bool IsArgument => _passType != null;
         public string Name => _name;
         public string WbdkName => _wbdkName;
-
-        public ObjectMethodArgument ToObjectMethodArgument() => new ObjectMethodArgument
-        {
-            Name = _name,
-            DataType = _dataType.ToCode(),
-            PassType = _passType ?? ArgumentPassType.ByReference
-        };
-
-        public ObjectMemberVariable ToObjectMemberVariable() => new ObjectMemberVariable
-        {
-            Name = _name,
-            FileContext = _fileContext,
-            DataType = _dataType.ToCode()
-        };
     }
 }

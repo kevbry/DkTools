@@ -17,14 +17,5 @@ namespace DKX.Compilation.Variables
             WbdkName = wbdkName ?? throw new ArgumentNullException(nameof(wbdkName));
             DataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
         }
-
-        public ObjectVariable ToObjectVariable()
-        {
-            return new ObjectVariable
-            {
-                Name = WbdkName,
-                DataType = DataType
-            };
-        }
     }
 }

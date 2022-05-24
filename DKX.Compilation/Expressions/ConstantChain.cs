@@ -1,6 +1,7 @@
 ﻿using DK.Code;
-using DKX.Compilation.CodeGeneration.OpCodes;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
 using System;
@@ -17,14 +18,17 @@ namespace DKX.Compilation.Expressions
             _constant = constant ?? throw new ArgumentNullException(nameof(constant));
         }
 
-        public override void ToCode(OpCodeGenerator code, int parentOffset) => _constant.Value.ToCode(code, -1);
-
         public override bool IsEmptyCode => false;
-
-        public override void Report(ISourceCodeReporter reporter) => _constant.Value.Report(reporter);
 
         public override DataType DataType => _constant.DataType;
 
         public override DataType InferredDataType => _constant.DataType;
+
+        public override CodeFragment ToWbdkCode_Read(ISourceCodeReporter report) => _constant.Value.ToWbdkCode_Read(report);
+
+        public override CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report)
+        {
+            throw new CodeException(Span, ErrorCode.ConstantsCannotBeWrittenTo);
+        }
     }
 }

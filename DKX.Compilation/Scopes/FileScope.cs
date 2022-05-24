@@ -1,6 +1,7 @@
 ﻿using DK;
 using DK.AppEnvironment;
 using DK.Code;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Tokens;
 using System;
@@ -76,6 +77,20 @@ namespace DKX.Compilation.Scopes
         }
 
         public override bool HasErrors => _reportItems.Any(x => x.Severity == ErrorSeverity.Error);
+
+        public IEnumerable<FileContext> GetFileContexts() => _namespace?.GetFileContexts() ?? FileContextHelper.EmptyArray;
+
+        public string GenerateWbdkCode(FileContext fileContext)
+        {
+            var cw = new CodeWriter();
+            GenerateWbdkCode(cw);
+            return cw.Code;
+        }
+
+        internal override void GenerateWbdkCode(CodeWriter cw)
+        {
+            _namespace?.GenerateWbdkCode(cw);
+        }
     }
 
     public enum ProcessingDepth

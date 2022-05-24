@@ -106,15 +106,6 @@ namespace DKX.Compilation.Tests.Code
             CheckSpan(token, 1, spacer);
         }
 
-        private void Group(DkxTokenType type, int childCount, int length, int spacer)
-        {
-            var token = GetToken();
-            Assert.AreEqual(type, token.Type);
-            Assert.AreEqual(childCount, token.Tokens.Count);
-            Assert.IsTrue(token.Closed);
-            CheckSpan(token, length, spacer);
-        }
-
         private void Group(DkxTokenType type, int spacerIntoBody, Action<TokenValidator> callback, int spacerAfterBody)
         {
             var token = GetToken();
@@ -133,15 +124,12 @@ namespace DKX.Compilation.Tests.Code
             CheckSpan(token, startPos, _pos, spacerAfterBody);
         }
 
-        //public void Arguments(int childCount, int length, int spacer) => Group(DkxTokenType.Arguments, childCount, length, spacer);
-        public void Arguments(int spacerIntoBody, Action<TokenValidator> callback, int spacerAfterBody) =>
-            Group(DkxTokenType.Arguments, spacerIntoBody, callback, spacerAfterBody);
+        public void Brackets(int spacerIntoBody, Action<TokenValidator> callback, int spacerAfterBody) =>
+            Group(DkxTokenType.Brackets, spacerIntoBody, callback, spacerAfterBody);
 
-        //public void Array(int childCount, int length, int spacer) => Group(DkxTokenType.Array, childCount, length, spacer);
         public void Array(int spacerIntoBody, Action<TokenValidator> callback, int spacerAfterBody) =>
             Group(DkxTokenType.Array, spacerIntoBody, callback, spacerAfterBody);
 
-        //public void Scope(int childCount, int length, int spacer) => Group(DkxTokenType.Scope, childCount, length, spacer);
         public void Scope(int spacerIntoBody, Action<TokenValidator> callback, int spacerAfterBody) =>
             Group(DkxTokenType.Scope, spacerIntoBody, callback, spacerAfterBody);
     }

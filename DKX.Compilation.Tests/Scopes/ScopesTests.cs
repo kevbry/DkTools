@@ -1,6 +1,8 @@
-﻿using DKX.Compilation.Scopes;
+﻿using DK.Code;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
 using NUnit.Framework;
+using System.Linq;
 
 namespace DKX.Compilation.Tests.Scopes
 {
@@ -8,42 +10,56 @@ namespace DKX.Compilation.Tests.Scopes
     class ScopesTests
     {
         [Test]
-        public void Test1()
+        public void MemberClass()
         {
-            var source = @"
+            var dkxCode = @"
 namespace Test
 {
-    public class StringHelper
+    class Member
     {
-        public string Trim(string str) { str[0] = """"; }
-    }
+        int _no;
+        string _name;
 
-    public class CharHelper
-    {
-        public char ToLower(char ch) { return ch >= 'A' && ch <= 'Z' ? ch + 32 : ch; }
-        public char ToUpper(char ch) { return ch >= 'a' && ch <= 'z' ? ch - 32 : ch; }
+        public int Number { get { return _no; } }
+        public string Name { get { return _name; } set { _name = value; } }
+
+        public void SetData(int no, string name)
+        {
+            _no = no;
+            _name = name;
+        }
     }
 }
 ";
-            var cp = new DkxCodeParser(source);
+            var wbdkCode = @"
+int Member__no;
+char(255) Member__name;
+
+int Member_GetNumber() { return Member__no; }
+char(255) Member_GetName() { return Member__name; }
+void Member_SetName(char(255) value) { Member__name = value; }
+
+void Member_SetData(int no, char(255) name)
+{
+    Member__no = no;
+    Member__name = name;
+}
+";
+            var cp = new DkxCodeParser(dkxCode);
             var fileScope = new FileScope(@"x:\src\test.dkx", cp, ProcessingDepth.Full);
             fileScope.ProcessTokens(cp.ReadAll().Tokens);
 
             foreach (var ri in fileScope.ReportItems) TestContext.Out.WriteLine(ri.ToString());
-            Assert.IsFalse(fileScope.HasErrors);
+            Assert.IsFalse(fileScope.HasErrors, "Compiler returned errors.");
 
-            Assert.IsNotNull(fileScope.Namespace);
+            var fileContexts = fileScope.GetFileContexts().ToArray();
+            Assert.AreEqual(1, fileContexts.Length);
+            Assert.AreEqual(FileContext.NeutralClass, fileContexts[0]);
 
-            var ns = fileScope.Namespace;
-            TestContext.Out.WriteLine($"Namespace: {ns.Name}");
-            foreach (var cls in ns.Classes)
-            {
-                TestContext.Out.WriteLine($"  Class: {cls.Name}");
-                foreach (var method in cls.Methods)
-                {
-                    TestContext.Out.WriteLine($"    Method: {method.Signature}");
-                }
-            }
+            var actualWbdkCode = fileScope.GenerateWbdkCode(fileContexts[0]);
+            TestContext.Out.WriteLine($"Expected WBDK Code:\n{wbdkCode}");
+            TestContext.Out.WriteLine($"Actual WBDK Code:\n{actualWbdkCode}");
+            WbdkCodeValidator.Validate(wbdkCode, actualWbdkCode);
         }
     }
 }

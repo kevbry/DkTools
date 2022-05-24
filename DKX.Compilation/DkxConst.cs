@@ -1,5 +1,4 @@
-﻿using DK;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace DKX.Compilation
 {
@@ -24,41 +23,8 @@ namespace DKX.Compilation
         /// </summary>
         public const int WbdkFileTitleMaxLength = 12;
 
-        public static class Keywords
-        {
-            public static readonly HashSet<string> AllKeywords = StringHelper.ParseWordList(
-                "and bool char class const date enum false if indrel int like namespace numeric or private program protected public " +
-                "return short static switch string table time trigger true uint unsigned unsupported ushort var variant void while");
-
-            public static readonly HashSet<string> DataTypeKeyword = StringHelper.ParseWordList(
-                "bool char date enum indrel int like numeric short string table time uint unsigned unsupported ushort variant void");
-
-            public const string Bool = "bool";
-            public const string Char = "char";
-            public const string Class = "class";
-            public const string Client = "client";
-            public const string Const = "const";
-            public const string Date = "date";
-            public const string Int = "int";
-            public const string Namespace = "namespace";
-            public const string Neutral = "neutral";
-            public const string Numeric = "numeric";
-            public const string Out = "out";
-            public const string Private = "private";
-            public const string Protected = "protected";
-            public const string Public = "public";
-            public const string Ref = "ref";
-            public const string Server = "server";
-            public const string Short = "short";
-            public const string Static = "static";
-            public const string String = "string";
-            public const string Time = "time";
-            public const string UChar = "uchar";
-            public const string UInt = "uint";
-            public const string UShort = "ushort";
-            public const string Variant = "variant";
-            public const string Void = "void";
-        }
+        public const char StatementEndToken = ';';
+        public const char DelimiterToken = ',';
 
         public static class Namespaces
         {
@@ -68,6 +34,8 @@ namespace DKX.Compilation
         public static class Properties
         {
             public const string SetterArgumentName = "value";
+            public const string GetterPrefix = "Get";
+            public const string SetterPrefix = "Set";
         }
 
         public static class Variables
@@ -93,6 +61,77 @@ namespace DKX.Compilation
         public static class String
         {
             public const int MaxLength = 255;
+        }
+
+        public static class Keywords
+        {
+            public static readonly HashSet<string> AllKeywords = new HashSet<string>(new string[]
+            {
+                And, Break, Bool, Char, Class, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
+                Namespace, Numeric, Or, Private, Protected, Public, Return, Set, Short, Static, Switch, String,
+                Table, Time, True, UChar, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
+            });
+
+            public static readonly HashSet<string> DataTypeKeyword = new HashSet<string>(new string[]
+            {
+                Bool, Char, Date, Enum, Indrel, Int, Numeric, Short, String, Table, Time, UChar, UInt, Unsigned, Unsupported, UShort, Variant, Void
+            });
+
+            /// <summary>
+            /// Keywords that kick off a statement. (e.g. if, for, while, return, etc...)
+            /// Does not include keywords that occur in a statement, but not as the first keyword, such as 'else'.
+            /// </summary>
+            public static readonly HashSet<string> ControlStatementStartKeyword = new HashSet<string>(new string[]
+            {
+                Break, Continue, Do, If, For, Return, Switch, While
+            });
+
+            public const string And = "and";
+            public const string Break = "break";
+            public const string Bool = "bool";
+            public const string Char = "char";
+            public const string Class = "class";
+            public const string Client = "client";
+            public const string Const = "const";
+            public const string Continue = "continue";
+            public const string Date = "date";
+            public const string Do = "do";
+            public const string Else = "else";
+            public const string Enum = "enum";
+            public const string False = "false";
+            public const string For = "for";
+            public const string Get = "get";
+            public const string If = "if";
+            public const string Indrel = "indrel";
+            public const string Int = "int";
+            public const string Namespace = "namespace";
+            public const string Neutral = "neutral";
+            public const string Numeric = "numeric";
+            public const string Or = "or";
+            public const string Out = "out";
+            public const string Private = "private";
+            public const string Protected = "protected";
+            public const string Public = "public";
+            public const string Ref = "ref";
+            public const string Return = "return";
+            public const string Server = "server";
+            public const string Set = "set";
+            public const string Short = "short";
+            public const string Static = "static";
+            public const string String = "string";
+            public const string Switch = "switch";
+            public const string Table = "table";
+            public const string Time = "time";
+            public const string True = "true";
+            public const string UChar = "uchar";
+            public const string UInt = "uint";
+            public const string UShort = "ushort";
+            public const string Unsigned = "unsigned";
+            public const string Unsupported = "unsupported";
+            public const string Var = "var";
+            public const string Variant = "variant";
+            public const string Void = "void";
+            public const string While = "while";
         }
     }
 }

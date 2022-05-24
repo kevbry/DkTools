@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.Nodes;
+﻿using DK.Code;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
@@ -49,6 +50,27 @@ namespace DKX.Compilation.Scopes
             if (depth == ProcessingDepth.Full)
             {
                 foreach (var badToken in tokens.GetUnused(used)) ReportItem(badToken.Span, ErrorCode.SyntaxError, badToken.ToString());
+            }
+        }
+
+        public IEnumerable<FileContext> GetFileContexts()
+        {
+            var fileContexts = new List<FileContext>();
+            foreach (var cls in _classes.Values)
+            {
+                foreach (var fc in cls.GetFileContexts())
+                {
+                    if (!fileContexts.Contains(fc)) fileContexts.Add(fc);
+                }
+            }
+            return fileContexts;
+        }
+
+        internal override void GenerateWbdkCode(CodeWriter cw)
+        {
+            foreach (var cls in _classes.Values)
+            {
+                cls.GenerateWbdkCode(cw);
             }
         }
     }
