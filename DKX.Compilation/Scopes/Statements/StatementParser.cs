@@ -19,6 +19,7 @@ namespace DKX.Compilation.Scopes.Statements
 
             while (!stream.EndOfStream)
             {
+                var resetPos = stream.Position;
                 var token = stream.Peek();
                 if (token.Type == DkxTokenType.Keyword && DkxConst.Keywords.ControlStatementStartKeyword.Contains(token.Text))
                 {
@@ -35,22 +36,27 @@ namespace DKX.Compilation.Scopes.Statements
                         default:
                             throw new NotImplementedException();
                     }
+                    continue;
                 }
-                else if ((readDataTypeResult = await ExpressionParser.TryReadDataTypeAsync(scope, stream, resolver)).Success)
+
+                if ((readDataTypeResult = await ExpressionParser.TryReadDataTypeAsync(scope, stream, resolver)).Success)
                 {
-                    // Variable declaration
-                    statements.Add(await VariableDeclarationStatement.ParseAsync(scope, readDataTypeResult.DataType, readDataTypeResult.Span, stream, resolver));
+                    if (stream.Peek().Type == DkxTokenType.Identifier)
+                    {
+                        // Variable declaration
+                        statements.Add(await VariableDeclarationStatement.ParseAsync(scope, readDataTypeResult.DataType, readDataTypeResult.Span, stream, resolver));
+                        continue;
+                    }
+                    else stream.Position = resetPos;
                 }
+
+                // Normal expression
+                var statement = await TryReadExpressionStatementAsync(scope, stream, resolver);
+                if (statement != null) statements.Add(statement);
                 else
                 {
-                    // Normal expression
-                    var statement = await TryReadExpressionStatementAsync(scope, stream, resolver);
-                    if (statement != null) statements.Add(statement);
-                    else
-                    {
-                        var badToken = stream.Read();
-                        if (!badToken.IsDefault) await scope.ReportAsync(badToken.Span, ErrorCode.SyntaxError);
-                    }
+                    var badToken = stream.Read();
+                    if (!badToken.IsDefault) await scope.ReportAsync(badToken.Span, ErrorCode.SyntaxError);
                 }
             }
 

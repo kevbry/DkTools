@@ -51,6 +51,7 @@
     <Compile Include="CodeGeneration\CodeWriter.cs" />
     <Compile Include="Conversions\ConversionValidator.cs" />
     <Compile Include="Expressions\ConstructorChain.cs" />
+    <Compile Include="Expressions\DataTypeChain.cs" />
     <Compile Include="Expressions\FieldChain.cs" />
     <Compile Include="Expressions\MethodCallChain.cs" />
     <Compile Include="Expressions\ThisChain.cs" />

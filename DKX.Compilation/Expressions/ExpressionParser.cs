@@ -23,6 +23,14 @@ namespace DKX.Compilation.Expressions
         private static async Task<Chain> TryReadValueAsync(Scope scope, DkxTokenStream stream, OpPrec leftPrec, IResolver resolver)
         {
             var startPos = stream.Position;
+
+            var dataTypeResult = await TryReadDataTypeAsync(scope, stream, resolver);
+            if (dataTypeResult.Success)
+            {
+                var chain = new DataTypeChain(dataTypeResult.DataType, dataTypeResult.Span);
+                return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+            }
+
             var token = stream.Read();
             if (token.Type == DkxTokenType.Keyword)
             {

@@ -264,6 +264,8 @@ namespace DKX.Compilation.Scopes
             sb.Append(nameParts[0]);
             sb.Append('.');
             sb.Append(string.Join("_", nameParts.Skip(1)));
+            sb.Append('_');
+            sb.Append(_name);
             sb.Append('(');
 
             var firstArg = true;

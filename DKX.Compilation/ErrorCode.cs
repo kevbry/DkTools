@@ -189,6 +189,9 @@ namespace DKX.Compilation
 
         [Description("'this' cannot be modified.")]
         ThisCannotBeModified = 1412,
+
+        [Description("Static class references cannot be modified.")]
+        StaticReferenceCannotBeModified = 1413,
         #endregion
 
         #region Expressions (1500-1599)
