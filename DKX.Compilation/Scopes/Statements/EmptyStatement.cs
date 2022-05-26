@@ -1,5 +1,6 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes.Statements
 {
@@ -9,7 +10,7 @@ namespace DKX.Compilation.Scopes.Statements
             : base(parentScope, span)
         { }
 
-        internal override void GenerateWbdkCode(CodeWriter cw) { }
+        internal override Task GenerateWbdkCodeAsync(CodeWriter cw) => Task.CompletedTask;
 
         public override bool IsEmpty => true;
     }

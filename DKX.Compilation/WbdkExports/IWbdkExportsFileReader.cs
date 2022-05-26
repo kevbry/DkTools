@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.WbdkExports
 {
     public interface IWbdkExportsFileReader
     {
-        IEnumerable<string> GetIncludeDependencies();
+        Task<IEnumerable<string>> GetIncludeDependenciesAsync();
 
-        IEnumerable<WbdkExportTableDependency> GetTableDependencies();
+        Task<IEnumerable<WbdkExportTableDependency>> GetTableDependenciesAsync();
     }
 }

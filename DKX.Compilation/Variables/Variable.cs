@@ -1,12 +1,17 @@
 ﻿using DK;
 using DK.Code;
+using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.ReportItems;
+using DKX.Compilation.Resolving;
+using DKX.Compilation.Scopes;
 using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Variables
 {
-    public class Variable
+    public class Variable : IField, IArgument
     {
         private string _name;
         private string _wbdkName;
@@ -14,10 +19,35 @@ namespace DKX.Compilation.Variables
         private FileContext _fileContext;
         private ArgumentPassType? _passType;
         private Chain _initializer;
+        private bool _static;
+        private bool _local;
+        private Privacy _privacy;
+        private uint _offset;
 
         public static readonly Variable[] EmptyArray = new Variable[0];
 
-        internal Variable(string name, string wbdkName, DataType dataType, FileContext fileContext, ArgumentPassType? passType, Chain initializer)
+        /// <summary>
+        /// Creates a new Variable.
+        /// </summary>
+        /// <param name="name">Name of the variable.</param>
+        /// <param name="wbdkName">For local variables, name of the variable as it will be defined in WBDK. For member variables, this includes the class name prefix.</param>
+        /// <param name="dataType">Variable's data type.</param>
+        /// <param name="fileContext">For member variables, the context it lives in. Not used for local variables.</param>
+        /// <param name="passType">For arguments, the pass type. For local variables this must be null.</param>
+        /// <param name="static_">For member variables, determines whether it is static. Static variables are defined as globals in WBDK.</param>
+        /// <param name="local">Set to true for arguments and local variables.</param>
+        /// <param name="privacy">For member variables, their privacy.</param>
+        /// <param name="initializer">For member variables, their initializer. Not used for arguments and local variables.</param>
+        internal Variable(
+            string name,
+            string wbdkName,
+            DataType dataType,
+            FileContext fileContext,
+            ArgumentPassType? passType,
+            bool static_,
+            bool local,
+            Privacy privacy,
+            Chain initializer)
         {
             _name = name ?? throw new ArgumentNullException();
             if (!_name.IsWord()) throw new ArgumentException("Variable name must be a single word identifier.");
@@ -26,15 +56,55 @@ namespace DKX.Compilation.Variables
             _dataType = dataType;
             _fileContext = fileContext;
             _passType = passType;
+            _static = static_;
+            _local = local;
+            _privacy = privacy;
             _initializer = initializer;
         }
 
         public ArgumentPassType? ArgumentType => _passType;
+        ArgumentPassType IArgument.PassType => _passType ?? ArgumentPassType.ByValue;
         public DataType DataType => _dataType;
         internal Chain Initializer { get => _initializer; set => _initializer = value ?? throw new ArgumentNullException(); }
         public FileContext FileContext => _fileContext;
         public bool IsArgument => _passType != null;
+        public bool IsConstant => false;
+        public bool Local => _local;
         public string Name => _name;
+        public uint Offset { get => _offset; set => _offset = value; }
+        public Privacy Privacy => _privacy;
+        public bool ReadOnly => false;
+        public Privacy ReadPrivacy => _privacy;
+        public bool Static => _static;
         public string WbdkName => _wbdkName;
+        public Privacy WritePrivacy => _privacy;
+
+        public Task<CodeFragment> ToWbdkCode_ReadAsync(CodeFragment parentFragment, CodeSpan fieldSpan, ISourceCodeReporter report)
+        {
+            if (_static || _passType != null)
+            {
+                // Stored as a WBDK variable.
+                return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
+            }
+            else
+            {
+                // Member variable which needs to use DKX accessor functions.
+                return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableGetter(parentFragment, _offset, _dataType, fieldSpan));
+            }
+        }
+
+        public Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment parentFragment, CodeSpan fieldSpan, CodeFragment valueFragment, ISourceCodeReporter report)
+        {
+            if (_static || _passType != null)
+            {
+                // Stored as a WBDK variable.
+                return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
+            }
+            else
+            {
+                // Member variable which needs to use DKX accessor functions.
+                return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableSetter(parentFragment, _offset, _dataType, fieldSpan, valueFragment));
+            }
+        }
     }
 }

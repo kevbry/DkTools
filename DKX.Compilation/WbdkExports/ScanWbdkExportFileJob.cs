@@ -44,7 +44,7 @@ namespace DKX.Compilation.WbdkExports
         {
             await _app.Log.InfoAsync("Scan: {0} -> {1}", _pathName, _exportsPathName);
 
-            var content = _app.FileSystem.GetFileText(_pathName);
+            var content = await _app.FileSystem.ReadFileTextAsync(_pathName);
 
             var source = new CodeSource();
             source.Append(

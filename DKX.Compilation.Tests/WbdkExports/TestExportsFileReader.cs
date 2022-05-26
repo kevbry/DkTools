@@ -3,6 +3,7 @@ using DKX.Compilation.WbdkExports;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests.WbdkExports
 {
@@ -17,9 +18,9 @@ namespace DKX.Compilation.Tests.WbdkExports
             _tableDependencies = tableDependencies ?? WbdkExportTableDependency.EmptyArray;
         }
 
-        public IEnumerable<string> GetIncludeDependencies() => _includeDependencies;
+        public Task<IEnumerable<string>> GetIncludeDependenciesAsync() => Task.FromResult<IEnumerable<string>>(_includeDependencies);
 
-        public IEnumerable<WbdkExportTableDependency> GetTableDependencies() => _tableDependencies;
+        public Task<IEnumerable<WbdkExportTableDependency>> GetTableDependenciesAsync() => Task.FromResult<IEnumerable<WbdkExportTableDependency>>(_tableDependencies);
     }
 
     class TestExportsFileReaderFactory : IWbdkExportsFileReaderFactory

@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Crc32.NET, Version=1.0.0.0, Culture=neutral, PublicKeyToken=dc0b95cf99bf4e99, processorArchitecture=MSIL">
+      <HintPath>..\packages\Crc32.NET.1.2.0\lib\net20\Crc32.NET.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -47,16 +50,31 @@
     <Compile Include="CodeGeneration\CodeFragment.cs" />
     <Compile Include="CodeGeneration\CodeWriter.cs" />
     <Compile Include="Conversions\ConversionValidator.cs" />
+    <Compile Include="Expressions\ConstructorChain.cs" />
+    <Compile Include="Expressions\FieldChain.cs" />
+    <Compile Include="Expressions\MethodCallChain.cs" />
+    <Compile Include="Expressions\ThisChain.cs" />
     <Compile Include="ObjectFiles\IObjectFileReader.cs" />
     <Compile Include="ObjectFiles\IObjectFileReaderFactory.cs" />
     <Compile Include="ObjectFiles\ObjectFileModel.cs" />
     <Compile Include="ObjectFiles\ObjectFileReader.cs" />
     <Compile Include="ObjectFiles\ObjectFileReaderFactory.cs" />
+    <Compile Include="Objects\ObjectAccess.cs" />
+    <Compile Include="Resolving\ClassResolver.cs" />
+    <Compile Include="Resolving\ExportsProvider.cs" />
+    <Compile Include="Resolving\GlobalResolver.cs" />
+    <Compile Include="Resolving\IClass.cs" />
     <Compile Include="Resolving\IEntity.cs" />
+    <Compile Include="Resolving\IExportsProvider.cs" />
+    <Compile Include="Resolving\INamespaceExport.cs" />
     <Compile Include="Resolving\IResolver.cs" />
+    <Compile Include="Resolving\MethodResolver.cs" />
+    <Compile Include="Resolving\NamespaceResolver.cs" />
     <Compile Include="Scopes\ClassScope.cs" />
     <Compile Include="Scopes\FileScope.cs" />
+    <Compile Include="Scopes\IClassNamingScope.cs" />
     <Compile Include="Scopes\IConstantScope.cs" />
+    <Compile Include="Scopes\IObjectReferenceScope.cs" />
     <Compile Include="Scopes\IReturnScope.cs" />
     <Compile Include="Scopes\IVariableScope.cs" />
     <Compile Include="Scopes\IVariableWbdkScope.cs" />
@@ -70,6 +88,7 @@
     <Compile Include="Scopes\Statements\ReturnStatement.cs" />
     <Compile Include="Scopes\Statements\Statement.cs" />
     <Compile Include="Scopes\Statements\StatementParser.cs" />
+    <Compile Include="Scopes\Statements\VariableDeclarationStatement.cs" />
     <Compile Include="Tokens\DkxCodeParser.cs" />
     <Compile Include="Tokens\DkxToken.cs" />
     <Compile Include="Tokens\DkxTokenCollection.cs" />
@@ -115,6 +134,12 @@
     <Compile Include="Tokens\TokenUseTracker.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
+    <Compile Include="Variables\ConstantValues\BoolConstantValue.cs" />
+    <Compile Include="Variables\ConstantValues\CharConstantValue.cs" />
+    <Compile Include="Variables\ConstantValues\ConstantValue.cs" />
+    <Compile Include="Variables\ConstantValues\NullConstantValue.cs" />
+    <Compile Include="Variables\ConstantValues\NumberConstantValue.cs" />
+    <Compile Include="Variables\ConstantValues\StringConstantValue.cs" />
     <Compile Include="Variables\IConstantStore.cs" />
     <Compile Include="Variables\IVariableStore.cs" />
     <Compile Include="Variables\Variable.cs" />

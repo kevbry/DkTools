@@ -22,9 +22,11 @@ namespace DKX.Compilation.Tests
 
         public void AddReportItems(IEnumerable<ReportItem> reportItems) => ReportItems.AddRange(reportItems);
 
-        public void ReportItem(int pos, ErrorCode code, params object[] args) => ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
-
-        public void ReportItem(CodeSpan span, ErrorCode code, params object[] args) => ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
+        public Task ReportAsync(CodeSpan span, ErrorCode code, params object[] args)
+        {
+            ReportItems.Add(new ReportItem(string.Empty, -1, -1, -1, -1, code, args));
+            return Task.CompletedTask;
+        }
 
         public bool HasErrors => ReportItems?.Any(x => x.Severity == ErrorSeverity.Error) ?? false;
     }

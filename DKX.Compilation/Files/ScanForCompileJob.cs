@@ -129,7 +129,7 @@ namespace DKX.Compilation.Files
 
                 // Check file dependencies
                 var objectFileReader = _objectFileReaderFactory.CreateObjectFileReader(file.ObjectPathName);
-                foreach (var fileDep in objectFileReader.GetFileDependencies())
+                foreach (var fileDep in await objectFileReader.GetFileDependenciesAsync())
                 {
                     if (_app.FileSystem.FileExists(fileDep))
                     {
@@ -148,7 +148,7 @@ namespace DKX.Compilation.Files
                 }
 
                 // Check table dependencies
-                foreach (var tableDep in objectFileReader.GetTableDependencies())
+                foreach (var tableDep in await objectFileReader.GetTableDependenciesAsync())
                 {
                     if (_app.Settings.Dict.IsTable(tableDep.Key))
                     {

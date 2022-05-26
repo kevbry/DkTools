@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.ObjectFiles
 {
@@ -20,23 +21,24 @@ namespace DKX.Compilation.ObjectFiles
             _objectPathName = objectPathName ?? throw new ArgumentNullException(nameof(objectPathName));
         }
 
-        private void CheckModel()
+        private async Task CheckModelAsync()
         {
             if (_model == null)
             {
-                _model = JsonConvert.DeserializeObject<ObjectFileModel>(_app.FileSystem.GetFileText(_objectPathName));
+                var json = await _app.FileSystem.ReadFileTextAsync(_objectPathName);
+                _model = JsonConvert.DeserializeObject<ObjectFileModel>(json);
             }
         }
 
-        public IEnumerable<string> GetFileDependencies()
+        public async Task<IEnumerable<string>> GetFileDependenciesAsync()
         {
-            CheckModel();
+            await CheckModelAsync();
             return _model.FileDependencies?.Select(x => x.PathName).ToArray() ?? DkxConst.EmptyStringArray;
         }
 
-        public IDictionary<string, string> GetTableDependencies()
+        public async Task<IDictionary<string, string>> GetTableDependenciesAsync()
         {
-            CheckModel();
+            await CheckModelAsync();
             if (_tableHashes == null)
             {
                 _tableHashes = new Dictionary<string, string>();
@@ -51,9 +53,9 @@ namespace DKX.Compilation.ObjectFiles
             return _tableHashes;
         }
 
-        public IEnumerable<FileContext> GetFileContexts()
+        public async Task<IEnumerable<FileContext>> GetFileContextsAsync()
         {
-            CheckModel();
+            await CheckModelAsync();
             return _model.FileContexts?.Select(x => x.Context) ?? FileContextHelper.EmptyArray;
         }
     }

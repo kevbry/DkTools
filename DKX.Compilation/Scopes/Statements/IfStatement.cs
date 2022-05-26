@@ -3,10 +3,12 @@ using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Conversions;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes.Statements
 {
@@ -14,26 +16,31 @@ namespace DKX.Compilation.Scopes.Statements
     {
         private List<IfCase> _cases = new List<IfCase>();
 
-        public IfStatement(Scope parent, CodeSpan keywordSpan, DkxTokenStream stream)
-            : base(parent, keywordSpan)
+        private IfStatement(Scope parent, CodeSpan keywordSpan) : base(parent, keywordSpan) { }
+
+        public override bool IsEmpty => false;
+
+        public static async Task<IfStatement> ParseAsync(Scope parent, CodeSpan keywordSpan, DkxTokenStream stream, IResolver resolver)
         {
+            var ifStatement = new IfStatement(parent, keywordSpan);
+
             var first = true;
             while (true)
             {
                 var conditionToken = stream.Peek();
                 if (!conditionToken.IsBrackets)
                 {
-                    ReportItem(conditionToken.Span, ErrorCode.ExpectedCondition);
-                    return;
+                    await ifStatement.ReportAsync(conditionToken.Span, ErrorCode.ExpectedCondition);
+                    return ifStatement;
                 }
-                var condition = ExpressionParser.ReadExpressionOrNull(this, conditionToken.Tokens.ToStream());
-                if (condition == null) ReportItem(conditionToken.Span, ErrorCode.ExpectedCondition);
+                var condition = await ExpressionParser.TryReadExpressionAsync(ifStatement, conditionToken.Tokens.ToStream(), resolver);
+                if (condition == null) await ifStatement.ReportAsync(conditionToken.Span, ErrorCode.ExpectedCondition);
                 stream.Position++;
 
-                var ifCase = new IfCase(this, condition?.Span ?? keywordSpan, condition, first);
+                var ifCase = new IfCase(ifStatement, condition?.Span ?? keywordSpan, condition, first);
                 first = false;
-                ifCase.Statements = StatementParser.ReadBodyOrExpression(ifCase, stream, conditionToken.Span);
-                _cases.Add(ifCase);
+                ifCase.Statements = await StatementParser.ReadBodyOrExpressionAsync(ifCase, stream, conditionToken.Span, resolver);
+                ifStatement._cases.Add(ifCase);
 
                 if (stream.Test(t => t.IsKeyword(DkxConst.Keywords.Else)))
                 {
@@ -45,19 +52,20 @@ namespace DKX.Compilation.Scopes.Statements
                     }
                     else
                     {
-                        var elseCase = new IfCase(this, elseToken.Span, null, first: false);
-                        elseCase.Statements = StatementParser.ReadBodyOrExpression(elseCase, stream, elseToken.Span);
-                        _cases.Add(elseCase);
+                        var elseCase = new IfCase(ifStatement, elseToken.Span, null, first: false);
+                        elseCase.Statements = await StatementParser.ReadBodyOrExpressionAsync(elseCase, stream, elseToken.Span, resolver);
+                        ifStatement._cases.Add(elseCase);
                     }
                 }
             }
         }
 
-        public override bool IsEmpty => false;
-
-        internal override void GenerateWbdkCode(CodeWriter cw)
+        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
         {
-            foreach (var ifCase in _cases) ifCase.GenerateWbdkCode(cw);
+            foreach (var ifCase in _cases)
+            {
+                await ifCase.GenerateWbdkCodeAsync(cw);
+            }
         }
 
         private class IfCase : Statement, IVariableScope
@@ -80,7 +88,7 @@ namespace DKX.Compilation.Scopes.Statements
 
             public override bool IsEmpty => false;
 
-            internal override void GenerateWbdkCode(CodeWriter cw)
+            internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
             {
                 if (!_first)
                 {
@@ -91,16 +99,16 @@ namespace DKX.Compilation.Scopes.Statements
                     if (!_first) cw.Write(' ');
                     cw.Write(DkxConst.Keywords.If);
                     cw.Write(" (");
-                    var conditionFrag = _condition.ToWbdkCode_Read(this);
+                    var conditionFrag = await _condition.ToWbdkCode_ReadAsync(this);
                     cw.Write(conditionFrag);
-                    ConversionValidator.CheckConversion(DataType.Bool, conditionFrag, this);
+                    await ConversionValidator.CheckConversionAsync(DataType.Bool, conditionFrag, this);
                     cw.Write(')');
                 }
                 using (cw.Indent())
                 {
                     foreach (var stmt in _statements ?? Statement.EmptyArray)
                     {
-                        stmt.GenerateWbdkCode(cw);
+                        await stmt.GenerateWbdkCodeAsync(cw);
                     }
                 }
             }

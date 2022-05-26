@@ -35,12 +35,12 @@ namespace DKX.Compilation.DataTypes
             {
                 if (!code.ReadExact('(')) return null;
                 if (!code.ReadNumber()) return null;
-                if (!byte.TryParse(code.Text, out var width) || width < DataType.MinNumericWidth || width > DataType.MaxNumericWidth) return null;
+                if (!byte.TryParse(code.Text, out var width) || width < DkxConst.Numeric.MinWidth || width > DkxConst.Numeric.MaxWidth) return null;
                 byte scale = 0;
                 if (code.ReadExact(','))
                 {
                     if (!code.ReadNumber()) return null;
-                    if (!byte.TryParse(code.Text, out scale) || scale < DataType.MinNumericScale || scale > DataType.MaxNumericScale) return null;
+                    if (!byte.TryParse(code.Text, out scale) || scale < DkxConst.Numeric.MinScale|| scale > DkxConst.Numeric.MaxScale) return null;
                     if (!code.ReadExact(')')) return null;
                 }
                 else
@@ -76,7 +76,7 @@ namespace DKX.Compilation.DataTypes
             {
                 if (code.ReadNumber())
                 {
-                    if (!byte.TryParse(code.Text, out var width) || width < DataType.MinNumericWidth || width >= DataType.MaxNumericWidth) return null;
+                    if (!byte.TryParse(code.Text, out var width) || width < DkxConst.Numeric.MinWidth || width >= DkxConst.Numeric.MaxWidth) return null;
                     return new DataType(BaseType.UNumeric, width: width);
                 }
 
@@ -87,7 +87,7 @@ namespace DKX.Compilation.DataTypes
                     if (code.ReadExactWholeWordI("int")) baseType = BaseType.UInt;
                     else if (code.ReadExactWholeWordI("long")) baseType = BaseType.UInt;
                     else if (code.ReadExactWholeWordI("short")) baseType = BaseType.UShort;
-                    else if (code.ReadExactWholeWordI("char")) baseType = BaseType.UChar;
+                    else if (code.ReadExactWholeWordI("char")) baseType = BaseType.Char;
                     else if (!mask && code.ReadIncludeStringLiteral()) mask = true;
                     else if (ReadAttribute(code)) { }
                     else break;
@@ -101,7 +101,7 @@ namespace DKX.Compilation.DataTypes
             {
                 if (code.ReadNumber())
                 {
-                    if (!byte.TryParse(code.Text, out var width) || width < DataType.MinNumericWidth || width > DataType.MaxNumericWidth) return null;
+                    if (!byte.TryParse(code.Text, out var width) || width < DkxConst.Numeric.MinWidth || width > DkxConst.Numeric.MaxWidth) return null;
 
                     var mask = false;
                     while (!code.EndOfFile)
@@ -170,7 +170,7 @@ namespace DKX.Compilation.DataTypes
                 if (code.ReadExact('('))
                 {
                     if (!code.ReadNumber()) return null;
-                    if (!byte.TryParse(code.Text, out var width) || width < 0 || width > DataType.MaxStringLength) return null;
+                    if (!byte.TryParse(code.Text, out var width) || width < 0 || width > DkxConst.String.MaxLength) return null;
                     if (!code.ReadExact(')')) return null;
 
                     var mask = false;
@@ -193,7 +193,7 @@ namespace DKX.Compilation.DataTypes
             if (word.EqualsI("string"))
             {
                 if (!code.ReadNumber()) return null;
-                if (!byte.TryParse(code.Text, out var width) || width < 0 || width > DataType.MaxStringLength) return null;
+                if (!byte.TryParse(code.Text, out var width) || width < 0 || width > DkxConst.String.MaxLength) return null;
 
                 var mask = false;
                 while (!code.EndOfFile)
@@ -241,7 +241,7 @@ namespace DKX.Compilation.DataTypes
                 {
                     if (width == -1 && code.ReadNumber())
                     {
-                        if (!int.TryParse(code.Text, out width) || width < 1 || width > DataType.MaxStringLength) return null;
+                        if (!int.TryParse(code.Text, out width) || width < 1 || width > DkxConst.String.MaxLength) return null;
                     }
                     else if (ReadAttribute(code, "alterable", "required", "nowarn", "numeric")) { }
                     else break;
@@ -272,22 +272,6 @@ namespace DKX.Compilation.DataTypes
                 while (ReadAttribute(code)) ;
 
                 return new DataType(BaseType.Enum, options.ToArray());
-            }
-            #endregion
-            #region like
-            if (word.EqualsI("like"))
-            {
-                if (!code.ReadWord()) return null;
-                var word1 = code.Text;
-
-                var resetPos = code.Position;
-                if (code.ReadExact('.'))
-                {
-                    if (!code.ReadWord()) code.Position = resetPos;
-                    else return new DataType(BaseType.Like2, new string[] { word1, code.Text });
-                }
-
-                return new DataType(BaseType.Like1, new string[] { word1 });
             }
             #endregion
             #region table

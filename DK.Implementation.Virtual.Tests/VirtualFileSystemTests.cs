@@ -70,8 +70,8 @@ namespace DK.Implementation.Virtual.Tests
             Assert.IsFalse(fs.FileExists(@"x:\tests\blah.txt"));
             Assert.IsFalse(fs.FileExists(@"x:\tests"));
 
-            Assert.AreEqual("Test Content", fs.GetFileText(@"x:\tests\file.txt"));
-            Assert.AreEqual(Encoding.UTF8.GetBytes("Test Content"), fs.GetFileBytes(@"x:\tests\file.txt"));
+            Assert.AreEqual("Test Content", fs.ReadFileText(@"x:\tests\file.txt"));
+            Assert.AreEqual(Encoding.UTF8.GetBytes("Test Content"), fs.ReadFileBytes(@"x:\tests\file.txt"));
         }
 
         [TestCase("*.txt", "aaa.txt|bbb.txt|ccc.txt|abc.txt")]

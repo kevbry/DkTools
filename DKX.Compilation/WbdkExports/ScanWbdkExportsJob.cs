@@ -156,7 +156,7 @@ namespace DKX.Compilation.WbdkExports
             // Check if any of the include dependencies have been touched.
             var exportsReader = _exportsReaderFactory.CreateReader(exportsPathName);
             var exportsDate = GetFileDate(exportsPathName);
-            foreach (var includePathName in exportsReader.GetIncludeDependencies())
+            foreach (var includePathName in await exportsReader.GetIncludeDependenciesAsync())
             {
                 if (GetFileDate(includePathName) > exportsDate)
                 {
@@ -165,7 +165,7 @@ namespace DKX.Compilation.WbdkExports
                 }
             }
 
-            foreach (var td in exportsReader.GetTableDependencies())
+            foreach (var td in await exportsReader.GetTableDependenciesAsync())
             {
                 if (_app.Settings.Dict.IsTable(td.TableName))
                 {

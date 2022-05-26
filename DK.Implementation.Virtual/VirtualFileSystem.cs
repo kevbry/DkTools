@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace DK.Implementation.Virtual
 {
@@ -178,7 +179,7 @@ namespace DK.Implementation.Virtual
 
         public bool IsDirectoryHiddenOrSystem(string path) => false;
 
-        public string GetFileText(string pathName)
+        public string ReadFileText(string pathName)
         {
             pathName = CleanPath(pathName);
             var file = FindFileOrNull(pathName);
@@ -189,13 +190,17 @@ namespace DK.Implementation.Virtual
             return Encoding.UTF8.GetString(bytes);
         }
 
-        public byte[] GetFileBytes(string pathName)
+        public Task<string> ReadFileTextAsync(string pathName) => Task.FromResult(ReadFileText(pathName));
+
+        public byte[] ReadFileBytes(string pathName)
         {
             pathName = CleanPath(pathName);
             var file = FindFileOrNull(pathName);
             if (file == null) throw new VirtualFileNotFoundException(pathName);
             return file.Content;
         }
+
+        public Task<byte[]> ReadFileBytesAsync(string pathName) => Task.FromResult(ReadFileBytes(pathName));
 
         public void WriteFileText(string pathName, string text)
         {
@@ -215,6 +220,12 @@ namespace DK.Implementation.Virtual
             dir.WriteFile(name, Encoding.UTF8.GetBytes(text));
         }
 
+        public Task WriteFileTextAsync(string pathName, string text)
+        {
+            WriteFileText(pathName, text);
+            return Task.CompletedTask;
+        }
+
         public void WriteFileBytes(string pathName, byte[] data)
         {
             pathName = CleanPath(pathName);
@@ -231,6 +242,12 @@ namespace DK.Implementation.Virtual
             if (dir == null) throw new VirtualDirectoryNotFoundException(parentPath);
 
             dir.WriteFile(name, data);
+        }
+
+        public Task WriteFileBytesAsync(string pathName, byte[] data)
+        {
+            WriteFileBytes(pathName, data);
+            return Task.CompletedTask;
         }
 
         public void TouchFile(string pathName)

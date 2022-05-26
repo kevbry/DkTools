@@ -1,4 +1,7 @@
-﻿using System;
+﻿using DK.Code;
+using DKX.Compilation.ReportItems;
+using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -191,6 +194,57 @@ namespace DKX.Compilation.Expressions
                 default:
                     return false;
             }
+        }
+
+        public static bool GetCompareResult(this Operator op, int compareResult)
+        {
+            switch (op)
+            {
+                case Operator.Equal:
+                    return compareResult == 0;
+                case Operator.NotEqual:
+                    return compareResult != 0;
+                case Operator.LessThan:
+                    return compareResult < 0;
+                case Operator.LessEqual:
+                    return compareResult <= 0;
+                case Operator.GreaterThan:
+                    return compareResult > 0;
+                case Operator.GreaterEqual:
+                    return compareResult >= 0;
+                default:
+                    throw new InvalidOperatorException();
+            }
+        }
+
+        public static async Task<decimal> GetMathResultAsync(this Operator op, decimal left, decimal right, ISourceCodeReporter reportOrNull, CodeSpan errorSpan)
+        {
+            switch (op)
+            {
+                case Operator.Add:
+                    return left + right;
+                case Operator.Subtract:
+                    return left - right;
+                case Operator.Multiply:
+                    return left * right;
+                case Operator.Divide:
+                    if (right == 0)
+                    {
+                        await reportOrNull?.ReportAsync(errorSpan, ErrorCode.DivideByZero);
+                        return 0;
+                    }
+                    return left / right;
+                case Operator.Modulus:
+                    if (right == 0)
+                    {
+                        await reportOrNull?.ReportAsync(errorSpan, ErrorCode.DivideByZero);
+                        return 0;
+                    }
+                    return left % right;
+                default:
+                    throw new InvalidOperatorException();
+            }
+
         }
     }
 

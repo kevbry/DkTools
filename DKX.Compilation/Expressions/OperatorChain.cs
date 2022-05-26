@@ -3,7 +3,9 @@ using DKX.Compilation.Conversions;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Variables.ConstantValues;
 using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -43,17 +45,17 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public override CodeFragment ToWbdkCode_Read(ISourceCodeReporter report)
+        public override async Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
         {
-            return ToWbdkCode(reading: true, report);
+            return await ToWbdkCodeAsync(reading: true, report);
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override async Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
         {
-            return ToWbdkCode(reading: false, report);
+            return await ToWbdkCodeAsync(reading: false, report);
         }
 
-        private CodeFragment ToWbdkCode(bool reading, ISourceCodeReporter report)
+        private async Task<CodeFragment> ToWbdkCodeAsync(bool reading, ISourceCodeReporter report)
         {
             CodeFragment leftFrag, rightFrag;
             OpPrec prec;
@@ -62,7 +64,7 @@ namespace DKX.Compilation.Expressions
             {
                 case Operator.Increment:
                 case Operator.Decrement:
-                    leftFrag = _left.ToWbdkCode_Read(report);
+                    leftFrag = await _left.ToWbdkCode_ReadAsync(report);
                     if (leftFrag.ReadOnly) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, _op.GetText());
                     if (!leftFrag.DataType.IsSuitableForIncDec) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
                     return new CodeFragment($"{leftFrag.Protect(OpPrec.IncDec)} {_op.GetText()} 1", leftFrag.DataType, OpPrec.IncDec, Span, readOnly: false);
@@ -72,34 +74,84 @@ namespace DKX.Compilation.Expressions
                 case Operator.Multiply:
                 case Operator.Divide:
                 case Operator.Modulus:
-                    if (!reading) throw new CodeException(Span, ErrorCode.OperatorResultCannotBeWrittenTo, _op.GetText());
-                    leftFrag = _left.ToWbdkCode_Read(report);
+                    if (!reading) throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo, _op.GetText());
+                    leftFrag = await _left.ToWbdkCode_ReadAsync(report);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    rightFrag = _right.ToWbdkCode_Read(report);
+                    rightFrag = await _right.ToWbdkCode_ReadAsync(report);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(rightFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, report);
+                    await ConversionValidator.CheckConversionAsync(leftFrag.DataType, rightFrag, report);
                     prec = _op.GetPrecedence();
                     return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
 
                 case Operator.Assign:
-                    rightFrag = _right.ToWbdkCode_Read(report);
-                    ConversionValidator.CheckConversion(_left.DataType, rightFrag, report);
-                    leftFrag = _left.ToWbdkCode_Write(rightFrag, report);
-                    return new CodeFragment($"{leftFrag.Protect(OpPrec.Assign)} = {rightFrag.Protect(OpPrec.Assign)}", leftFrag.DataType, OpPrec.Assign, Span, readOnly: true);
+                    rightFrag = await _right.ToWbdkCode_ReadAsync(report);
+                    leftFrag = await _left.ToWbdkCode_WriteAsync(rightFrag, report);
+                    return leftFrag.Protect(OpPrec.Assign);
 
                 case Operator.AssignAdd:
                 case Operator.AssignSubtract:
                 case Operator.AssignMultiply:
                 case Operator.AssignDivide:
                 case Operator.AssignModulus:
-                    leftFrag = _left.ToWbdkCode_Read(report);
+                    leftFrag = await _left.ToWbdkCode_ReadAsync(report);
                     if (leftFrag.ReadOnly) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, _op.GetText());
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    rightFrag = _right.ToWbdkCode_Read(report);
+                    rightFrag = await _right.ToWbdkCode_ReadAsync(report);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(rightFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, report);
+                    await ConversionValidator.CheckConversionAsync(leftFrag.DataType, rightFrag, report);
                     prec = _op.GetPrecedence();
                     return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public override async Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        {
+            ConstantValue left, right;
+            switch (_op)
+            {
+                case Operator.Add:
+                case Operator.Subtract:
+                case Operator.Multiply:
+                case Operator.Divide:
+                case Operator.Modulus:
+                    left = await _left.GetConstantOrNullAsync(reportOrNull);
+                    right = await _right.GetConstantOrNullAsync(reportOrNull);
+                    if (left != null && right != null) return await left.GetMathResultOrNullAsync(_op, right, reportOrNull);
+                    return null;
+
+                case Operator.And:
+                    left = await _left.GetConstantOrNullAsync(reportOrNull);
+                    right = await _right.GetConstantOrNullAsync(reportOrNull);
+                    if (left != null && !left.IsBool) await reportOrNull?.ReportAsync(_left.Span, ErrorCode.ConditionMustBeBool);
+                    if (right != null && !right.IsBool) await reportOrNull?.ReportAsync(_right.Span, ErrorCode.ConditionMustBeBool);
+                    if (left != null && right != null) return new BoolConstantValue(left.Bool && right.Bool, Span);
+                    return null;
+
+                case Operator.Or:
+                    left = await _left.GetConstantOrNullAsync(reportOrNull);
+                    right = await _right.GetConstantOrNullAsync(reportOrNull);
+                    if (left != null && !left.IsBool) await reportOrNull?.ReportAsync(_left.Span, ErrorCode.ConditionMustBeBool);
+                    if (right != null && !right.IsBool) await reportOrNull?.ReportAsync(_right.Span, ErrorCode.ConditionMustBeBool);
+                    if (left != null && right != null) return new BoolConstantValue(left.Bool || right.Bool, Span);
+                    return null;
+
+                case Operator.Equal:
+                case Operator.NotEqual:
+                case Operator.LessThan:
+                case Operator.LessEqual:
+                case Operator.GreaterThan:
+                case Operator.GreaterEqual:
+                    left = await _left.GetConstantOrNullAsync(reportOrNull);
+                    right = await _right.GetConstantOrNullAsync(reportOrNull);
+                    if (left != null && right != null)
+                    {
+                        var result = await left.GetComparisonResultOrNullAsync(_op, right, reportOrNull);
+                        if (result != null) return new BoolConstantValue(result.Value, Span);
+                    }
+                    return null;
 
                 default:
                     throw new NotImplementedException();

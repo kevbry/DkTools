@@ -4,14 +4,16 @@ using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
-    public class FileScope : Scope
+    class FileScope : Scope
     {
         private string _sourcePathName;
         private DkxCodeParser _cp;
@@ -30,10 +32,14 @@ namespace DKX.Compilation.Scopes
         public IEnumerable<ReportItem> ReportItems => _reportItems;
         public NamespaceScope Namespace => _namespace;
 
-        public void ProcessFile()
+        public async Task ProcessFile(IExportsProvider exportsProvider)
         {
             var fileTokens = _cp.ReadAll().Tokens;
             var used = new TokenUseTracker();
+
+            // TODO: In the future, will need to look for the 'using' statements at the top of the file.
+
+            var resolver = null as IResolver;
 
             foreach (var nsIndex in fileTokens.FindIndices((t,i) =>
                 t.Type == DkxTokenType.Keyword && t.Text == DkxConst.Keywords.Namespace &&
@@ -51,23 +57,27 @@ namespace DKX.Compilation.Scopes
                 {
                     if (namespaceName.Length <= DkxConst.Namespaces.MaxNamespaceLength)
                     {
-                        if (_namespace == null) _namespace = new NamespaceScope(this, namespaceName);
-                        _namespace.ProcessTokens(scopeToken.Tokens, _depth);
+                        if (_namespace == null)
+                        {
+                            _namespace = new NamespaceScope(this, namespaceName);
+                            resolver = new GlobalResolver(exportsProvider, new string[] { namespaceName });
+                        }
+                        await _namespace.ProcessTokens(scopeToken.Tokens, _depth, resolver);
                     }
                     else
                     {
-                        ReportItem(nameToken.Span, ErrorCode.NamespaceNameTooLong, DkxConst.Namespaces.MaxNamespaceLength);
+                        await ReportAsync(nameToken.Span, ErrorCode.NamespaceNameTooLong, DkxConst.Namespaces.MaxNamespaceLength);
                     }
                 }
                 else
                 {
-                    ReportItem(nameToken.Span, ErrorCode.NamespaceNameMustMatchFileName, expectedNamespaceName);
+                    await ReportAsync(nameToken.Span, ErrorCode.NamespaceNameMustMatchFileName, expectedNamespaceName);
                 }
             }
 
             if (_depth == ProcessingDepth.Full)
             {
-                foreach (var badToken in fileTokens.GetUnused(used)) ReportItem(badToken.Span, ErrorCode.SyntaxError, badToken.ToString());
+                await ReportUnusedTokensAsync(fileTokens, used);
             }
         }
 
@@ -79,16 +89,16 @@ namespace DKX.Compilation.Scopes
 
         public override bool HasErrors => _reportItems.Any(x => x.Severity == ErrorSeverity.Error);
 
-        public string GenerateWbdkCode(FileContext fileContext)
+        public async Task<string> GenerateWbdkCodeAsync(FileContext fileContext)
         {
             var cw = new CodeWriter();
-            GenerateWbdkCode(cw);
+            await GenerateWbdkCodeAsync(cw);
             return cw.Code;
         }
 
-        internal override void GenerateWbdkCode(CodeWriter cw)
+        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
         {
-            _namespace?.GenerateWbdkCode(cw);
+            await _namespace?.GenerateWbdkCodeAsync(cw);
         }
 
         public ObjectFileModel CreateObjectModel()

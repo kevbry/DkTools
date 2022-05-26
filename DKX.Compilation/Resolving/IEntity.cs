@@ -4,7 +4,7 @@ using DKX.Compilation.ReportItems;
 
 namespace DKX.Compilation.Resolving
 {
-    interface IEntity
+    public interface IEntity
     {
         DataType DataType { get; }
 

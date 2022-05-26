@@ -76,7 +76,7 @@ namespace DK.Preprocessing
 				return;
 			}
 
-			if (content == null) _origContent = _appSettings.FileSystem.GetFileText(_origFileName);
+			if (content == null) _origContent = _appSettings.FileSystem.ReadFileText(_origFileName);
 			else _origContent = content;
 
 			// Perform localization
@@ -246,7 +246,7 @@ namespace DK.Preprocessing
 			_currentLocalFileName = localFileName;
 			_currentLocalLine = 1;
 
-			var fileText = _appSettings.FileSystem.GetFileText(localFileName);
+			var fileText = _appSettings.FileSystem.ReadFileText(localFileName);
 			_localFileContent[localFileName.ToLower()] = fileText;
 
 			var pos = 0;

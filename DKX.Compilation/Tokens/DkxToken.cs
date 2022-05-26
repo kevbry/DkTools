@@ -1,5 +1,6 @@
 ﻿using DK.Code;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
 using System;
 using System.Collections.Generic;
@@ -56,8 +57,8 @@ namespace DKX.Compilation.Tokens
             new DkxToken(DkxTokenType.Identifier, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
         public static DkxToken CreateKeyword(string keyword, CodeSpan span) =>
             new DkxToken(DkxTokenType.Keyword, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
-        public static DkxToken CreateDataType(DataType dataType, CodeSpan span) =>
-            new DkxToken(DkxTokenType.DataType, span, null, default, dataType, hasError: false);
+        public static DkxToken CreateDataType(DataType dataType, CodeSpan span, bool hasError) =>
+            new DkxToken(DkxTokenType.DataType, span, null, default, dataType, hasError);
         public static DkxToken CreateNumber(decimal number, DataType dataType, CodeSpan span) =>
             new DkxToken(DkxTokenType.Number, span, null, number, dataType, hasError: false);
         public static DkxToken CreateString(string rawText, CodeSpan span, bool hasError) =>
@@ -215,8 +216,10 @@ namespace DKX.Compilation.Tokens
                     return $"[{string.Join(", ", _tokens)}]";
                 case DkxTokenType.Scope:
                     return $"{{{string.Join(" ", _tokens)}}}";
+                case DkxTokenType.DataType:
+                    return _dataType.ToString();
                 default:
-                    return string.Empty;
+                    throw new InvalidDkxTokenTypeException();
             }
         }
     }
@@ -238,4 +241,6 @@ namespace DKX.Compilation.Tokens
         Array,
         Scope
     }
+
+    class InvalidDkxTokenTypeException : CompilerException { }
 }

@@ -1,9 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using DKX.Compilation.DataTypes;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Resolving
 {
-    interface IResolver
+    public interface IResolver
     {
-        IEnumerable<IEntity> ResolveIdentifier(string name);
+        Task<IClass> ResolveClassAsync(string className);
+
+        Task<IEnumerable<IMethod>> GetMethods(DataType dataType, string name);
+
+        Task<IEnumerable<IField>> GetFields(DataType dataType, string name);
     }
 }

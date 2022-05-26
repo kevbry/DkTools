@@ -197,93 +197,58 @@ namespace DKX.Compilation.Tokens
                         }
 
                         var word = _sb.ToString();
-                        var span = new CodeSpan(startPos, _pos);
-
-                        // Numeric types are defined as: numeric9  numeric11.2  unsigned19  unsigned12.2
-                        Match match;
-                        if ((match = _numericDataTypeRegex.Match(word)).Success)
-                        {
-                            var keyword = match.Groups[1].Value;
-                            var width = int.Parse(match.Groups[2].Value);
-                            if (width >= DkxConst.Numeric.MinWidth && width <= DkxConst.Numeric.MaxWidth)
-                            {
-                                if (_pos < _len && _source[_pos] == '.')
-                                {
-                                    _pos++;
-                                    var scale = 0;
-                                    while (_pos < _len && IsDigit(_source[_pos])) { scale *= 10; scale += _source[_pos++] - '0'; }
-                                    if (scale >= DkxConst.Numeric.MinScale && scale <= DkxConst.Numeric.MaxScale && scale <= width)
-                                    {
-                                        tokenOut = DkxToken.CreateDataType(new DataType(keyword == "unsigned" ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: (byte)scale), new CodeSpan(startPos, _pos));
-                                        return true;
-                                    }
-                                    else
-                                    {
-                                        // Scale is out of bounds. Fall back to just the width.
-                                        _pos = span.End;
-                                    }
-                                }
-                                else
-                                {
-                                    tokenOut = DkxToken.CreateDataType(new DataType(keyword == "unsigned" ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: 0), span);
-                                    return true;
-                                }
-                            }
-                            else
-                            {
-                                tokenOut = DkxToken.CreateDataType(new DataType(keyword == "unsigned" ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: 0), span);
-                                return true;
-                            }
-                        }
-                        else if ((match = _stringDataTypeRegex.Match(word)).Success)
-                        {
-                            var width = int.Parse(match.Groups[1].Value);
-                            if (width <= DkxConst.String.MaxLength)
-                            {
-                                tokenOut = DkxToken.CreateDataType(new DataType(BaseType.String, width: (byte)width), span);
-                                return true;
-                            }
-                        }
+                        var wordSpan = new CodeSpan(startPos, _pos);
 
                         switch (word)
                         {
                             case DkxConst.Keywords.Void:
-                                tokenOut = DkxToken.CreateDataType(DataType.Void, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Void, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.Bool:
-                                tokenOut = DkxToken.CreateDataType(DataType.Bool, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Bool, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.Char:
-                                tokenOut = DkxToken.CreateDataType(DataType.Char, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Char, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.Date:
-                                tokenOut = DkxToken.CreateDataType(DataType.Date, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Date, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.Time:
-                                tokenOut = DkxToken.CreateDataType(DataType.Time, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Time, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.Int:
-                                tokenOut = DkxToken.CreateDataType(DataType.Int, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Int, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.UInt:
-                                tokenOut = DkxToken.CreateDataType(DataType.UInt, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.UInt, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.Short:
-                                tokenOut = DkxToken.CreateDataType(DataType.Short, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Short, wordSpan, hasError: false);
                                 return true;
                             case DkxConst.Keywords.UShort:
-                                tokenOut = DkxToken.CreateDataType(DataType.UShort, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.UShort, wordSpan, hasError: false);
+                                return true;
+                            case DkxConst.Keywords.Numeric:
+                                ReadNumericDataType(BaseType.Numeric, wordSpan, out tokenOut);
+                                return true;
+                            case DkxConst.Keywords.Unsigned:
+                                ReadNumericDataType(BaseType.UNumeric, wordSpan, out tokenOut);
                                 return true;
                             case DkxConst.Keywords.String:
-                                tokenOut = DkxToken.CreateDataType(DataType.String255, span);
+                                ReadStringDataType(wordSpan, out tokenOut);
                                 return true;
                             case DkxConst.Keywords.Variant:
-                                tokenOut = DkxToken.CreateDataType(DataType.Variant, span);
+                                tokenOut = DkxToken.CreateDataType(DataType.Variant, wordSpan, hasError: false);
                                 return true;
                         }
 
-                        if (DkxConst.Keywords.AllKeywords.Contains(word)) tokenOut = DkxToken.CreateKeyword(word, span);
-                        else tokenOut = DkxToken.CreateIdentifier(word, span);
+                        if (DkxConst.Keywords.AllKeywords.Contains(word))
+                        {
+                            tokenOut = DkxToken.CreateKeyword(word, wordSpan);
+                            return true;
+                        }
+
+                        tokenOut = DkxToken.CreateIdentifier(word, wordSpan);
                         return true;
                     }
 
@@ -439,6 +404,47 @@ namespace DKX.Compilation.Tokens
             if (value >= int.MinValue && value <= int.MaxValue) return DataType.Int;
             if (value >= 0 && value <= uint.MaxValue) return DataType.UInt;
             return new DataType(value >= 0 ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: (byte)scale);
+        }
+
+        private void ReadNumericDataType(BaseType baseType, CodeSpan keywordSpan, out DkxToken tokenOut)
+        {
+            // This method assumes the words 'numeric' or 'unsigned' have already been read from the stream.
+
+            if (!TryReadExact('('))
+            {
+                _pos = keywordSpan.End;
+                tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: 9), keywordSpan, hasError: true);
+                return;
+            }
+
+            if (!TryReadUint(out var width, DkxConst.Numeric.MinWidth, DkxConst.Numeric.MaxWidth))
+            {
+                _pos = keywordSpan.End;
+                tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: 9), keywordSpan, hasError: true);
+                return;
+            }
+
+            if (TryReadExact(','))
+            {
+                if (!TryReadUint(out var scale, DkxConst.Numeric.MinScale, DkxConst.Numeric.MaxScale) || !TryReadExact(')'))
+                {
+                    _pos = keywordSpan.End;
+                    tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: 9), keywordSpan, hasError: true);
+                    return;
+                }
+
+                tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: (byte)width, scale: (byte)scale), new CodeSpan(keywordSpan.Start, _pos), hasError: false);
+                return;
+            }
+
+            if (!TryReadExact(')'))
+            {
+                _pos = keywordSpan.End;
+                tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: 9), keywordSpan, hasError: true);
+                return;
+            }
+
+            tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: (byte)width), new CodeSpan(keywordSpan.Start, _pos), hasError: false);
         }
 
         private void ReadStringLiteral(out DkxToken tokenOut)
@@ -746,6 +752,96 @@ namespace DKX.Compilation.Tokens
             var cp = new DkxCodeParser(literalText);
             cp.ReadStringLiteral(out var token);
             return token.Text;
+        }
+
+        private void ReadStringDataType(CodeSpan keywordSpan, out DkxToken tokenOut)
+        {
+            if (!TryReadExact('(', allowWhiteSpace: true))
+            {
+                _pos = keywordSpan.End;
+                tokenOut = DkxToken.CreateDataType(DataType.String255, keywordSpan, hasError: false);
+                return;
+            }
+
+            if (!TryReadUint(out var width, DkxConst.String.MinLength, DkxConst.String.MaxLength))
+            {
+                _pos = keywordSpan.End;
+                tokenOut = DkxToken.CreateDataType(DataType.String255, keywordSpan, hasError: false);
+                return;
+            }
+
+            if (!TryReadExact(')', allowWhiteSpace: true))
+            {
+                _pos = keywordSpan.End;
+                tokenOut = DkxToken.CreateDataType(DataType.String255, keywordSpan, hasError: false);
+                return;
+            }
+
+            tokenOut = DkxToken.CreateDataType(new DataType(BaseType.String, width: (byte)width), new CodeSpan(keywordSpan.Start, _pos), hasError: false);
+        }
+
+        private bool TryReadUint(out uint valueOut, uint minValue = uint.MinValue, uint maxValue = uint.MaxValue, bool allowWhiteSpace = true)
+        {
+            var startPos = _pos;
+            if (allowWhiteSpace) SkipWhiteSpace();
+
+            if (_pos >= _len || !IsDigit(_source[_pos]))
+            {
+                valueOut = default;
+                return false;
+            }
+
+            ulong value = 0;
+            char ch;
+
+            if (_pos + 2 < _len && _source[_pos] == '0' && _source[_pos + 1] == 'x' && IsHexDigit(_source[_pos + 2]))
+            {
+                // Hex number
+                _pos += 2;
+                while (_pos < _len && IsHexDigit(ch = _source[_pos]))
+                {
+                    value *= 16;
+                    value += (ulong)HexDigitToInt(ch);
+                    if (value > maxValue) break;
+                    _pos++;
+                }
+            }
+            else
+            {
+                // Decimal number
+                while (_pos < _len && IsDigit(ch = _source[_pos]))
+                {
+                    value *= 10;
+                    value += (ulong)(ch - '0');
+                    if (value > maxValue) break;
+                    _pos++;
+                }
+            }
+
+            if (value < minValue || value > maxValue)
+            {
+                _pos = startPos;
+                valueOut = default;
+                return false;
+            }
+
+            valueOut = (uint)value;
+            return true;
+        }
+
+        private bool TryReadExact(char ch, bool allowWhiteSpace = true)
+        {
+            var startPos = _pos;
+            if (allowWhiteSpace) SkipWhiteSpace();
+
+            if (_pos < _len && _source[_pos] == ch)
+            {
+                _pos++;
+                return true;
+            }
+
+            _pos = startPos;
+            return false;
         }
     }
 }

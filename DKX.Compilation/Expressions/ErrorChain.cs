@@ -2,7 +2,9 @@
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Variables.ConstantValues;
 using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -16,20 +18,20 @@ namespace DKX.Compilation.Expressions
             _innerChain = innerChainOrNull;
         }
 
+        public override DataType DataType => _innerChain?.DataType ?? DataType.Int;
+        public override DataType InferredDataType => _innerChain?.InferredDataType ?? DataType.Int;
         public override bool IsEmptyCode => _innerChain?.IsEmptyCode ?? true;
 
-        public override DataType DataType => _innerChain?.DataType ?? DataType.Int;
-
-        public override DataType InferredDataType => _innerChain?.InferredDataType ?? DataType.Int;
-
-        public override CodeFragment ToWbdkCode_Read(ISourceCodeReporter report)
+        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
         {
             throw new InvalidOperationException("An error chain should never reach the point of generating code.");
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
         {
             throw new InvalidOperationException("An error chain should never reach the point of generating code.");
         }
+
+        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull) => Task.FromResult<ConstantValue>(null);
     }
 }

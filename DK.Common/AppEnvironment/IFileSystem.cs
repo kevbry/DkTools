@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DK.AppEnvironment
 {
@@ -35,13 +36,21 @@ namespace DK.AppEnvironment
 
         bool IsDirectoryHiddenOrSystem(string path);
 
-        string GetFileText(string pathName);
+        string ReadFileText(string pathName);
 
-        byte[] GetFileBytes(string pathName);
+        Task<string> ReadFileTextAsync(string pathName);
+
+        byte[] ReadFileBytes(string pathName);
+
+        Task<byte[]> ReadFileBytesAsync(string pathName);
 
         void WriteFileText(string pathName, string text);
 
+        Task WriteFileTextAsync(string pathName, string text);
+
         void WriteFileBytes(string pathName, byte[] data);
+
+        Task WriteFileBytesAsync(string pathName, byte[] data);
 
         void CreateDirectory(string path);
 

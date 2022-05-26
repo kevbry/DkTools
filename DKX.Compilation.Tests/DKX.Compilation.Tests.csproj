@@ -59,7 +59,7 @@
     <Compile Include="DkDataTypeParserTests.cs" />
     <Compile Include="Files\TestCompileFileJob.cs" />
     <Compile Include="Files\TestCompileFileJobFactory.cs" />
-    <Compile Include="Scopes\ScopesTests.cs" />
+    <Compile Include="Classes\ClassTests.cs" />
     <Compile Include="StatementTests\ForStatementTests.cs" />
     <Compile Include="StatementTests\IfStatementTests.cs" />
     <Compile Include="StatementTests\VarStatementTests.cs" />

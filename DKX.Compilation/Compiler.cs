@@ -3,6 +3,7 @@ using DK.Diagnostics;
 using DKX.Compilation.Files;
 using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Schema;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,7 @@ namespace DKX.Compilation
             await DetermineWorkDirAsync();
 
             // Scan for DKX files to be compiled.
+            var exportsProvider = new ExportsProvider(_app);
             var tableHashProvider = new TableHashProvider(_app);
             var queue = new CompileQueue(_app, "DKX Compilation Queue");
             await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
@@ -39,7 +41,7 @@ namespace DKX.Compilation
                 objectDir: _objectDir,
                 targetSourceDir: _targetSourceDir,
                 compileQueue: queue,
-                compileFileJobFactory: new CompileFileJobFactory(_app, queue, _targetSourceDir),
+                compileFileJobFactory: new CompileFileJobFactory(_app, queue, _targetSourceDir, exportsProvider),
                 tableHashProvider: tableHashProvider,
                 objectFileReaderFactory: new ObjectFileReaderFactory(_app)));
 

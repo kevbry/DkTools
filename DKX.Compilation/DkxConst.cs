@@ -15,6 +15,8 @@ namespace DKX.Compilation
         public const char StatementEndToken = ';';
         public const char DelimiterToken = ',';
 
+        public const string This = "this";
+
         public static class Namespaces
         {
             public const int MaxNamespaceLength = 12;
@@ -45,25 +47,34 @@ namespace DKX.Compilation
             public const int MinWidth = 1;
             public const int MaxScale = 18;
             public const int MinScale = 1;
+
+            public const int MaxLiteralDigits = 28;
         }
 
         public static class String
         {
+            public const int MinLength = 1;
             public const int MaxLength = 255;
         }
 
+        public static class Operators
+        {
+            public const string Dot = ".";
+        }
+
+        #region Keywords
         public static class Keywords
         {
             public static readonly HashSet<string> AllKeywords = new HashSet<string>(new string[]
             {
                 And, Break, Bool, Char, Class, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
-                Namespace, Numeric, Or, Private, Protected, Public, Return, Set, Short, Static, Switch, String,
-                Table, Time, True, UChar, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
+                Namespace, New, Numeric, Or, Private, Protected, Public, Return, Set, Short, Static, Switch, String,
+                Table, Time, True, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
             });
 
             public static readonly HashSet<string> DataTypeKeyword = new HashSet<string>(new string[]
             {
-                Bool, Char, Date, Enum, Indrel, Int, Numeric, Short, String, Table, Time, UChar, UInt, Unsigned, Unsupported, UShort, Variant, Void
+                Bool, Char, Date, Enum, Indrel, Int, Numeric, Short, String, Table, Time, UInt, Unsigned, Unsupported, UShort, Variant, Void
             });
 
             /// <summary>
@@ -95,6 +106,7 @@ namespace DKX.Compilation
             public const string Int = "int";
             public const string Namespace = "namespace";
             public const string Neutral = "neutral";
+            public const string New = "new";
             public const string Numeric = "numeric";
             public const string Or = "or";
             public const string Out = "out";
@@ -112,7 +124,6 @@ namespace DKX.Compilation
             public const string Table = "table";
             public const string Time = "time";
             public const string True = "true";
-            public const string UChar = "uchar";
             public const string UInt = "uint";
             public const string UShort = "ushort";
             public const string Unsigned = "unsigned";
@@ -122,5 +133,13 @@ namespace DKX.Compilation
             public const string Void = "void";
             public const string While = "while";
         }
+        #endregion
+
+        #region DkxLib
+        public static class DkxLib
+        {
+            public const string dkx_new = "dkx_new";
+        }
+        #endregion
     }
 }

@@ -1,12 +1,11 @@
 ﻿using DK.Code;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.ReportItems
 {
     public interface ISourceCodeReporter
     {
-        void ReportItem(int pos, ErrorCode code, params object[] args);
-
-        void ReportItem(CodeSpan span, ErrorCode code, params object[] args);
+        Task ReportAsync(CodeSpan span, ErrorCode code, params object[] args);
 
         bool HasErrors { get; }
     }

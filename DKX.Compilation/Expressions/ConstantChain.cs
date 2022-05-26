@@ -4,7 +4,9 @@ using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
+using DKX.Compilation.Variables.ConstantValues;
 using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -24,11 +26,16 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => _constant.DataType;
 
-        public override CodeFragment ToWbdkCode_Read(ISourceCodeReporter report) => _constant.Value.ToWbdkCode_Read(report);
+        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report) => Task.FromResult(_constant.Value.ToWbdkCode());
 
-        public override CodeFragment ToWbdkCode_Write(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
         {
-            throw new CodeException(Span, ErrorCode.ConstantsCannotBeWrittenTo);
+            throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
+        }
+
+        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        {
+            return Task.FromResult(_constant.Value);
         }
     }
 }

@@ -4,6 +4,7 @@ using DK.Diagnostics;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
 using Newtonsoft.Json;
@@ -22,6 +23,7 @@ namespace DKX.Compilation.Files
         private string _objPathName;
         private string _targetPath;
         private IReportItemCollector _reportCollector;
+        private IExportsProvider _exportsProvider;
 
         public CompileFileJob(
             DkAppContext app,
@@ -29,7 +31,8 @@ namespace DKX.Compilation.Files
             string relPath,
             string objPathName,
             string targetPath,
-            IReportItemCollector reportCollector)
+            IReportItemCollector reportCollector,
+            IExportsProvider exportsProvider)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _dkxPathName = dkxPathName ?? throw new ArgumentNullException(nameof(dkxPathName));
@@ -37,6 +40,7 @@ namespace DKX.Compilation.Files
             _objPathName = objPathName ?? throw new ArgumentNullException(nameof(objPathName));
             _targetPath = targetPath ?? throw new ArgumentNullException(nameof(targetPath));
             _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
+            _exportsProvider = exportsProvider ?? throw new ArgumentNullException(nameof(exportsProvider));
         }
 
         public string Description => $"Compile File: {_dkxPathName}";
@@ -45,10 +49,10 @@ namespace DKX.Compilation.Files
         {
             await _app.Log.InfoAsync("Compiling: {0}", _dkxPathName);
 
-            var source = _app.FileSystem.GetFileText(_dkxPathName);
+            var source = await _app.FileSystem.ReadFileTextAsync(_dkxPathName);
             var cp = new DkxCodeParser(source);
             var fileScope = new FileScope(_dkxPathName, cp, ProcessingDepth.Full);
-            fileScope.ProcessFile();
+            await fileScope.ProcessFile(_exportsProvider);
 
             var reportItems = fileScope.ReportItems.ToList();
             _reportCollector.AddReportItems(reportItems);
@@ -64,7 +68,7 @@ namespace DKX.Compilation.Files
                 {
                     var wbdkPathName = DkxFileHelper.DkxPathNameToWbdkPathName(_dkxPathName, _relPath, _targetPath, fileContext);
                     var cw = new CodeWriter();
-                    fileScope.GenerateWbdkCode(cw);
+                    await fileScope.GenerateWbdkCodeAsync(cw);
 
                     await _app.Log.DebugAsync("Writing: {0}", wbdkPathName);
                     _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(wbdkPathName));

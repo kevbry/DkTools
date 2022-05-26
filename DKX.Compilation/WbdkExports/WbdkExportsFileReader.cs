@@ -3,6 +3,7 @@ using DK.AppEnvironment;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.WbdkExports
 {
@@ -21,25 +22,25 @@ namespace DKX.Compilation.WbdkExports
             _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
         }
 
-        private void EnsureModelLoaded()
+        private async Task EnsureModelLoadedAsync()
         {
             if (_model == null)
             {
-                var json = _app.FileSystem.GetFileText(_pathName);
+                var json = await _app.FileSystem.ReadFileTextAsync(_pathName);
                 _model = JsonConvert.DeserializeObject<WbdkExportsModel>(json);
                 if (_model == null) throw new InvalidWbdkExportsFileException(_pathName);
             }
         }
 
-        public IEnumerable<string> GetIncludeDependencies()
+        public async Task<IEnumerable<string>> GetIncludeDependenciesAsync()
         {
-            EnsureModelLoaded();
+            await EnsureModelLoadedAsync();
             return _model.DependentFiles ?? Constants.EmptyStringArray;
         }
 
-        public IEnumerable<WbdkExportTableDependency> GetTableDependencies()
+        public async Task<IEnumerable<WbdkExportTableDependency>> GetTableDependenciesAsync()
         {
-            EnsureModelLoaded();
+            await EnsureModelLoadedAsync();
             return _model.TableDependencies ?? WbdkExportTableDependency.EmptyArray;
         }
     }

@@ -45,7 +45,7 @@ namespace DK.Preprocessing
             {
                 if (_app.FileSystem.FileExists(fullPathName))
                 {
-                    var fileContent = _app.FileSystem.GetFileText(fullPathName);
+                    var fileContent = _app.FileSystem.ReadFileText(fullPathName);
 
                     CodeSource source;
                     if (doMerge)

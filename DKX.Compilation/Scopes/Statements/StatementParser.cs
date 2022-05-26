@@ -1,50 +1,65 @@
 ﻿using DK.Code;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes.Statements
 {
     static class StatementParser
     {
-        public static Statement[] SplitTokensIntoStatements(Scope parentScope, DkxTokenCollection tokens)
+        public static async Task<Statement[]> SplitTokensIntoStatementsAsync(Scope scope, DkxTokenCollection tokens, IResolver resolver)
         {
             var stream = (tokens ?? throw new ArgumentNullException(nameof(tokens))).ToStream();
             var statements = new List<Statement>();
+            ReadDataTypeResult readDataTypeResult;
 
             while (!stream.EndOfStream)
             {
-                if (stream.Test(t => t.Type == DkxTokenType.Keyword && DkxConst.Keywords.ControlStatementStartKeyword.Contains(t.Text)))
+                var token = stream.Peek();
+                if (token.Type == DkxTokenType.Keyword && DkxConst.Keywords.ControlStatementStartKeyword.Contains(token.Text))
                 {
-                    var token = stream.Read();
+                    // Control statement
+                    stream.Position++;
                     switch (token.Text)
                     {
                         case DkxConst.Keywords.If:
-                            statements.Add(new IfStatement(parentScope, token.Span, stream));
+                            statements.Add(await IfStatement.ParseAsync(scope, token.Span, stream, resolver));
                             break;
                         case DkxConst.Keywords.Return:
-                            statements.Add(new ReturnStatement(parentScope, token.Span, stream));
+                            statements.Add(await ReturnStatement.ParseAsync(scope, token.Span, stream, resolver));
                             break;
                         default:
                             throw new NotImplementedException();
                     }
                 }
+                else if ((readDataTypeResult = await ExpressionParser.TryReadDataTypeAsync(scope, stream, resolver)).Success)
+                {
+                    // Variable declaration
+                    statements.Add(await VariableDeclarationStatement.ParseAsync(scope, readDataTypeResult.DataType, readDataTypeResult.Span, stream, resolver));
+                }
                 else
                 {
-                    var statement = ReadExpressionStatementOrNull(parentScope, stream);
+                    // Normal expression
+                    var statement = await TryReadExpressionStatementAsync(scope, stream, resolver);
                     if (statement != null) statements.Add(statement);
-                    else break;
+                    else
+                    {
+                        var badToken = stream.Read();
+                        if (!badToken.IsDefault) await scope.ReportAsync(badToken.Span, ErrorCode.SyntaxError);
+                    }
                 }
             }
 
             return statements.ToArray();
         }
 
-        public static Statement ReadExpressionStatementOrNull(Scope scope, DkxTokenStream stream)
+        public static async Task<Statement> TryReadExpressionStatementAsync(Scope scope, DkxTokenStream stream, IResolver resolver)
         {
-            var exp = ExpressionParser.ReadExpressionOrNull(scope, stream);
+            var exp = await ExpressionParser.TryReadExpressionAsync(scope, stream, resolver);
             if (exp == null)
             {
                 if (stream.Peek().IsStatementEnd)
@@ -57,25 +72,25 @@ namespace DKX.Compilation.Scopes.Statements
 
             var token = stream.Peek();
             if (token.IsStatementEnd) stream.Position++;
-            else scope.ReportItem(exp.Span, ErrorCode.StatementNotTerminated);
+            else await scope.ReportAsync(exp.Span, ErrorCode.StatementNotTerminated);
 
             return new ExpressionStatement(scope, exp);
         }
 
-        public static Statement[] ReadBodyOrExpression(Scope scope, DkxTokenStream stream, CodeSpan errorSpan)
+        public static async Task<Statement[]> ReadBodyOrExpressionAsync(Scope scope, DkxTokenStream stream, CodeSpan errorSpan, IResolver resolver)
         {
             var token = stream.Peek();
             if (token.IsScope)
             {
                 stream.Position++;
-                return SplitTokensIntoStatements(scope, token.Tokens).ToArray();
+                return (await SplitTokensIntoStatementsAsync(scope, token.Tokens, resolver)).ToArray();
             }
             else
             {
-                var statement = ReadExpressionStatementOrNull(scope, stream);
+                var statement = await TryReadExpressionStatementAsync(scope, stream, resolver);
                 if (statement == null)
                 {
-                    scope.ReportItem(errorSpan, ErrorCode.ExpectedExpression);
+                    await scope.ReportAsync(errorSpan, ErrorCode.ExpectedExpression);
                     return Statement.EmptyArray;
                 }
                 return new Statement[] { statement };

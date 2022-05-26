@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace DK.Implementation.Windows
 {
@@ -37,13 +39,55 @@ namespace DK.Implementation.Windows
 
         public bool IsDirectoryHiddenOrSystem(string path) => (new DirectoryInfo(path).Attributes & (FileAttributes.System | FileAttributes.Hidden)) != 0;
 
-        public string GetFileText(string pathName) => File.ReadAllText(pathName);
+        public string ReadFileText(string pathName) => File.ReadAllText(pathName);
 
-        public byte[] GetFileBytes(string pathName) => File.ReadAllBytes(pathName);
+        public async Task<string> ReadFileTextAsync(string pathName)
+        {
+            using (var fileStream = new FileStream(pathName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+            using (var streamReader = new StreamReader(fileStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+            {
+                return await streamReader.ReadToEndAsync();
+            }
+        }
+
+        public byte[] ReadFileBytes(string pathName) => File.ReadAllBytes(pathName);
+
+        public async Task<byte[]> ReadFileBytesAsync(string pathName)
+        {
+            using (var fileStream = new FileStream(pathName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+            {
+                var bytes = new byte[fileStream.Length];
+                var numRead = await fileStream.ReadAsync(bytes, 0, bytes.Length);
+                if (numRead != bytes.Length)
+                {
+                    var bytes2 = new byte[numRead];
+                    Array.Copy(bytes, bytes2, numRead);
+                    return bytes2;
+                }
+                return bytes;
+            }
+        }
 
         public void WriteFileText(string pathName, string text) => File.WriteAllText(pathName, text);
 
+        public async Task WriteFileTextAsync(string pathName, string text)
+        {
+            var bytes = Encoding.UTF8.GetBytes(text);
+            using (var fileStream = new FileStream(pathName, FileMode.Open, FileAccess.Write, FileShare.Read, bufferSize: 4096, useAsync: true))
+            {
+                await fileStream.WriteAsync(bytes, 0, bytes.Length);
+            }
+        }
+
         public void WriteFileBytes(string pathName, byte[] data) => File.WriteAllBytes(pathName, data);
+
+        public async Task WriteFileBytesAsync(string pathName, byte[] data)
+        {
+            using (var fileStream = new FileStream(pathName, FileMode.Open, FileAccess.Write, FileShare.Read, bufferSize: 4096, useAsync: true))
+            {
+                await fileStream.WriteAsync(data, 0, data.Length);
+            }
+        }
 
         public void CreateDirectory(string path) => Directory.CreateDirectory(path);
 

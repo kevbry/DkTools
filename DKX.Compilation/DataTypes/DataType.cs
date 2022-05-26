@@ -1,6 +1,7 @@
 ﻿using DK;
 using DK.Code;
 using DKX.Compilation.Exceptions;
+using DKX.Compilation.Resolving;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,13 +15,7 @@ namespace DKX.Compilation.DataTypes
         private byte _width;
         private byte _scale;
         private string _options;
-
-        public const byte MinNumericWidth = 1;
-        public const byte MaxNumericWidth = 38;
-        public const byte MinNumericScale = 0;
-        public const byte MaxNumericScale = 38;
-        public const byte MinStringLength = 1;
-        public const byte MaxStringLength = 255;
+        private IClass _class;
 
         // General limits for width and scale
         public const byte MinWidth = 1;
@@ -36,6 +31,7 @@ namespace DKX.Compilation.DataTypes
             _width = 0;
             _scale = 0;
             _options = null;
+            _class = null;
         }
 
         public DataType(BaseType baseType, byte width = 0, byte scale = 0)
@@ -44,11 +40,11 @@ namespace DKX.Compilation.DataTypes
             {
                 case BaseType.Numeric:
                 case BaseType.UNumeric:
-                    if (width < MinNumericWidth || width > MaxNumericWidth) throw new ArgumentOutOfRangeException(nameof(width));
-                    if (scale < MinNumericScale || scale > MaxNumericScale) throw new ArgumentOutOfRangeException(nameof(scale));
+                    if (width < DkxConst.Numeric.MinWidth || width > DkxConst.Numeric.MaxWidth) throw new ArgumentOutOfRangeException(nameof(width));
+                    if (scale < DkxConst.Numeric.MinScale || scale > DkxConst.Numeric.MaxScale) throw new ArgumentOutOfRangeException(nameof(scale));
                     break;
                 case BaseType.String:
-                    if (width < MinStringLength || width > MaxStringLength) throw new ArgumentOutOfRangeException(nameof(width));
+                    if (width < DkxConst.String.MinLength || width > DkxConst.String.MaxLength) throw new ArgumentOutOfRangeException(nameof(width));
                     if (scale != 0) throw new ArgumentOutOfRangeException(nameof(scale));
                     break;
                 default:
@@ -61,6 +57,7 @@ namespace DKX.Compilation.DataTypes
             _width = width;
             _scale = scale;
             _options = null;
+            _class = null;
         }
 
         public DataType(BaseType baseType, string[] options)
@@ -71,12 +68,6 @@ namespace DKX.Compilation.DataTypes
                 case BaseType.Enum:
                     if (options.Length == 0) throw new ArgumentException("Options list must contain at least 1 value.");
                     break;
-                case BaseType.Like1:
-                    if (options.Length != 1) throw new ArgumentException("Options list must contain exactly 1 value.");
-                    break;
-                case BaseType.Like2:
-                    if (options.Length != 2) throw new ArgumentException("Options list must contain exactly 2 values.");
-                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(baseType));
             }
@@ -85,23 +76,26 @@ namespace DKX.Compilation.DataTypes
             _width = 0;
             _scale = 0;
             _options = StringListToOptions(options ?? throw new ArgumentNullException(nameof(options)));
+            _class = null;
         }
 
-        private DataType(BaseType baseType, byte width, byte scale, string[] options)
+        public DataType(IClass class_)
         {
-            _baseType = baseType;
-            _width = width;
-            _scale = scale;
-            _options = options != null ? StringListToOptions(options) : null;
+            _baseType = BaseType.Class;
+            _width = 0;
+            _scale = 0;
+            _options = null;
+            _class = class_ ?? throw new ArgumentNullException(nameof(class_));
         }
 
         public BaseType BaseType => _baseType;
+        public IClass Class => _class;
         public short Width => _width;
         public short Scale => _scale;
         public string[] Options => OptionsToStringList(_options ?? string.Empty);
-        public bool IsUnresolved => _baseType == BaseType.Like1 || _baseType == BaseType.Like2;
         public bool IsUnsupported => _baseType == BaseType.Unsupported;
-        public bool IsValue => _baseType != BaseType.Void && _baseType != BaseType.Unsupported && _baseType != BaseType.Like1 && _baseType != BaseType.Like2;
+        public bool IsSigned => _baseType.IsSigned();
+        public bool IsValue => _baseType != BaseType.Void && _baseType != BaseType.Unsupported;
         public bool IsVoid => _baseType == BaseType.Void;
 
         public override string ToString() => ToCode();
@@ -128,7 +122,6 @@ namespace DKX.Compilation.DataTypes
         public static readonly DataType String255 = new DataType(BaseType.String, width: 255);
         public static readonly DataType Table = new DataType(BaseType.Table);
         public static readonly DataType Time = new DataType(BaseType.Time);
-        public static readonly DataType UChar = new DataType(BaseType.UChar);
         public static readonly DataType UInt = new DataType(BaseType.UInt);
         public static readonly DataType Unsupported = new DataType(BaseType.Unsupported);
         public static readonly DataType UShort = new DataType(BaseType.UShort);
@@ -163,10 +156,8 @@ namespace DKX.Compilation.DataTypes
                     return $"unsigned({_width})";
                 case BaseType.Char:
                     return "char";
-                case BaseType.UChar:
-                    return "uchar";
                 case BaseType.String:
-                    if (_width == MaxStringLength) return "string";
+                    if (_width == DkxConst.String.MaxLength) return "string";
                     return $"string({_width})";
                 case BaseType.Date:
                     return "date";
@@ -190,10 +181,8 @@ namespace DKX.Compilation.DataTypes
                     return "indrel";
                 case BaseType.Variant:
                     return "variant";
-                case BaseType.Like1:
-                    return $"like {_options[0]}";
-                case BaseType.Like2:
-                    return $"like {_options[0]} {_options[1]}";
+                case BaseType.Class:
+                    return _class.FullClassName;
                 default:
                     throw new InvalidBaseTypeException(_baseType);
             }
@@ -225,10 +214,8 @@ namespace DKX.Compilation.DataTypes
                     return $"numeric({_width}) unsigned";
                 case BaseType.Char:
                     return "char";
-                case BaseType.UChar:
-                    return "unsigned char";
                 case BaseType.String:
-                    if (_width == MaxStringLength) return "char(255)";
+                    if (_width == DkxConst.String.MaxLength) return "char(255)";
                     return $"char({_width})";
                 case BaseType.Date:
                     return "date";
@@ -252,10 +239,8 @@ namespace DKX.Compilation.DataTypes
                     return "indrel";
                 case BaseType.Variant:
                     return "variant";
-                case BaseType.Like1:
-                    return $"like {_options[0]}";
-                case BaseType.Like2:
-                    return $"like {_options[0]} {_options[1]}";
+                case BaseType.Class:
+                    return "unsigned int";
                 default:
                     throw new InvalidBaseTypeException(_baseType);
             }
@@ -340,7 +325,7 @@ namespace DKX.Compilation.DataTypes
                         spanOut = default;
                         return false;
                     }
-                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < MinNumericWidth || width > MaxNumericWidth)
+                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out var width) || width < DkxConst.Numeric.MinWidth || width > DkxConst.Numeric.MaxWidth)
                     {
                         dataTypeOut = default;
                         spanOut = default;
@@ -349,7 +334,7 @@ namespace DKX.Compilation.DataTypes
                     byte scale = 0;
                     if (code.ReadExact(','))
                     {
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale)
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < DkxConst.Numeric.MinScale || scale > DkxConst.Numeric.MaxScale)
                         {
                             dataTypeOut = default;
                             spanOut = default;
@@ -373,7 +358,7 @@ namespace DKX.Compilation.DataTypes
                         spanOut = default;
                         return false;
                     }
-                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinNumericWidth || width > MaxNumericWidth)
+                    if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < DkxConst.Numeric.MinWidth || width > DkxConst.Numeric.MaxWidth)
                     {
                         dataTypeOut = default;
                         spanOut = default;
@@ -382,7 +367,7 @@ namespace DKX.Compilation.DataTypes
                     scale = 0;
                     if (code.ReadExact(','))
                     {
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < MinNumericScale || scale > MaxNumericScale)
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out scale) || scale < DkxConst.Numeric.MinScale || scale > DkxConst.Numeric.MaxScale)
                         {
                             dataTypeOut = default;
                             spanOut = default;
@@ -404,15 +389,10 @@ namespace DKX.Compilation.DataTypes
                     spanOut = wordSpan;
                     return true;
 
-                case "uchar":
-                    dataTypeOut = UChar;
-                    spanOut = wordSpan;
-                    return true;
-
                 case "string":
                     if (code.ReadExact('('))
                     {
-                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < MinStringLength || width > MaxStringLength)
+                        if (!code.ReadNumber() || !byte.TryParse(code.Text, out width) || width < DkxConst.String.MinLength || width > DkxConst.String.MaxLength)
                         {
                             dataTypeOut = default;
                             spanOut = default;
@@ -489,31 +469,6 @@ namespace DKX.Compilation.DataTypes
                     dataTypeOut = Variant;
                     spanOut = wordSpan;
                     return true;
-
-                case "like":
-                    if (!code.ReadWord())
-                    {
-                        dataTypeOut = default;
-                        spanOut = default;
-                        return false;
-                    }
-                    var word1 = code.Text;
-                    var word1Span = code.Span;
-                    if (code.ReadExact('.'))
-                    {
-                        if (!code.ReadWord())
-                        {
-                            dataTypeOut = default;
-                            spanOut = default;
-                            return false;
-                        }
-                        dataTypeOut = new DataType(BaseType.Like2, new string[] { word1, code.Text });
-                        spanOut = wordSpan.Envelope(code.Span);
-                        return true;
-                    }
-                    dataTypeOut = new DataType(BaseType.Like1, new string[] { word1 });
-                    spanOut = wordSpan.Envelope(word1Span);
-                    return true;
             }
 
             dataTypeOut = default;
@@ -576,6 +531,128 @@ namespace DKX.Compilation.DataTypes
         #endregion
 
         #region Capabilities
+        public uint DataSize
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Short:
+                    case BaseType.UShort:
+                    case BaseType.Char:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                        return 2;
+                    case BaseType.Bool:
+                    case BaseType.Int:
+                    case BaseType.UInt:
+                        return 4;
+                    case BaseType.Numeric:
+                    case BaseType.UNumeric:
+                        if (_width <= 2) return 1;
+                        if (_width <= 4) return 2;
+                        if (_width <= 9) return 4;
+                        if (_width <= 14) return 6;
+                        if (_width <= 18) return 8;
+                        return 9;
+                    case BaseType.String:
+                        return (uint)(_width + 1) * 2;
+                    case BaseType.Class:
+                        return 4;
+                    default:
+                        return 0;
+                }
+            }
+        }
+
+        public int NumBits
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Char:
+                    case BaseType.Short:
+                    case BaseType.UShort:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                        return 16;
+                    case BaseType.Bool:
+                    case BaseType.Int:
+                    case BaseType.UInt:
+                        return 32;
+                    case BaseType.Numeric:
+                    case BaseType.UNumeric:
+                        if (_width <= 2) return 8;
+                        if (_width <= 4) return 16;
+                        if (_width <= 9) return 32;
+                        if (_width < 14) return 48;
+                        if (_width < 18) return 64;
+                        return 72;
+                    default:
+                        return 0;
+                }
+            }
+        }
+
+        public decimal MinNumber
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Bool:
+                    case BaseType.UShort:
+                    case BaseType.UInt:
+                    case BaseType.UNumeric:
+                    case BaseType.Char:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                        return 0;
+                    case BaseType.Short:
+                        return short.MaxValue;
+                    case BaseType.Int:
+                        return int.MaxValue;
+                    case BaseType.Numeric:
+                        return -(decimal)Math.Pow(10, _width);
+                    default:
+                        return 0;
+                }
+            }
+        }
+
+        public decimal MaxNumber
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Bool:
+                        return 1;
+                    case BaseType.UShort:
+                    case BaseType.Char:
+                    case BaseType.Date:
+                    case BaseType.Time:
+                    case BaseType.Enum:
+                        return ushort.MaxValue;
+                    case BaseType.UInt:
+                        return uint.MaxValue;
+                    case BaseType.Short:
+                        return short.MaxValue;
+                    case BaseType.Int:
+                        return int.MaxValue;
+                    case BaseType.Numeric:
+                    case BaseType.UNumeric:
+                        return (decimal)Math.Pow(10, _width);
+                    default:
+                        throw new InvalidBaseTypeException(_baseType);
+                }
+            }
+        }
+
         public bool IsSuitableForVariable
         {
             get
@@ -590,7 +667,6 @@ namespace DKX.Compilation.DataTypes
                     case BaseType.Numeric:
                     case BaseType.UNumeric:
                     case BaseType.Char:
-                    case BaseType.UChar:
                     case BaseType.String:
                     case BaseType.Date:
                     case BaseType.Time:
@@ -610,7 +686,6 @@ namespace DKX.Compilation.DataTypes
                 switch (_baseType)
                 {
                     case BaseType.Char:
-                    case BaseType.UChar:
                     case BaseType.Short:
                     case BaseType.UShort:
                     case BaseType.Int:
@@ -634,7 +709,6 @@ namespace DKX.Compilation.DataTypes
                 switch (_baseType)
                 {
                     case BaseType.Char:
-                    case BaseType.UChar:
                     case BaseType.Short:
                     case BaseType.UShort:
                     case BaseType.Int:
@@ -644,6 +718,20 @@ namespace DKX.Compilation.DataTypes
                     case BaseType.Date:
                     case BaseType.Time:
                     case BaseType.Enum:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        public bool IsSuitableForNew
+        {
+            get
+            {
+                switch (_baseType)
+                {
+                    case BaseType.Class:
                         return true;
                     default:
                         return false;

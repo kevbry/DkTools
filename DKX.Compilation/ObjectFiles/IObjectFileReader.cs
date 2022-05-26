@@ -1,14 +1,15 @@
 ﻿using DK.Code;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.ObjectFiles
 {
     public interface IObjectFileReader
     {
-        IEnumerable<string> GetFileDependencies();
+        Task<IEnumerable<string>> GetFileDependenciesAsync();
 
-        IDictionary<string, string> GetTableDependencies();
+        Task<IDictionary<string, string>> GetTableDependenciesAsync();
 
-        IEnumerable<FileContext> GetFileContexts();
+        Task<IEnumerable<FileContext>> GetFileContextsAsync();
     }
 }

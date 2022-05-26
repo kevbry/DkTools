@@ -40,6 +40,9 @@ namespace DKX.Compilation
 
         [Description("Invalid string literal.")]
         InvalidStringLiteral = 1005,
+
+        [Description("Invalid type.")]
+        InvalidDataType = 1006,
         #endregion
 
         #region Classes (1100-1199)
@@ -90,11 +93,29 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Duplicate class '{0}'.")]
         DuplicateClass = 1112,
+
+        [Description("Type cannot be instantiated.")]
+        DataTypeCannotBeInstantiated = 1113,
+
+        [Description("Field '{0}' not found.")]
+        FieldNotFound = 1114,
+
+        [Description("Field '{0}' is ambiguous.")]
+        AmbiguousField = 1115,
         #endregion
 
         #region Methods (1200-1299)
         [Description("Expected method name.")]
         ExpectedMethodName = 1200,
+
+        [Description("No method was found with matching number of arguments.")]
+        NoMethodWithSameNumberOfArguments = 1201,
+
+        [Description("No method was found with compatible arguments.")]
+        NoMethodWithCompatibleArguments = 1202,
+
+        [Description("More than one method with compatible arguments was found.")]
+        MethodAmbiguous = 1203,
         #endregion
 
         #region Properties (1300-1399)
@@ -112,6 +133,12 @@ namespace DKX.Compilation
 
         [Description("Duplicate property 'setter'.")]
         DuplicatePropertySetter = 1304,
+
+        /// <summary>
+        /// {0} = property name
+        /// </summary>
+        [Description("Property '{0}' is read-only.")]
+        PropertyIsReadOnly = 1305,
         #endregion
 
         #region Variables/Arguments (1400-1499)
@@ -130,8 +157,8 @@ namespace DKX.Compilation
         [Description("Expected variable name.")]
         ExpectedVariableName = 1402,
 
-        [Description("Expected argument data type.")]
-        ExpectedArgumentDataType = 1403,
+        [Description("Expected data type.")]
+        ExpectedDataType = 1403,
 
         [Description("Expected argument name.")]
         ExpectedArgumentName = 1404,
@@ -150,6 +177,18 @@ namespace DKX.Compilation
 
         [Description("Duplicate argument name.")]
         DuplicateArgumentName = 1409,
+
+        [Description("Constructor contains empty arguments.")]
+        ConstructorContainsEmptyArguments = 1410,
+
+        /// <summary>
+        /// {0} = variable name
+        /// </summary>
+        [Description("Use of variable '{0}' requires a non-static object reference.")]
+        VariableRequiresThisPointer = 1411,
+
+        [Description("'this' cannot be modified.")]
+        ThisCannotBeModified = 1412,
         #endregion
 
         #region Expressions (1500-1599)
@@ -195,17 +234,40 @@ namespace DKX.Compilation
         [Description("Statement is not terminated with ';'.")]
         StatementNotTerminated = 1509,
 
+        [Description("Expression cannot be written to.")]
+        ExpressionCannotBeWrittenTo = 1510,
+
         /// <summary>
-        /// {0} = operator text
+        /// {0} = source data type
+        /// {1} = destination data type
         /// </summary>
-        [Description("Operator '{0}' result cannot be written to.")]
-        OperatorResultCannotBeWrittenTo = 1510,
+        [Description("Cannot convert '{0}' to '{1}'.")]
+        DataTypeNotCompatible = 1511,
 
-        [Description("Literal values cannot be written to.")]
-        LiteralsCannotBeWrittenTo = 1511,
+        [Description("Possible loss of data converting '{0}' to '{1}'.")]
+        [Severity(ErrorSeverity.Warning)]
+        DataTypeLossOfDataWarning = 1512,
 
-        [Description("Constant values cannot be written to.")]
-        ConstantsCannotBeWrittenTo = 1512,
+        /// <summary>
+        /// {0} = destination data type
+        /// </summary>
+        [Description("Constant value is out of bounds for '{0}'.")]
+        ConstantDoesNotFit = 1513,
+
+        [Description("Expected member name.")]
+        ExpectedMemberName = 1514,
+
+        [Description("Expression must be a constant value.")]
+        ExpressionNotConstant = 1515,
+
+        [Description("Division by zero.")]
+        DivideByZero = 1516,
+
+        /// <summary>
+        /// {0} = data type
+        /// </summary>
+        [Description("Constant expression yield a value out of range for type '{0}'.")]
+        ConstantValueOutOfRange = 1517,
         #endregion
     }
 

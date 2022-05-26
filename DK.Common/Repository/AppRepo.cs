@@ -962,7 +962,7 @@ namespace DK.Repository
             _data = new List<int>();
             _strings = new StringRepo();
 
-            var rawFileData = _appSettings.FileSystem.GetFileBytes(_repoFileName);
+            var rawFileData = _appSettings.FileSystem.ReadFileBytes(_repoFileName);
             byte[] fileData;
             byte[] fileHash;
             using (var memStream = new IO.MemoryStream(rawFileData))

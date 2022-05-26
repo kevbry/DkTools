@@ -21,7 +21,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.Function, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
 
-            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
+            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(await app.FileSystem.ReadFileTextAsync(exportsPathName));
             Assert.IsNotNull(model);
 
             Assert.AreEqual(pathName, model.SourceFile);
@@ -59,7 +59,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.ClientClass, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
 
-            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
+            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(await app.FileSystem.ReadFileTextAsync(exportsPathName));
             Assert.IsNotNull(model);
 
             Assert.AreEqual(pathName, model.SourceFile);
@@ -95,7 +95,7 @@ namespace DKX.Compilation.Tests.WbdkExports
             var job = new ScanWbdkExportFileJob(app, pathName, exportsPathName, FileContext.NeutralClass, tableHashProvider);
             await job.ExecuteAsync(cancel: default);
 
-            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(app.FileSystem.GetFileText(exportsPathName));
+            var model = JsonConvert.DeserializeObject<WbdkExportsModel>(await app.FileSystem.ReadFileTextAsync(exportsPathName));
             Assert.IsNotNull(model);
 
             Assert.AreEqual(pathName, model.SourceFile);

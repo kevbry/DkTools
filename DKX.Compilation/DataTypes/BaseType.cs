@@ -7,103 +7,162 @@ namespace DKX.Compilation.DataTypes
         /// <summary>
         /// Unsupported WBDK data type (e.g. graphic, scroll, interface, etc)
         /// </summary>
-        Unsupported = 0,
+        Unsupported,
 
         /// <summary>
         /// Not a data type. Used for function return types.
         /// </summary>
-        Void = 1,
+        Void,
 
         /// <summary>
         /// Boolean value. Represented as Boolean_t in WBDK.
         /// </summary>
-        Bool = 2,
+        Bool,
 
         /// <summary>
         /// 16-bit integer.
         /// </summary>
-        Short = 3,
+        Short,
 
         /// <summary>
         /// 16-bit unsigned integer.
         /// </summary>
-        UShort = 4,
+        UShort,
 
         /// <summary>
         /// 32-bit integer.
         /// </summary>
-        Int = 5,
+        Int,
 
         /// <summary>
         /// 32-bit unsigned integer.
         /// </summary>
-        UInt = 6,
+        UInt,
 
         /// <summary>
         /// Fixed scale numeric. Includes the width and scale attributes.
         /// </summary>
-        Numeric = 7,
+        Numeric,
 
         /// <summary>
         /// Fixed scale unsigned numeric. Includes the width and scale attributes.
         /// </summary>
-        UNumeric = 8,
+        UNumeric,
 
         /// <summary>
         /// Single wide character
         /// </summary>
-        Char = 9,
-
-        /// <summary>
-        /// Single wide unsigned char.
-        /// </summary>
-        UChar = 10,
+        Char,
 
         /// <summary>
         /// String. Width field identifies the maximum length (not including null terminator).
         /// </summary>
-        String = 11,
+        String,
 
         /// <summary>
         /// Date
         /// </summary>
-        Date = 12,
+        Date,
 
         /// <summary>
         ///  Time
         /// </summary>
-        Time = 13,
+        Time,
 
         /// <summary>
         /// Enum list. Options list contains the valid values.
         /// </summary>
-        Enum = 14,
+        Enum,
 
         /// <summary>
         /// System function with table argument (e.g. find())
         /// </summary>
-        Table = 15,
+        Table,
 
         /// <summary>
         /// System function with index/relationship argument (e.g. insrel())
         /// </summary>
-        Indrel = 16,
+        Indrel,
 
         /// <summary>
         /// COM variant
         /// </summary>
-        Variant = 17,
+        Variant,
 
         /// <summary>
-        /// like operator on a single identifier.
-        /// Options list will contain 1 string with the identifier name.
+        /// A reference to a class object.
+        /// Options string contains the full class name split by '.'
+        /// Options[0] = namespace
+        /// Options[1] = class name...
         /// </summary>
-        Like1 = 18,
+        Class
+    }
 
-        /// <summary>
-        /// Like operator on a word-dot-pair.
-        /// Options list will contain 2 strings with the 2 words.
-        /// </summary>
-        Like2 = 19
+    /*
+    switch (baseType)
+    {
+        case BaseType.Unsupported:
+        case BaseType.Void:
+        case BaseType.Bool:
+        case BaseType.Short:
+        case BaseType.UShort:
+        case BaseType.Int:
+        case BaseType.UInt:
+        case BaseType.Numeric:
+        case BaseType.UNumeric:
+        case BaseType.Char:
+        case BaseType.String:
+        case BaseType.Date:
+        case BaseType.Time:
+        case BaseType.Enum:
+        case BaseType.Table:
+        case BaseType.Indrel:
+        case BaseType.Variant:
+        case BaseType.Class:
+    }
+    */
+
+    static class BaseTypeHelper
+    {
+        public static bool IsSigned(this BaseType baseType)
+        {
+            switch (baseType)
+            {
+                case BaseType.Char:
+                case BaseType.Short:
+                case BaseType.Int:
+                case BaseType.Numeric:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static int MaxWidth(this BaseType baseType)
+        {
+            // Signed: 1-2 = int1, 3-4 = int2, 5-9 = int4, 10-14 = int6, 15-18 = int8, 19+ = int9
+            switch (baseType)
+            {
+                case BaseType.Bool:
+                case BaseType.Char:
+                    return 1;
+                case BaseType.Short:
+                case BaseType.UShort:
+                case BaseType.Date:
+                case BaseType.Time:
+                case BaseType.Enum:
+                    return 4;
+                case BaseType.Int:
+                case BaseType.UInt:
+                    return 9;
+                case BaseType.Numeric:
+                case BaseType.UNumeric:
+                    return 38;
+                case BaseType.String:
+                    return 255;
+                default:
+                    return 0;
+            }
+        }
     }
 }

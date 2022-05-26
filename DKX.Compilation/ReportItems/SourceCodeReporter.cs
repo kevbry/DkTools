@@ -2,6 +2,7 @@
 using DK.Code;
 using DK.Diagnostics;
 using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.ReportItems
 {
@@ -23,13 +24,13 @@ namespace DKX.Compilation.ReportItems
             _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
         }
 
-        private void EnsureFileLoaded()
+        private async Task EnsureFileLoadedAsync()
         {
             if (_source == null)
             {
                 try
                 {
-                    _source = _app.FileSystem.GetFileText(_sourcePathName);
+                    _source = await _app.FileSystem.ReadFileTextAsync(_sourcePathName);
                 }
                 catch (Exception ex)
                 {
@@ -39,15 +40,15 @@ namespace DKX.Compilation.ReportItems
             }
         }
 
-        public void ReportItem(int pos, ErrorCode code, params object[] args)
+        public async Task AddReportAsync(int pos, ErrorCode code, params object[] args)
         {
-            EnsureFileLoaded();
+            await EnsureFileLoadedAsync();
             _reportCollector.AddReportItem(new ReportItem(_sourcePathName, _source, pos, code, args));
         }
 
-        public void ReportItem(CodeSpan span, ErrorCode code, params object[] args)
+        public async Task ReportAsync(CodeSpan span, ErrorCode code, params object[] args)
         {
-            EnsureFileLoaded();
+            await EnsureFileLoadedAsync();
             _reportCollector.AddReportItem(new ReportItem(_sourcePathName, _source, span, code, args));
         }
 

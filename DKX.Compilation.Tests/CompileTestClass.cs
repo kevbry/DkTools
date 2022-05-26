@@ -157,8 +157,8 @@ namespace DKX.Compilation.Tests
             if (expectedError.HasValue) TestContext.Out.WriteLine($"Expected Error: {expectedError.ToString()}");
 
             TestContext.Out.WriteLine($"DKX Source:\n{dkxSource}");
-            if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{app.FileSystem.GetFileText(wbdkPathName)}");
-            if (objPathName != null && app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object Model Generated:\n{app.FileSystem.GetFileText(objPathName)}");
+            if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{await app.FileSystem.ReadFileTextAsync(wbdkPathName)}");
+            if (objPathName != null && app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object Model Generated:\n{await app.FileSystem.ReadFileTextAsync(objPathName)}");
 
             if (expectedError.HasValue)
             {
@@ -176,12 +176,12 @@ namespace DKX.Compilation.Tests
             }
 
             Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
-            WbdkCodeValidator.Validate(wbdkCode, app.FileSystem.GetFileText(wbdkPathName));
+            WbdkCodeValidator.Validate(wbdkCode, await app.FileSystem.ReadFileTextAsync(wbdkPathName));
 
             if (objPathName != null && objectModel != null)
             {
                 Assert.IsTrue(app.FileSystem.FileExists(objPathName), "Object file was not created.");
-                var actualModel = JsonConvert.DeserializeObject<ObjectFileModel>(app.FileSystem.GetFileText(objPathName));
+                var actualModel = JsonConvert.DeserializeObject<ObjectFileModel>(await app.FileSystem.ReadFileTextAsync(objPathName));
                 ObjectModelValidator.ValidateModel(objectModel, actualModel);
             }
         }

@@ -2,44 +2,52 @@
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes.Statements
 {
     class ReturnStatement : Statement
     {
         private DataType _dataType;
-        private Chain _exp;
+        private Chain _expression;
 
-        public ReturnStatement(Scope parent, CodeSpan keywordSpan, DkxTokenStream stream)
-            : base(parent, keywordSpan)
+        private ReturnStatement(Scope parent, CodeSpan keywordSpan) : base(parent, keywordSpan) { }
+
+        public override bool IsEmpty => false;
+
+        public static async Task<ReturnStatement> ParseAsync(Scope parent, CodeSpan keywordSpan, DkxTokenStream stream, IResolver resolver)
         {
-            var returnScope = GetScope<IReturnScope>();
-            if (returnScope == null) throw new InvalidOperationException("Could not get return scope.");
-            _dataType = returnScope.ReturnDataType;
+            var ret = new ReturnStatement(parent, keywordSpan);
 
-            if (_dataType.IsVoid)
+            var returnScope = ret.GetScope<IReturnScope>();
+            if (returnScope == null) throw new InvalidOperationException("Could not get return scope.");
+            ret._dataType = returnScope.ReturnDataType;
+
+            if (ret._dataType.IsVoid)
             {
-                if (!stream.Peek().IsStatementEnd) ReportItem(keywordSpan, ErrorCode.ExpectedToken, ';');
+                if (!stream.Peek().IsStatementEnd) await ret.ReportAsync(keywordSpan, ErrorCode.ExpectedToken, ';');
                 else stream.Position++;
             }
             else
             {
-                _exp = ExpressionParser.ReadExpressionOrNull(this, stream);
-                if (_exp == null) ReportItem(keywordSpan, ErrorCode.ExpectedExpression);
+                var expression = await ExpressionParser.TryReadExpressionAsync(ret, stream, resolver);
+                if (expression == null) await ret.ReportAsync(keywordSpan, ErrorCode.ExpectedExpression);
+                ret._expression = expression;
             }
+
+            return ret;
         }
 
-        public override bool IsEmpty => false;
-
-        internal override void GenerateWbdkCode(CodeWriter cw)
+        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
         {
             cw.Write("return");
-            if (_exp != null)
+            if (_expression != null)
             {
                 cw.Write(' ');
-                cw.Write(_exp.ToWbdkCode_Read(this));
+                cw.Write(await _expression.ToWbdkCode_ReadAsync(this));
             }
             cw.Write(';');
             cw.WriteLine();
