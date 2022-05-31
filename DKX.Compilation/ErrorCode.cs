@@ -76,17 +76,14 @@ namespace DKX.Compilation
         [Description("Classes must be declared 'static'.")]
         ClassMustBeStatic = 1109,
 
-        /// <summary>
-        /// {0} = file name without extension
-        /// </summary>
-        [Description("Namespace name must match the file name '{0}'.")]
-        NamespaceNameMustMatchFileName = 1110,
+        [Description("Expected namespace name.")]
+        ExpectedNamespaceName = 1110,
 
         /// <summary>
         /// {0} = max number of characters
         /// </summary>
-        [Description("Namespace name cannot exceed {0} characters.")]
-        NamespaceNameTooLong = 1111,
+        //[Description("Namespace name cannot exceed {0} characters.")]
+        //NamespaceNameTooLong = 1111,
 
         /// <summary>
         /// {0} = class name
@@ -97,11 +94,29 @@ namespace DKX.Compilation
         [Description("Type cannot be instantiated.")]
         DataTypeCannotBeInstantiated = 1113,
 
+        /// <summary>
+        /// {0} = field name
+        /// </summary>
         [Description("Field '{0}' not found.")]
         FieldNotFound = 1114,
 
+        /// <summary>
+        /// {0} = field name
+        /// </summary>
         [Description("Field '{0}' is ambiguous.")]
         AmbiguousField = 1115,
+
+        /// <summary>
+        /// {0} = class name
+        /// </summary>
+        [Description("Class '{0}' not found.")]
+        ClassNotFound = 1116,
+
+        /// <summary>
+        /// {0} = constant field name
+        /// </summary>
+        [Description("A circular dependency was found in constant '{0}'.")]
+        CircularConstantDependency = 1117,
         #endregion
 
         #region Methods (1200-1299)
@@ -228,8 +243,8 @@ namespace DKX.Compilation
         [Description("Operator '{0}' cannot be used with this data type.")]
         OperatorCannotBeUsedWithThisDataType = 1506,
 
-        [Description("Condition expression must yield a boolean result.")]
-        ConditionMustBeBool = 1507,
+        [Description("Expression requires a boolean result.")]
+        ExpressionMustBeBool = 1507,
 
         [Description("Expected condition expression.")]
         ExpectedCondition = 1508,
@@ -271,6 +286,9 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Constant expression yield a value out of range for type '{0}'.")]
         ConstantValueOutOfRange = 1517,
+
+        [Description("Constant could not be resolved.")]
+        ConstantNotResolved = 1518,
         #endregion
     }
 

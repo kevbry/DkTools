@@ -2,9 +2,7 @@
 using DK.AppEnvironment;
 using DK.Implementation.Virtual;
 using DK.Repository;
-using DKX.Compilation.ObjectFiles;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Tests.Files;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
@@ -136,14 +134,7 @@ namespace DKX.Compilation.Tests
             app.FileSystem.WriteFileText(pathName, content);
         }
 
-        protected async Task SetupCompileSingle(string dkxPathName, string wbdkPathName,
-            string dkxSource, string wbdkCode, ReportItem? expectedError = null)
-        {
-            await SetupCompileSingle(dkxPathName, wbdkPathName, objPathName: null, dkxSource, wbdkCode, objectModel: null, expectedError);
-        }
-
-        protected async Task SetupCompileSingle(string dkxPathName, string wbdkPathName, string objPathName,
-            string dkxSource, string wbdkCode, ObjectFileModel objectModel, ReportItem? expectedError = null)
+        protected async Task<DkAppContext> SetupCompileSingle(string dkxPathName, string dkxSource, ReportItem? expectedError = null)
         {
             var app = CreateApp();
             SetupCompile(app);
@@ -157,8 +148,6 @@ namespace DKX.Compilation.Tests
             if (expectedError.HasValue) TestContext.Out.WriteLine($"Expected Error: {expectedError.ToString()}");
 
             TestContext.Out.WriteLine($"DKX Source:\n{dkxSource}");
-            if (app.FileSystem.FileExists(wbdkPathName)) TestContext.Out.WriteLine($"WBDK Code Generated:\n{await app.FileSystem.ReadFileTextAsync(wbdkPathName)}");
-            if (objPathName != null && app.FileSystem.FileExists(objPathName)) TestContext.Out.WriteLine($"Object Model Generated:\n{await app.FileSystem.ReadFileTextAsync(objPathName)}");
 
             if (expectedError.HasValue)
             {
@@ -166,24 +155,23 @@ namespace DKX.Compilation.Tests
 
                 var errorText = expectedError.Value.ToString();
                 Assert.IsTrue(compiler.ReportItems.Any(x => x.ToString().EqualsI(errorText)), "Compiler returned errors, but not the expected one.");
-
-                Assert.IsFalse(app.FileSystem.FileExists(wbdkPathName), "WBDK file was generated even though there were errors.");
-                return;
+                return app;
             }
             else
             {
                 Assert.IsFalse(compiler.HasErrors, "Compiler returned errors.");
             }
 
-            Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
-            WbdkCodeValidator.Validate(wbdkCode, await app.FileSystem.ReadFileTextAsync(wbdkPathName));
+            return app;
+        }
 
-            if (objPathName != null && objectModel != null)
-            {
-                Assert.IsTrue(app.FileSystem.FileExists(objPathName), "Object file was not created.");
-                var actualModel = JsonConvert.DeserializeObject<ObjectFileModel>(await app.FileSystem.ReadFileTextAsync(objPathName));
-                ObjectModelValidator.ValidateModel(objectModel, actualModel);
-            }
+        protected async Task ValidateOutput(DkAppContext app, string wbdkPathName, string wbdkCode)
+        {
+            Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
+
+            var actualWbdkCode = await app.FileSystem.ReadFileTextAsync(wbdkPathName);
+            TestContext.Out.WriteLine($"WBDK Code Generated: {wbdkPathName}\n{actualWbdkCode}");
+            WbdkCodeValidator.Validate(wbdkCode, actualWbdkCode);
         }
     }
 }

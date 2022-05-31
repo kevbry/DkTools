@@ -1,12 +1,10 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
-using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -14,7 +12,7 @@ namespace DKX.Compilation.Expressions
     {
         private Constant _constant;
 
-        public ConstantChain(Constant constant, CodeSpan span)
+        public ConstantChain(Constant constant, Span span)
             : base(span)
         {
             _constant = constant ?? throw new ArgumentNullException(nameof(constant));
@@ -26,16 +24,23 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => _constant.DataType;
 
-        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report) => Task.FromResult(_constant.Value.ToWbdkCode());
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        {
+            var value = _constant.ConstantValue;
+            if (value == null) throw new CodeException(Span, ErrorCode.ConstantNotResolved);
+            return value.ToWbdkCode();
+        }
 
-        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report)
         {
-            return Task.FromResult(_constant.Value);
+            var value = _constant.ConstantValue;
+            if (value != null) return new ConstValueTerm(value, Span);
+            return null;
         }
     }
 }

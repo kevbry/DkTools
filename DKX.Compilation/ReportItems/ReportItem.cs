@@ -1,105 +1,63 @@
 ﻿using DK;
-using DK.Code;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.ReportItems
 {
     public struct ReportItem
     {
         private string _pathName;
-        private int _startLine;
-        private int _startCh;
-        private int _endLine;
-        private int _endCh;
+        private Span _span;
         private ErrorCode _code;
         private object[] _args;
 
         public static readonly ReportItem[] EmptyArray = new ReportItem[0];
 
-        public ReportItem(string pathName, int startLine, int startCh, int endLine, int endCh, ErrorCode code, params object[] args)
+        public ReportItem(Span span, ErrorCode code, params object[] args)
         {
-            _pathName = pathName;
-            _startLine = startLine;
-            _startCh = startCh;
-            _endLine = endLine;
-            _endCh = endCh;
+            _pathName = span.PathName;
+            _span = span;
             _code = code;
             _args = args;
-        }
-
-        public ReportItem(string pathName, string source, CodeSpan span, ErrorCode code, params object[] args)
-        {
-            _pathName = pathName;
-            _code = code;
-            _args = args;
-
-            if (span.Start > source.Length)
-            {
-                _startLine = -1;
-                _startCh = -1;
-                _endLine = -1;
-                _endCh = -1;
-            }
-            else
-            {
-                StringHelper.CalcLineAndPosFromOffset(source, span.Start, out _startLine, out _startCh);
-                if (span.End > source.Length)
-                {
-                    _endLine = _startLine;
-                    _endCh = _startCh;
-                }
-                else
-                {
-                    StringHelper.CalcLineAndPosFromOffset(source, span.End, out _endLine, out _endCh);
-                }
-            }
-        }
-
-        public ReportItem(string pathName, string source, int pos, ErrorCode code, params object[] args)
-        {
-            _pathName = pathName;
-            _code = code;
-            _args = args;
-
-            if (pos > source.Length)
-            {
-                _startLine = -1;
-                _startCh = -1;
-                _endLine = -1;
-                _endCh = -1;
-            }
-            else
-            {
-                StringHelper.CalcLineAndPosFromOffset(source, pos, out _startLine, out _startCh);
-                _endLine = _startLine;
-                _endCh = _startCh;
-            }
         }
 
         public ErrorCode Code => _code;
         public string PathName => _pathName;
         public ErrorSeverity Severity => _code.GetSeverity();
 
-        public override string ToString()
+        public async Task<string> ToDisplayStringAsync(SourceCodeCache sourceCodeCache)
         {
             var sb = new StringBuilder();
             if (!string.IsNullOrEmpty(_pathName))
             {
                 sb.Append(_pathName);
-                if (_startLine >= 0)
+
+                if (_span.Start != 0 || _span.End != 0)
                 {
-                    sb.Append('(');
-                    sb.Append(_startLine + 1);
-                    sb.Append(',');
-                    sb.Append(_startCh + 1);
-                    if (_endLine >= 0 && (_startLine != _endLine || _startCh != _endCh))
+                    var source = await sourceCodeCache.GetSourceCodeAsync(_pathName);
+                    if (source != null)
                     {
+                        int startLine = 0;
+                        int startPos = 0;
+                        if (_span.Start >= 0 && _span.Start <= source.Length) StringHelper.CalcLineAndPosFromOffset(source, _span.Start, out startLine, out startPos);
+
+                        sb.Append('(');
+                        sb.Append(startLine + 1);
                         sb.Append(',');
-                        sb.Append(_endLine + 1);
-                        sb.Append(',');
-                        sb.Append(_endCh + 1);
+                        sb.Append(startPos + 1);
+
+                        if (_span.End != _span.Start && _span.End >= 0 && _span.End <= source.Length)
+                        {
+                            StringHelper.CalcLineAndPosFromOffset(source, _span.End, out var endLine, out var endPos);
+
+                            sb.Append(',');
+                            sb.Append(endLine + 1);
+                            sb.Append(',');
+                            sb.Append(endPos + 1);
+                        }
+
+                        sb.Append(')');
                     }
-                    sb.Append(')');
                 }
                 sb.Append(": ");
             }
@@ -114,16 +72,6 @@ namespace DKX.Compilation.ReportItems
             else sb.Append(desc);
 
             return sb.ToString();
-        }
-
-        public static ReportItem FromOneBased(string pathName, int startLine, int startPos, int endLine, int endPos, ErrorCode errorCode, params object[] args)
-        {
-            return new ReportItem(pathName, startLine - 1, startPos - 1, endLine - 1, endPos - 1, errorCode, args);
-        }
-
-        public static ReportItem FromOneBased(string pathName, int startLine, int startPos, ErrorCode errorCode, params object[] args)
-        {
-            return new ReportItem(pathName, startLine - 1, startPos - 1, -1, -1, errorCode, args);
         }
     }
 

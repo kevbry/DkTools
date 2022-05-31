@@ -1,7 +1,7 @@
-﻿using DK.Code;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 
 namespace DKX.Compilation.Tokens
 {
@@ -71,6 +71,32 @@ namespace DKX.Compilation.Tokens
             return ret;
         }
 
+        public int FindStatementEnd(int startPosition)
+        {
+            var pos = startPosition;
+
+            while (pos < _tokens.Count)
+            {
+                switch (_tokens[pos].Type)
+                {
+                    case DkxTokenType.StatementEnd:
+                        return pos;
+                    case DkxTokenType.Invalid:
+                        switch (_tokens[pos].Char)
+                        {
+                            case ')':
+                            case '}':
+                            case ']':
+                                return -1;
+                        }
+                        break;
+                }
+                pos++;
+            }
+
+            return -1;
+        }
+
         public IEnumerable<DkxToken> GetUnused(TokenUseTracker used)
         {
             foreach (var token in _tokens)
@@ -99,11 +125,11 @@ namespace DKX.Compilation.Tokens
             yield return current;
         }
 
-        public CodeSpan Span
+        public Span Span
         {
             get
             {
-                if (_tokens.Count == 0) return CodeSpan.Empty;
+                if (_tokens.Count == 0) return Span.Empty;
 
                 var span = _tokens[0].Span;
                 for (int i = 1, ii = _tokens.Count; i < ii; i++) span = span.Envelope(_tokens[i].Span);

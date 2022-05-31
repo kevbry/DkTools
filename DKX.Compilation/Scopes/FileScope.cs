@@ -1,14 +1,13 @@
-﻿using DK;
-using DK.AppEnvironment;
-using DK.Code;
+﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
-using DKX.Compilation.ObjectFiles;
+using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
@@ -18,7 +17,7 @@ namespace DKX.Compilation.Scopes
         private string _sourcePathName;
         private DkxCodeParser _cp;
         private List<ReportItem> _reportItems = new List<ReportItem>();
-        private NamespaceScope _namespace;
+        private List<NamespaceScope> _namespaces = new List<NamespaceScope>();
         private ProcessingDepth _depth;
 
         public FileScope(string sourcePathName, DkxCodeParser codeParser, ProcessingDepth depth)
@@ -29,92 +28,127 @@ namespace DKX.Compilation.Scopes
             _depth = depth;
         }
 
+        public string DkxPathName => _sourcePathName;
+        public IEnumerable<NamespaceScope> Namespaces => _namespaces;
         public IEnumerable<ReportItem> ReportItems => _reportItems;
-        public NamespaceScope Namespace => _namespace;
 
-        public async Task ProcessFile(IExportsProvider exportsProvider)
+        public void ProcessFile(IProject project)
         {
             var fileTokens = _cp.ReadAll().Tokens;
-            var used = new TokenUseTracker();
+            var stream = new DkxTokenStream(fileTokens);
+            var resolver = new GlobalResolver(project, DkxConst.EmptyStringArray);
 
-            // TODO: In the future, will need to look for the 'using' statements at the top of the file.
-
-            var resolver = null as IResolver;
-
-            foreach (var nsIndex in fileTokens.FindIndices((t,i) =>
-                t.Type == DkxTokenType.Keyword && t.Text == DkxConst.Keywords.Namespace &&
-                fileTokens[i + 1].Type == DkxTokenType.Identifier &&
-                fileTokens[i + 2].Type == DkxTokenType.Scope))
+            while (!stream.EndOfStream)
             {
-                var keywordToken = fileTokens[nsIndex];
-                var nameToken = fileTokens[nsIndex + 1];
-                var scopeToken = fileTokens[nsIndex + 2];
-                used.Use(keywordToken, nameToken, scopeToken);
-
-                var expectedNamespaceName = PathUtil.GetFileNameWithoutExtension(_sourcePathName);
-                var namespaceName = nameToken.Text;
-                if (namespaceName.EqualsI(expectedNamespaceName))
+                var token = stream.Read();
+                if (token.IsKeyword(DkxConst.Keywords.Namespace))
                 {
-                    if (namespaceName.Length <= DkxConst.Namespaces.MaxNamespaceLength)
+                    var keywordToken = token;
+                    var namespaceNameSB = new StringBuilder();
+                    var gotErrors = false;
+
+                    while (true)
                     {
-                        if (_namespace == null)
+                        token = stream.Read();
+                        if (!token.IsIdentifier)
                         {
-                            _namespace = new NamespaceScope(this, namespaceName);
-                            resolver = new GlobalResolver(exportsProvider, new string[] { namespaceName });
+                            Report(token.Span, ErrorCode.ExpectedNamespaceName);
+                            gotErrors = true;
                         }
-                        await _namespace.ProcessTokens(scopeToken.Tokens, _depth, resolver);
+                        else
+                        {
+                            if (namespaceNameSB.Length > 0) namespaceNameSB.Append('.');
+                            namespaceNameSB.Append(token.Text);
+                        }
+
+                        token = stream.Peek();
+                        if (token.IsScope) break;
+
+                        stream.Position++;
+                        if (token.IsOperator(Expressions.Operator.Dot)) continue;
+                        Report(token.Span, ErrorCode.SyntaxError);
+                        gotErrors = true;
+                        break;
+                    }
+
+                    token = stream.Read();
+                    if (token.IsScope)
+                    {
+                        if (!gotErrors)
+                        {
+                            var bodyToken = token;
+                            var namespaceName = namespaceNameSB.ToString();
+
+                            var namespace_ = _namespaces.Where(x => x.Name == namespaceName).FirstOrDefault();
+                            if (namespace_ == null)
+                            {
+                                namespace_ = new NamespaceScope(this, namespaceName);
+                                _namespaces.Add(namespace_);
+                                resolver.AddUsingNamespace(namespaceName);
+                            }
+
+                            namespace_.ProcessTokens(namespaceName, bodyToken.Tokens, _depth, resolver);
+                        }
                     }
                     else
                     {
-                        await ReportAsync(nameToken.Span, ErrorCode.NamespaceNameTooLong, DkxConst.Namespaces.MaxNamespaceLength);
+                        Report(token.Span, ErrorCode.SyntaxError);
+                        break;
                     }
                 }
-                else
-                {
-                    await ReportAsync(nameToken.Span, ErrorCode.NamespaceNameMustMatchFileName, expectedNamespaceName);
-                }
-            }
-
-            if (_depth == ProcessingDepth.Full)
-            {
-                await ReportUnusedTokensAsync(fileTokens, used);
             }
         }
 
-        public override void OnReport(CodeSpan span, ErrorCode errorCode, params object[] args)
+        public override void OnReport(ReportItem reportItem)
         {
             if (_depth == ProcessingDepth.ExportsOnly) return;
-            _reportItems.Add(new ReportItems.ReportItem(_sourcePathName, _cp.Source, span, errorCode, args));
+            _reportItems.Add(reportItem);
         }
 
         public override bool HasErrors => _reportItems.Any(x => x.Severity == ErrorSeverity.Error);
 
-        public async Task<string> GenerateWbdkCodeAsync(FileContext fileContext)
+        public List<GeneratedCodeResult> GenerateWbdkCode(string targetPath)
         {
-            var cw = new CodeWriter();
-            await GenerateWbdkCodeAsync(cw);
-            return cw.Code;
-        }
+            var results = new List<GeneratedCodeResult>();
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
-        {
-            await _namespace?.GenerateWbdkCodeAsync(cw);
-        }
-
-        public ObjectFileModel CreateObjectModel()
-        {
-            return new ObjectFileModel
+            foreach (var ns in _namespaces)
             {
-                FileDependencies = null,    // TODO
-                TableDependencies = null,   // TODO
-                FileContexts = _namespace?.GetFileContexts().Select(x => new ObjectFileContext { Context = x }).ToArray() ?? ObjectFileContext.EmptyArray
-            };
+                results.AddRange(ns.GenerateWbdkCode(targetPath));
+            }
+
+            return results;
         }
+
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        {
+            // This will never be called for file scope.
+            throw new NotImplementedException();
+        }
+
+        public void ClearReportItems() => _reportItems.Clear();
+
+        public NamespaceScope GetNamespaceOrNull(string name) => _namespaces.Where(x => x.Name == name).FirstOrDefault();
     }
 
     public enum ProcessingDepth
     {
         ExportsOnly,
         Full
+    }
+
+    public struct GeneratedCodeResult
+    {
+        public string WbdkPathName { get; private set; }
+        public string Code { get; private set; }
+        public string FullClassName { get; private set; }
+        public string Namespace { get; private set; }
+
+        public GeneratedCodeResult(string wbdkPathName, string code, string fullClassName, string namespaceName)
+        {
+            WbdkPathName = wbdkPathName ?? throw new ArgumentNullException(nameof(wbdkPathName));
+            Code = code ?? throw new ArgumentNullException(nameof(code));
+            FullClassName = fullClassName ?? throw new ArgumentNullException(nameof(fullClassName));
+            Namespace = namespaceName ?? throw new ArgumentNullException(nameof(namespaceName));
+        }
     }
 }

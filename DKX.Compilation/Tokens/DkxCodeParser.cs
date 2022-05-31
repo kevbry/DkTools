@@ -1,5 +1,4 @@
-﻿using DK.Code;
-using DKX.Compilation.DataTypes;
+﻿using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using System;
 using System.Text;
@@ -9,13 +8,15 @@ namespace DKX.Compilation.Tokens
 {
     public class DkxCodeParser
     {
+        private string _pathName;
         private string _source;
         private int _pos;
         private int _len;
         private StringBuilder _sb = new StringBuilder();
 
-        public DkxCodeParser(string source)
+        public DkxCodeParser(string pathName, string source)
         {
+            _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
             _source = source ?? throw new ArgumentNullException(nameof(source));
             _pos = 0;
             _len = _source.Length;
@@ -69,7 +70,7 @@ namespace DKX.Compilation.Tokens
 
         public DkxToken ReadAll()
         {
-            var root = DkxToken.CreateScope(CodeSpan.Empty);
+            var root = DkxToken.CreateScope(new Span(_pathName, 0, 0));
             while (TryRead(out var token)) root.Add(token);
             return root;
         }
@@ -92,70 +93,70 @@ namespace DKX.Compilation.Tokens
             {
                 case '+':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignAdd, new CodeSpan(startPos, ++_pos));
-                    else if (_pos < _len && _source[_pos] == ch) tokenOut = DkxToken.CreateOperator(Operator.Increment, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Add, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignAdd, new Span(_pathName, startPos, ++_pos));
+                    else if (_pos < _len && _source[_pos] == ch) tokenOut = DkxToken.CreateOperator(Operator.Increment, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Add, new Span(_pathName, startPos, _pos));
                     return true;
                 case '-':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignSubtract, new CodeSpan(startPos, ++_pos));
-                    else if (_pos < _len && _source[_pos] == ch) tokenOut = DkxToken.CreateOperator(Operator.Decrement, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Subtract, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignSubtract, new Span(_pathName, startPos, ++_pos));
+                    else if (_pos < _len && _source[_pos] == ch) tokenOut = DkxToken.CreateOperator(Operator.Decrement, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Subtract, new Span(_pathName, startPos, _pos));
                     return true;
                 case '*':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignMultiply, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Multiply, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignMultiply, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Multiply, new Span(_pathName, startPos, _pos));
                     return true;
                 case '/':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignDivide, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Divide, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignDivide, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Divide, new Span(_pathName, startPos, _pos));
                     return true;
                 case '%':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignModulus, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Modulus, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.AssignModulus, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Modulus, new Span(_pathName, startPos, _pos));
                     return true;
                 case '=':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.Equal, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Assign, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.Equal, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Assign, new Span(_pathName, startPos, _pos));
                     return true;
                 case '!':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.NotEqual, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.Not, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.NotEqual, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.Not, new Span(_pathName, startPos, _pos));
                     return true;
                 case '<':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.LessEqual, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.LessThan, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.LessEqual, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.LessThan, new Span(_pathName, startPos, _pos));
                     return true;
                 case '>':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.GreaterEqual, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateOperator(Operator.GreaterThan, new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '=') tokenOut = DkxToken.CreateOperator(Operator.GreaterEqual, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateOperator(Operator.GreaterThan, new Span(_pathName, startPos, _pos));
                     return true;
                 case '.':
-                    tokenOut = DkxToken.CreateOperator(Operator.Dot, new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateOperator(Operator.Dot, new Span(_pathName, startPos, ++_pos));
                     return true;
                 case ',':
-                    tokenOut = DkxToken.CreateDelimiter(new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateDelimiter(new Span(_pathName, startPos, ++_pos));
                     return true;
                 case ';':
-                    tokenOut = DkxToken.CreateStatementEnd(new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateStatementEnd(new Span(_pathName, startPos, ++_pos));
                     return true;
                 case '(':
-                    tokenOut = DkxToken.CreateArguments(new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateArguments(new Span(_pathName, startPos, ++_pos));
                     ReadNestable(ref tokenOut, ')');
                     return true;
                 case '[':
-                    tokenOut = DkxToken.CreateArray(new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateArray(new Span(_pathName, startPos, ++_pos));
                     ReadNestable(ref tokenOut, ']');
                     return true;
                 case '{':
-                    tokenOut = DkxToken.CreateScope(new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateScope(new Span(_pathName, startPos, ++_pos));
                     ReadNestable(ref tokenOut, '}');
                     return true;
                 case '"':
@@ -167,23 +168,23 @@ namespace DKX.Compilation.Tokens
                 case '@':
                     _pos++;
                     if (_pos < _len && _source[_pos] == '"') ReadVerbatimString(out tokenOut);
-                    else tokenOut = DkxToken.CreateInvalid('@', new CodeSpan(startPos, _pos));
+                    else tokenOut = DkxToken.CreateInvalid('@', new Span(_pathName, startPos, _pos));
                     return true;
                 case '&':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '&') tokenOut = DkxToken.CreateOperator(Operator.And, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateInvalid('&', new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '&') tokenOut = DkxToken.CreateOperator(Operator.And, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateInvalid('&', new Span(_pathName, startPos, _pos));
                     return true;
                 case '|':
                     _pos++;
-                    if (_pos < _len && _source[_pos] == '|') tokenOut = DkxToken.CreateOperator(Operator.Or, new CodeSpan(startPos, ++_pos));
-                    else tokenOut = DkxToken.CreateInvalid('|', new CodeSpan(startPos, _pos));
+                    if (_pos < _len && _source[_pos] == '|') tokenOut = DkxToken.CreateOperator(Operator.Or, new Span(_pathName, startPos, ++_pos));
+                    else tokenOut = DkxToken.CreateInvalid('|', new Span(_pathName, startPos, _pos));
                     return true;
                 case '?':
-                    tokenOut = DkxToken.CreateOperator(Operator.Ternary1, new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateOperator(Operator.Ternary1, new Span(_pathName, startPos, ++_pos));
                     return true;
                 case ':':
-                    tokenOut = DkxToken.CreateOperator(Operator.Ternary2, new CodeSpan(startPos, ++_pos));
+                    tokenOut = DkxToken.CreateOperator(Operator.Ternary2, new Span(_pathName, startPos, ++_pos));
                     return true;
 
                 default:
@@ -197,7 +198,7 @@ namespace DKX.Compilation.Tokens
                         }
 
                         var word = _sb.ToString();
-                        var wordSpan = new CodeSpan(startPos, _pos);
+                        var wordSpan = new Span(_pathName, startPos, _pos);
 
                         switch (word)
                         {
@@ -258,7 +259,7 @@ namespace DKX.Compilation.Tokens
                         return true;
                     }
 
-                    tokenOut = DkxToken.CreateInvalid(ch, new CodeSpan(_pos, ++_pos));
+                    tokenOut = DkxToken.CreateInvalid(ch, new Span(_pathName, _pos, ++_pos));
                     return true;
             }
         }
@@ -317,7 +318,7 @@ namespace DKX.Compilation.Tokens
                 else if (value >= 0 && value <= uint.MaxValue) dataType = DataType.UInt;
                 else dataType = new DataType(value >= 0 ? BaseType.UNumeric : BaseType.Numeric, width: width, scale: 0);
 
-                tokenOut = DkxToken.CreateNumber(value, dataType, new CodeSpan(startPos, _pos));
+                tokenOut = DkxToken.CreateNumber(value, dataType, new Span(_pathName, startPos, _pos));
             }
             else
             {
@@ -353,7 +354,7 @@ namespace DKX.Compilation.Tokens
 
                 value = decimal.Parse(_sb.ToString());
                 var dataType = ReadNumericSuffix(value, width, scale);
-                tokenOut = DkxToken.CreateNumber(value, dataType, new CodeSpan(startPos, _pos));
+                tokenOut = DkxToken.CreateNumber(value, dataType, new Span(_pathName, startPos, _pos));
             }
         }
 
@@ -406,7 +407,7 @@ namespace DKX.Compilation.Tokens
             return new DataType(value >= 0 ? BaseType.UNumeric : BaseType.Numeric, width: (byte)width, scale: (byte)scale);
         }
 
-        private void ReadNumericDataType(BaseType baseType, CodeSpan keywordSpan, out DkxToken tokenOut)
+        private void ReadNumericDataType(BaseType baseType, Span keywordSpan, out DkxToken tokenOut)
         {
             // This method assumes the words 'numeric' or 'unsigned' have already been read from the stream.
 
@@ -433,7 +434,7 @@ namespace DKX.Compilation.Tokens
                     return;
                 }
 
-                tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: (byte)width, scale: (byte)scale), new CodeSpan(keywordSpan.Start, _pos), hasError: false);
+                tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: (byte)width, scale: (byte)scale), keywordSpan + _pos, hasError: false);
                 return;
             }
 
@@ -444,7 +445,7 @@ namespace DKX.Compilation.Tokens
                 return;
             }
 
-            tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: (byte)width), new CodeSpan(keywordSpan.Start, _pos), hasError: false);
+            tokenOut = DkxToken.CreateDataType(new DataType(baseType, width: (byte)width), keywordSpan + _pos, hasError: false);
         }
 
         private void ReadStringLiteral(out DkxToken tokenOut)
@@ -485,7 +486,7 @@ namespace DKX.Compilation.Tokens
 
             if (!closed) hasError = true;
 
-            tokenOut = DkxToken.CreateString(_sb.ToString(), new CodeSpan(startPos, _pos), hasError);
+            tokenOut = DkxToken.CreateString(_sb.ToString(), new Span(_pathName, startPos, _pos), hasError);
         }
 
         private void ReadVerbatimString(out DkxToken tokenOut)
@@ -521,7 +522,7 @@ namespace DKX.Compilation.Tokens
                 }
             }
 
-            tokenOut = DkxToken.CreateString(_sb.ToString(), new CodeSpan(startPos, _pos), !closed);
+            tokenOut = DkxToken.CreateString(_sb.ToString(), new Span(_pathName, startPos, _pos), !closed);
         }
 
         private void ReadCharLiteral(out DkxToken tokenOut)
@@ -535,7 +536,7 @@ namespace DKX.Compilation.Tokens
             // Read the character
             if (_pos >= _len)
             {
-                tokenOut = DkxToken.CreateChar(default, new CodeSpan(startPos, _pos), hasError: true);
+                tokenOut = DkxToken.CreateChar(default, new Span(_pathName, startPos, _pos), hasError: true);
                 return;
             }
 
@@ -565,7 +566,7 @@ namespace DKX.Compilation.Tokens
                 {
                     // Closed cleanly
                     _pos++;
-                    tokenOut = DkxToken.CreateChar(ch, new CodeSpan(startPos, _pos), hasError);
+                    tokenOut = DkxToken.CreateChar(ch, new Span(_pathName, startPos, _pos), hasError);
                     return;
                 }
 
@@ -577,7 +578,7 @@ namespace DKX.Compilation.Tokens
                     {
                         case '\'':
                             _pos++;
-                            tokenOut = DkxToken.CreateChar(ch, new CodeSpan(startPos, _pos), true);
+                            tokenOut = DkxToken.CreateChar(ch, new Span(_pathName, startPos, _pos), true);
                             return;
                         case '\\':
                             _pos++;
@@ -585,7 +586,7 @@ namespace DKX.Compilation.Tokens
                             break;
                         case '\r':
                         case '\n':
-                            tokenOut = DkxToken.CreateChar(ch, new CodeSpan(startPos, _pos), true);
+                            tokenOut = DkxToken.CreateChar(ch, new Span(_pathName, startPos, _pos), true);
                             return;
                         default:
                             _pos++;
@@ -594,7 +595,7 @@ namespace DKX.Compilation.Tokens
                 }
             }
 
-            tokenOut = DkxToken.CreateChar(ch, new CodeSpan(startPos, _pos), true);
+            tokenOut = DkxToken.CreateChar(ch, new Span(_pathName, startPos, _pos), true);
         }
 
         private char UnescapeChar(ref bool hasError)
@@ -749,12 +750,12 @@ namespace DKX.Compilation.Tokens
         {
             if (string.IsNullOrEmpty(literalText) || !literalText.StartsWith("\"")) throw new ArgumentException("Text does not contain a string literal.");
 
-            var cp = new DkxCodeParser(literalText);
+            var cp = new DkxCodeParser(string.Empty, literalText);
             cp.ReadStringLiteral(out var token);
             return token.Text;
         }
 
-        private void ReadStringDataType(CodeSpan keywordSpan, out DkxToken tokenOut)
+        private void ReadStringDataType(Span keywordSpan, out DkxToken tokenOut)
         {
             if (!TryReadExact('(', allowWhiteSpace: true))
             {
@@ -777,7 +778,7 @@ namespace DKX.Compilation.Tokens
                 return;
             }
 
-            tokenOut = DkxToken.CreateDataType(new DataType(BaseType.String, width: (byte)width), new CodeSpan(keywordSpan.Start, _pos), hasError: false);
+            tokenOut = DkxToken.CreateDataType(new DataType(BaseType.String, width: (byte)width), keywordSpan + _pos, hasError: false);
         }
 
         private bool TryReadUint(out uint valueOut, uint minValue = uint.MinValue, uint maxValue = uint.MaxValue, bool allowWhiteSpace = true)

@@ -1,11 +1,9 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables;
-using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -14,7 +12,7 @@ namespace DKX.Compilation.Expressions
         private Variable _variable;
         private Chain _thisExpressionOrNull;
 
-        public VariableChain(Variable variable, CodeSpan span, Chain thisExpressionOrNull)
+        public VariableChain(Variable variable, Span span, Chain thisExpressionOrNull)
             : base(span)
         {
             _variable = variable ?? throw new ArgumentNullException(nameof(variable));
@@ -32,7 +30,7 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => _variable.DataType;
 
-        public override async Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
             if (_variable.Static || _variable.Local)
             {
@@ -43,16 +41,16 @@ namespace DKX.Compilation.Expressions
                 if (_thisExpressionOrNull == null) throw new InvalidOperationException("No object reference expression exists for a non-static variable.");
 
                 return Objects.ObjectAccess.GenerateMemberVariableGetter(
-                    thisFragment: await _thisExpressionOrNull.ToWbdkCode_ReadAsync(report),
+                    thisFragment: _thisExpressionOrNull.ToWbdkCode_Read(context),
                     varOffset: _variable.Offset,
                     varDataType: _variable.DataType,
                     span: Span);
             }
         }
 
-        public override async Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
-            await Conversions.ConversionValidator.CheckConversionAsync(_variable.DataType, valueFragment, report);
+            Conversions.ConversionValidator.CheckConversion(_variable.DataType, valueFragment, context.Report);
 
             if (_variable.Static || _variable.Local)
             {
@@ -63,7 +61,7 @@ namespace DKX.Compilation.Expressions
                 if (_thisExpressionOrNull == null) throw new InvalidOperationException("No object reference expression exists for a non-static variable.");
 
                 return Objects.ObjectAccess.GenerateMemberVariableSetter(
-                    thisFragment: await _thisExpressionOrNull.ToWbdkCode_ReadAsync(report),
+                    thisFragment: _thisExpressionOrNull.ToWbdkCode_Read(context),
                     varOffset: _variable.Offset,
                     varDataType: _variable.DataType,
                     span: Span,
@@ -71,6 +69,6 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull) => Task.FromResult<ConstantValue>(null);
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;
     }
 }

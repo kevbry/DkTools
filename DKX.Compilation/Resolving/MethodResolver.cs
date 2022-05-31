@@ -2,7 +2,6 @@
 using DKX.Compilation.Scopes;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Resolving
 {
@@ -17,10 +16,12 @@ namespace DKX.Compilation.Resolving
             _classResolver = classResolver ?? throw new ArgumentNullException(nameof(classResolver));
         }
 
-        public async Task<IClass> ResolveClassAsync(string className) => await _classResolver.ResolveClassAsync(className);
+        public IClass ResolveClass(string className) => _classResolver.ResolveClass(className);
 
-        public async Task<IEnumerable<IMethod>> GetMethods(DataType dataType, string name) => await _classResolver.GetMethods(dataType, name);
+        public IClass GetClassByFullNameOrNull(string fullClassName) => _classResolver.GetClassByFullNameOrNull(fullClassName);
 
-        public async Task<IEnumerable<IField>> GetFields(DataType dataType, string name) => await _classResolver.GetFields(dataType, name);
+        public IEnumerable<IMethod> GetMethods(DataType dataType, string name) => _classResolver.GetMethods(dataType, name);
+
+        public IEnumerable<IField> GetFields(DataType dataType, string name) => _classResolver.GetFields(dataType, name);
     }
 }

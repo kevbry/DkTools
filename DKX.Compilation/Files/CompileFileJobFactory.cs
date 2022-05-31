@@ -1,7 +1,7 @@
 ﻿using DK.AppEnvironment;
 using DKX.Compilation.Jobs;
+using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Resolving;
 using System;
 
 namespace DKX.Compilation.Files
@@ -11,19 +11,19 @@ namespace DKX.Compilation.Files
         private DkAppContext _app;
         private IReportItemCollector _reportCollector;
         private string _targetPath;
-        private IExportsProvider _exportsProvider;
+        private IProject _project;
 
-        public CompileFileJobFactory(DkAppContext app, IReportItemCollector reportCollector, string targetPath, IExportsProvider exportsProvider)
+        public CompileFileJobFactory(DkAppContext app, IReportItemCollector reportCollector, string targetPath, IProject project)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
             _targetPath = targetPath ?? throw new ArgumentNullException(nameof(targetPath));
-            _exportsProvider = exportsProvider ?? throw new ArgumentNullException(nameof(exportsProvider));
+            _project = project ?? throw new ArgumentNullException(nameof(project));
         }
 
-        public ICompileJob CreateCompileFileJob(string dkxPathName, string relPath, string objPathName)
+        public ICompileJob CreateCompileFileJob(string dkxPathName)
         {
-            return new CompileFileJob(_app, dkxPathName, relPath, objPathName, _targetPath, _reportCollector, _exportsProvider);
+            return new CompileFileJob(_app, dkxPathName, _targetPath, _reportCollector, _project);
         }
     }
 }

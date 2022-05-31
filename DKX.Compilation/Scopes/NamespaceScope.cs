@@ -1,14 +1,15 @@
-﻿using DK.Code;
+﻿using DK.AppEnvironment;
+using DK.Code;
 using DKX.Compilation.CodeGeneration;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
-    class NamespaceScope : Scope, INamespaceExport, IClassNamingScope
+    class NamespaceScope : Scope, INamespace
     {
         private string _name;
         private Dictionary<string, ClassScope> _classes = new Dictionary<string, ClassScope>();
@@ -20,11 +21,10 @@ namespace DKX.Compilation.Scopes
         }
 
         public IEnumerable<ClassScope> Classes => _classes.Values;
-        public string FullClassName => _name;
-        public IEnumerable<string> FullClassNameParts => new string[] { _name };
         public string Name => _name;
+        public string NamespaceName => _name;
 
-        public async Task ProcessTokens(DkxTokenCollection tokens, ProcessingDepth depth, IResolver globalResolver)
+        public void ProcessTokens(string namespaceName, DkxTokenCollection tokens, ProcessingDepth depth, IResolver globalResolver)
         {
             var used = new TokenUseTracker();
             var namespaceResolver = new NamespaceResolver(this, globalResolver);
@@ -41,20 +41,20 @@ namespace DKX.Compilation.Scopes
 
                 var className = classNameToken.Text;
 
-                var modifiers = await Modifiers.ReadModifiersAsync(tokens, classIndex, used, this);
-                if (depth == ProcessingDepth.Full) await modifiers.CheckForClassAsync(this, classNameToken.Span);
+                var modifiers = Modifiers.ReadModifiers(tokens, classIndex, used, this);
+                if (depth == ProcessingDepth.Full) modifiers.CheckForClass(this, classNameToken.Span);
 
-                var class_ = new ClassScope(this, classNameToken.Text, modifiers);
+                var class_ = new ClassScope(this, namespaceName, classNameToken.Text, GetScope<FileScope>().DkxPathName, modifiers);
 
-                if (_classes.ContainsKey(className)) await ReportAsync(classNameToken.Span, ErrorCode.DuplicateClass, className);
+                if (_classes.ContainsKey(className)) Report(classNameToken.Span, ErrorCode.DuplicateClass, className);
                 else _classes[className] = class_;
 
-                await class_.ProcessTokensAsync(classScopeToken.Tokens, depth, namespaceResolver);
+                class_.ProcessTokens(classScopeToken.Tokens, depth, namespaceResolver);
             }
 
             if (depth == ProcessingDepth.Full)
             {
-                foreach (var badToken in tokens.GetUnused(used)) await ReportAsync(badToken.Span, ErrorCode.SyntaxError, badToken.ToString());
+                foreach (var badToken in tokens.GetUnused(used)) Report(badToken.Span, ErrorCode.SyntaxError, badToken.ToString());
             }
         }
 
@@ -71,15 +71,43 @@ namespace DKX.Compilation.Scopes
             return fileContexts;
         }
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+        public List<GeneratedCodeResult> GenerateWbdkCode(string targetPath)
         {
+            var results = new List<GeneratedCodeResult>();
+
+            var context = new CodeGenerationContext(this);
+
             foreach (var cls in _classes.Values)
             {
-                await cls.GenerateWbdkCodeAsync(cw);
+                foreach (var fileContext in cls.GetFileContexts())
+                {
+                    try
+                    {
+                        var cw = new CodeWriter();
+                        cls.GenerateWbdkCode(context, cw);
+
+                        var wbdkFileName = cls.WbdkClassName + fileContext.GetExtension();
+                        var wbdkPathName = PathUtil.CombinePath(targetPath, wbdkFileName);
+
+                        results.Add(new GeneratedCodeResult(wbdkPathName, cw.Code, cls.FullClassName, cls.NamespaceName));
+                    }
+                    catch (CodeException ex)
+                    {
+                        Report(ex.Span, ex.ErrorCode, ex.Arguments);
+                    }
+                }
             }
+
+            return results;
         }
 
-        IEnumerable<IClass> INamespaceExport.Classes => _classes.Values;
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        {
+            // This will never be called for namespaces.
+            throw new NotImplementedException();
+        }
+
+        IEnumerable<IClass> INamespace.Classes => _classes.Values;
 
         public ClassScope GetClass(string name)
         {
@@ -87,7 +115,7 @@ namespace DKX.Compilation.Scopes
             return null;
         }
 
-        IClass INamespaceExport.GetClass(string name)
+        IClass INamespace.GetClass(string name)
         {
             if (_classes.TryGetValue(name, out var class_)) return class_;
             return null;

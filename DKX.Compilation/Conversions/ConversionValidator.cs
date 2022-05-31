@@ -1,34 +1,48 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables.ConstantValues;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Conversions
 {
     static class ConversionValidator
     {
-        public static async Task CheckConversionAsync(DataType dstDataType, CodeFragment srcFragment, ISourceCodeReporter report)
+        public static void CheckConversion(DataType dstDataType, CodeFragment srcFragment, IReportItemCollector report)
         {
             switch (TestCompatibility(dstDataType, srcFragment.DataType, srcFragment.IsConstant ? srcFragment.Constant : null))
             {
                 case DataTypeCompatibility.Fail:
-                    await report.ReportAsync(srcFragment.SourceSpan, ErrorCode.DataTypeNotCompatible, srcFragment.DataType.ToString(), dstDataType.ToString());
+                    report.Report(srcFragment.SourceSpan, ErrorCode.DataTypeNotCompatible, srcFragment.DataType.ToString(), dstDataType.ToString());
                     break;
                 case DataTypeCompatibility.Warning:
-                    await report.ReportAsync(srcFragment.SourceSpan, ErrorCode.DataTypeLossOfDataWarning, srcFragment.DataType.ToString(), dstDataType.ToString());
+                    report.Report(srcFragment.SourceSpan, ErrorCode.DataTypeLossOfDataWarning, srcFragment.DataType.ToString(), dstDataType.ToString());
                     break;
                 case DataTypeCompatibility.ConstantOutOfRange:
-                    await report.ReportAsync(srcFragment.SourceSpan, ErrorCode.ConstantDoesNotFit, dstDataType.ToString());
+                    report.Report(srcFragment.SourceSpan, ErrorCode.ConstantDoesNotFit, dstDataType.ToString());
                     break;
             }
         }
 
-        public static DataTypeCompatibility TestCompatibility(DataType dstDataType, DataType srcDataType, ConstantValue srcConstant)
+        public static void CheckConversion(DataType dstDataType, ConstValue srcConst, IReportItemCollector report)
+        {
+            switch (TestCompatibility(dstDataType, srcConst.DataType, srcConst))
+            {
+                case DataTypeCompatibility.Fail:
+                    report.Report(srcConst.Span, ErrorCode.DataTypeNotCompatible, srcConst.DataType.ToString(), dstDataType.ToString());
+                    break;
+                case DataTypeCompatibility.Warning:
+                    report.Report(srcConst.Span, ErrorCode.DataTypeLossOfDataWarning, srcConst.DataType.ToString(), dstDataType.ToString());
+                    break;
+                case DataTypeCompatibility.ConstantOutOfRange:
+                    report.Report(srcConst.Span, ErrorCode.ConstantDoesNotFit, dstDataType.ToString());
+                    break;
+            }
+        }
+
+        public static DataTypeCompatibility TestCompatibility(DataType dstDataType, DataType srcDataType, ConstValue srcConstant)
         {
             if (dstDataType.IsVoid || dstDataType.IsUnsupported) return DataTypeCompatibility.Fail;
             if (srcDataType.IsVoid || srcDataType.IsUnsupported) return DataTypeCompatibility.Fail;
@@ -194,7 +208,7 @@ namespace DKX.Compilation.Conversions
                     if (srcConstant != null && srcConstant.IsNull) return DataTypeCompatibility.Good;
                     if (srcDataType.BaseType == BaseType.Class)
                     {
-                        if (srcDataType.Class.FullClassName == dstDataType.Class.FullClassName) return DataTypeCompatibility.Good;
+                        if (srcDataType.Options[0] == dstDataType.Options[0]) return DataTypeCompatibility.Good;
                     }
                     return DataTypeCompatibility.Fail;
 

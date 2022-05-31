@@ -20,7 +20,7 @@ namespace DKX.Compilation.Schema
         public string GetTableHash(string tableName)
         {
             var table = _app.Settings.Dict.GetTable(tableName);
-            if (table == null) throw new ArgumentOutOfRangeException(nameof(tableName));
+            if (table == null) return null;
 
             var tableSig = GetDkxSignature(table);
 

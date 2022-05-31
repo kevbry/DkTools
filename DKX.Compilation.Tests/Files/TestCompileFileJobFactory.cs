@@ -5,9 +5,9 @@ namespace DKX.Compilation.Tests.Files
 {
     class TestCompileFileJobFactory : ICompileFileJobFactory
     {
-        public ICompileJob CreateCompileFileJob(string dkxPathName, string relPath, string objPathName)
+        public ICompileJob CreateCompileFileJob(string dkxPathName)
         {
-            return new TestCompileFileJob(dkxPathName, objPathName);
+            return new TestCompileFileJob(dkxPathName);
         }
     }
 }

@@ -7,7 +7,6 @@ using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes.Statements
 {
@@ -16,7 +15,7 @@ namespace DKX.Compilation.Scopes.Statements
         private DataType _dataType;
         private List<InitializationStatement> _initializers;
 
-        private VariableDeclarationStatement(Scope parent, DataType dataType, CodeSpan dataTypeSpan)
+        private VariableDeclarationStatement(Scope parent, DataType dataType, Span dataTypeSpan)
             : base(parent, dataTypeSpan)
         {
             _dataType = dataType;
@@ -24,14 +23,14 @@ namespace DKX.Compilation.Scopes.Statements
 
         public override bool IsEmpty => _initializers == null;
 
-        public static async Task<VariableDeclarationStatement> ParseAsync(Scope parent, DataType dataType, CodeSpan dataTypeSpan, DkxTokenStream stream, IResolver resolver)
+        public static VariableDeclarationStatement Parse(Scope parent, DataType dataType, Span dataTypeSpan, DkxTokenStream stream, IResolver resolver)
         {
             var varDeclStmt = new VariableDeclarationStatement(parent, dataType, dataTypeSpan);
 
             var nameToken = stream.Read();
             if (!nameToken.IsIdentifier)
             {
-                await varDeclStmt.ReportAsync(nameToken.Span, ErrorCode.ExpectedVariableName);
+                varDeclStmt.Report(nameToken.Span, ErrorCode.ExpectedVariableName);
                 return varDeclStmt;
             }
 
@@ -40,14 +39,15 @@ namespace DKX.Compilation.Scopes.Statements
                 if (stream.Peek().IsOperator(Operator.Assign))
                 {
                     var assignToken = stream.Read();
-                    var initializerExp = await ExpressionParser.TryReadExpressionAsync(varDeclStmt, stream, resolver);
+                    var initializerExp = ExpressionParser.TryReadExpression(varDeclStmt, stream, resolver);
                     if (initializerExp == null)
                     {
-                        await varDeclStmt.ReportAsync(assignToken.Span, ErrorCode.ExpectedExpression);
+                        varDeclStmt.Report(assignToken.Span, ErrorCode.ExpectedExpression);
                     }
                     else
                     {
                         var variable = new Variable(
+                            class_: parent.GetScope<IClass>(),
                             name: nameToken.Text,
                             wbdkName: nameToken.Text,
                             dataType: dataType,
@@ -56,7 +56,8 @@ namespace DKX.Compilation.Scopes.Statements
                             static_: false,
                             local: true,
                             privacy: Privacy.Public,
-                            initializer: null);
+                            initializer: null,
+                            span: nameToken.Span);
 
                         varDeclStmt.GetScope<IVariableScope>().VariableStore.AddVariable(variable);
 
@@ -67,6 +68,7 @@ namespace DKX.Compilation.Scopes.Statements
                 else
                 {
                     var variable = new Variable(
+                        class_: parent.GetScope<IClass>(),
                         name: nameToken.Text,
                         wbdkName: nameToken.Text,
                         dataType: dataType,
@@ -75,7 +77,8 @@ namespace DKX.Compilation.Scopes.Statements
                         static_: false,
                         local: true,
                         privacy: Privacy.Public,
-                        initializer: null);
+                        initializer: null,
+                        span: nameToken.Span);
 
                     varDeclStmt.GetScope<IVariableScope>().VariableStore.AddVariable(variable);
                 }
@@ -85,13 +88,13 @@ namespace DKX.Compilation.Scopes.Statements
                 if (nextToken.IsDelimiter) continue;
 
                 stream.Position++;
-                await varDeclStmt.ReportAsync(nextToken.Span, ErrorCode.ExpectedToken, ';');
+                varDeclStmt.Report(nextToken.Span, ErrorCode.ExpectedToken, ';');
             }
 
             return varDeclStmt;
         }
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             if (_initializers == null) return;
 
@@ -99,8 +102,8 @@ namespace DKX.Compilation.Scopes.Statements
             {
                 cw.Write(stmt.Variable.WbdkName);
                 cw.Write(" = ");
-                var frag = await stmt.Initializer.ToWbdkCode_ReadAsync(this);
-                await ConversionValidator.CheckConversionAsync(_dataType, frag, this);
+                var frag = stmt.Initializer.ToWbdkCode_Read(context);
+                ConversionValidator.CheckConversion(_dataType, frag, this);
                 cw.Write(frag);
                 cw.Write(DkxConst.StatementEndToken);
                 cw.WriteLine();

@@ -51,24 +51,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Files\ObjectModelValidator.cs" />
     <Compile Include="WbdkCodeValidator.cs" />
-    <Compile Include="Code\CodeParsingTests.cs" />
-    <Compile Include="Code\TokenValidator.cs" />
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />
     <Compile Include="Files\TestCompileFileJob.cs" />
     <Compile Include="Files\TestCompileFileJobFactory.cs" />
     <Compile Include="Classes\ClassTests.cs" />
-    <Compile Include="StatementTests\ForStatementTests.cs" />
-    <Compile Include="StatementTests\IfStatementTests.cs" />
-    <Compile Include="StatementTests\VarStatementTests.cs" />
-    <Compile Include="StatementTests\WhileStatementTest.cs" />
-    <Compile Include="WbdkExports\ScanWbdExportFileJobTests.cs" />
-    <Compile Include="WbdkExports\ScanWbdkExportsJobTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Schema\TestTableHashProvider.cs" />
-    <Compile Include="WbdkExports\TestExportsFileReader.cs" />
     <Compile Include="TestJobQueue.cs" />
     <Compile Include="TestLogger.cs" />
   </ItemGroup>

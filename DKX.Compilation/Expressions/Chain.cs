@@ -1,30 +1,28 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Variables.ConstantValues;
-using System.Threading.Tasks;
+using DKX.Compilation.Variables.ConstTerms;
 
 namespace DKX.Compilation.Expressions
 {
-    public abstract class Chain
+    abstract class Chain
     {
         public abstract DataType DataType { get; }
         public abstract DataType InferredDataType { get; }
-        public abstract Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report);
-        public abstract Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report);
+        public abstract CodeFragment ToWbdkCode_Read(CodeGenerationContext context);
+        public abstract CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment);
         public abstract bool IsEmptyCode { get; }
-        public abstract Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull);
+        public abstract ConstTerm ToConstTermOrNull(IReportItemCollector reportOrNull);
 
         public static readonly Chain[] EmptyArray = new Chain[0];
 
-        private CodeSpan _span;
+        private Span _span;
 
-        public Chain(CodeSpan span)
+        public Chain(Span span)
         {
             _span = span;
         }
 
-        public CodeSpan Span => _span;
+        public Span Span => _span;
     }
 }

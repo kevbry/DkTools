@@ -1,5 +1,6 @@
 ﻿using DK;
 using NUnit.Framework;
+using System.Text;
 
 namespace DKX.Compilation.Tests
 {
@@ -14,10 +15,10 @@ namespace DKX.Compilation.Tests
             {
                 while (expIndex < expSource.Length && expSource[expIndex].IsWhiteSpace()) expIndex++;
                 while (actIndex < actSource.Length && actSource[actIndex].IsWhiteSpace()) actIndex++;
-                Assert.IsTrue(expIndex >= expSource.Length == actIndex >= actSource.Length, $"Expected and actual code ends differently.{StringDiff(expSource, expIndex, actSource, actIndex)}");
+                Assert.IsTrue(expIndex >= expSource.Length == actIndex >= actSource.Length, "Expected and actual code ends differently.{0}", StringDiff(expSource, expIndex, actSource, actIndex));
                 if (expIndex >= expSource.Length) break;
 
-                Assert.AreEqual(expSource[expIndex], actSource[actIndex], $"Characters differ.{StringDiff(expSource, expIndex, actSource, actIndex)}");
+                Assert.AreEqual(expSource[expIndex], actSource[actIndex], "Characters differ.{0}", StringDiff(expSource, expIndex, actSource, actIndex));
                 expIndex++;
                 actIndex++;
             }
@@ -25,7 +26,35 @@ namespace DKX.Compilation.Tests
 
         private static string StringDiff(string expSource, int expIndex, string actSource, int actIndex)
         {
-            return $"\nExpected: {expSource.Substring(0, expIndex + 1 <= expSource.Length ? expIndex + 1 : expSource.Length)}\nActual: {actSource.Substring(0, actIndex + 1 <= actSource.Length ? actIndex + 1 : actSource.Length)}";
+            return $"\nExpected: {BuildContext(expSource, expIndex)}\nActual: {BuildContext(actSource, actIndex)}";
+        }
+
+        private const int ContextLength = 50;
+
+        private static string BuildContext(string source, int errorIndex)
+        {
+            var sb = new StringBuilder();
+
+            if (errorIndex > source.Length) errorIndex = source.Length;
+
+            var start = errorIndex - ContextLength;
+            if (start < 0) start = 0;
+
+            sb.Append(source.Substring(start, errorIndex - start));
+            sb.Append(">>>>>");
+
+            if (errorIndex + 1 <= source.Length)
+            {
+                sb.Append(source[errorIndex]);
+                sb.Append("<<<<<");
+                errorIndex++;
+
+                var end = errorIndex + ContextLength;
+                if (end > source.Length) sb.Append(source.Substring(errorIndex));
+                else sb.Append(source.Substring(errorIndex, end - errorIndex));
+            }
+
+            return sb.ToString();
         }
     }
 }

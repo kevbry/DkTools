@@ -1,7 +1,6 @@
-﻿using DK.Code;
-using DKX.Compilation.ReportItems;
+﻿using DKX.Compilation.ReportItems;
 using System;
-using System.Threading.Tasks;
+using System.IO;
 
 namespace DKX.Compilation.Expressions
 {
@@ -104,6 +103,22 @@ namespace DKX.Compilation.Expressions
                     return OpPrec.Compare;
                 default:
                     throw new InvalidOperatorException();
+            }
+        }
+
+        public static bool IsLeftToRight(this Operator op)
+        {
+            switch (op)
+            {
+                case Operator.Assign:
+                case Operator.AssignAdd:
+                case Operator.AssignSubtract:
+                case Operator.AssignMultiply:
+                case Operator.AssignDivide:
+                case Operator.AssignModulus:
+                    return false;
+                default:
+                    return true;
             }
         }
 
@@ -217,7 +232,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public static async Task<decimal> GetMathResultAsync(this Operator op, decimal left, decimal right, ISourceCodeReporter reportOrNull, CodeSpan errorSpan)
+        public static decimal GetMathResult(this Operator op, decimal left, decimal right, IReportItemCollector reportOrNull, Span errorSpan)
         {
             switch (op)
             {
@@ -230,14 +245,14 @@ namespace DKX.Compilation.Expressions
                 case Operator.Divide:
                     if (right == 0)
                     {
-                        await reportOrNull?.ReportAsync(errorSpan, ErrorCode.DivideByZero);
+                        reportOrNull?.Report(errorSpan, ErrorCode.DivideByZero);
                         return 0;
                     }
                     return left / right;
                 case Operator.Modulus:
                     if (right == 0)
                     {
-                        await reportOrNull?.ReportAsync(errorSpan, ErrorCode.DivideByZero);
+                        reportOrNull?.Report(errorSpan, ErrorCode.DivideByZero);
                         return 0;
                     }
                     return left % right;
@@ -245,6 +260,18 @@ namespace DKX.Compilation.Expressions
                     throw new InvalidOperatorException();
             }
 
+        }
+
+        public static void Serialize(this Operator op, BinaryWriter bin)
+        {
+            bin.Write((byte)op);
+        }
+
+        public static Operator Deserialize(BinaryReader bin)
+        {
+            var value = bin.ReadByte();
+            if (!Enum.IsDefined(typeof(Operator), value)) throw new InvalidOperatorException();
+            return (Operator)value;
         }
     }
 

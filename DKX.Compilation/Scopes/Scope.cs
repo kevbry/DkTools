@@ -1,14 +1,13 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Tokens;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace DKX.Compilation.Scopes
 {
-    public abstract class Scope : ISourceCodeReporter
+    public abstract class Scope : IReportItemCollector
     {
-        internal abstract Task GenerateWbdkCodeAsync(CodeWriter cw);
+        internal abstract void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw);
 
         private Scope _parent;
 
@@ -21,21 +20,24 @@ namespace DKX.Compilation.Scopes
 
         public T GetScope<T>() where T : class => (this as T) ?? _parent?.GetScope<T>();
 
-        public virtual void OnReport(CodeSpan span, ErrorCode errorCode, params object[] args) => _parent.OnReport(span, errorCode, args);
+        public virtual void OnReport(ReportItem reportItem) => _parent.OnReport(reportItem);
 
         public virtual bool HasErrors => _parent.HasErrors;
 
-        public Task ReportAsync(CodeSpan span, ErrorCode code, params object[] args)
+        public void AddReportItem(ReportItem reportItem) => OnReport(reportItem);
+
+        public void AddReportItems(IEnumerable<ReportItem> reportItems)
         {
-            OnReport(span, code, args);
-            return Task.CompletedTask;
+            foreach (var reportItem in reportItems) OnReport(reportItem);
         }
 
-        protected async Task ReportUnusedTokensAsync(DkxTokenCollection tokens, TokenUseTracker used)
+        public void Report(Span span, ErrorCode code, params object[] args) => OnReport(new ReportItem(span, code, args));
+
+        protected void ReportUnusedTokens(DkxTokenCollection tokens, TokenUseTracker used)
         {
             foreach (var badToken in tokens.GetUnused(used))
             {
-                await ReportAsync(badToken.Span, ErrorCode.SyntaxError);
+                Report(badToken.Span, ErrorCode.SyntaxError);
             }
         }
     }

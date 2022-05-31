@@ -2,8 +2,10 @@
 using DK.Code;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.Variables.ConstantValues;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -15,7 +17,6 @@ namespace DKX.Compilation.DataTypes
         private byte _width;
         private byte _scale;
         private string _options;
-        private IClass _class;
 
         // General limits for width and scale
         public const byte MinWidth = 1;
@@ -31,7 +32,6 @@ namespace DKX.Compilation.DataTypes
             _width = 0;
             _scale = 0;
             _options = null;
-            _class = null;
         }
 
         public DataType(BaseType baseType, byte width = 0, byte scale = 0)
@@ -57,7 +57,6 @@ namespace DKX.Compilation.DataTypes
             _width = width;
             _scale = scale;
             _options = null;
-            _class = null;
         }
 
         public DataType(BaseType baseType, string[] options)
@@ -68,6 +67,9 @@ namespace DKX.Compilation.DataTypes
                 case BaseType.Enum:
                     if (options.Length == 0) throw new ArgumentException("Options list must contain at least 1 value.");
                     break;
+                case BaseType.Class:
+                    if (options.Length != 1) throw new ArgumentException("Options list must contain exactly 1 value.");
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(baseType));
             }
@@ -76,7 +78,6 @@ namespace DKX.Compilation.DataTypes
             _width = 0;
             _scale = 0;
             _options = StringListToOptions(options ?? throw new ArgumentNullException(nameof(options)));
-            _class = null;
         }
 
         public DataType(IClass class_)
@@ -84,12 +85,18 @@ namespace DKX.Compilation.DataTypes
             _baseType = BaseType.Class;
             _width = 0;
             _scale = 0;
-            _options = null;
-            _class = class_ ?? throw new ArgumentNullException(nameof(class_));
+            _options = class_.FullClassName;
+        }
+
+        private DataType(BaseType baseType, byte width, byte scale, string options)
+        {
+            _baseType = baseType;
+            _width = width;
+            _scale = scale;
+            _options = options;
         }
 
         public BaseType BaseType => _baseType;
-        public IClass Class => _class;
         public short Width => _width;
         public short Scale => _scale;
         public string[] Options => OptionsToStringList(_options ?? string.Empty);
@@ -182,7 +189,7 @@ namespace DKX.Compilation.DataTypes
                 case BaseType.Variant:
                     return "variant";
                 case BaseType.Class:
-                    return _class.FullClassName;
+                    return _options;
                 default:
                     throw new InvalidBaseTypeException(_baseType);
             }
@@ -528,6 +535,15 @@ namespace DKX.Compilation.DataTypes
 
             return sb.ToString();
         }
+
+        public string ClassName
+        {
+            get
+            {
+                if (_baseType != BaseType.Class) throw new InvalidOperationException("Data type is not a class.");
+                return _options;
+            }
+        }
         #endregion
 
         #region Capabilities
@@ -736,6 +752,64 @@ namespace DKX.Compilation.DataTypes
                     default:
                         return false;
                 }
+            }
+        }
+        #endregion
+
+        #region Binary Serialization
+        public void Serialize(BinaryWriter bin)
+        {
+            _baseType.Serialize(bin);
+            bin.Write(_width);
+            bin.Write(_scale);
+            bin.Write(_options != null);
+            if (_options != null) bin.Write(_options);
+        }
+
+        public static DataType Deserialize(BinaryReader bin)
+        {
+            var baseType = BaseTypeHelper.Deserialize(bin);
+            var width = bin.ReadByte();
+            var scale = bin.ReadByte();
+            var options = bin.ReadBoolean() ? bin.ReadString() : null;
+
+            return new DataType(baseType, width, scale, options);
+        }
+        #endregion
+
+        #region Constants
+        public ConstValue CreateDefaultConstValue(Span span)
+        {
+            switch (_baseType)
+            {
+                case BaseType.Bool:
+                    return new BoolConstValue(false, span);
+                case BaseType.Short:
+                case BaseType.UShort:
+                case BaseType.Int:
+                case BaseType.UInt:
+                case BaseType.Numeric:
+                case BaseType.UNumeric:
+                    return new NumberConstValue(0M, this, span);
+                case BaseType.Char:
+                    return new CharConstValue('\0', span);
+                case BaseType.String:
+                    return new StringConstValue(string.Empty, this, span);
+                case BaseType.Date:
+                    return new DateConstValue(DkDate.MinValue, span);
+                case BaseType.Time:
+                    return new TimeConstValue(DkTime.MinValue, span);
+                case BaseType.Class:
+                    return new NullConstValue(span);
+                case BaseType.Enum:
+                case BaseType.Table:
+                case BaseType.Indrel:
+                case BaseType.Variant:
+                case BaseType.Void:
+                case BaseType.Unsupported:
+                default:
+                    return new NullConstValue(span);
+
             }
         }
         #endregion

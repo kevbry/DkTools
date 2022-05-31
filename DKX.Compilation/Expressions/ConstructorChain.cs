@@ -7,6 +7,8 @@ using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,26 +19,35 @@ namespace DKX.Compilation.Expressions
     {
         private DataType _dataType;
         private List<Chain> _argExpressions;
+        private IClass _class;
 
-        private ConstructorChain(DataType dataType, CodeSpan span)
+        private ConstructorChain(DataType dataType, Span span, IClass class_)
             : base(span)
         {
             _dataType = dataType;
+            _class = class_ ?? throw new ArgumentNullException(nameof(class_));
         }
 
-        public static async Task<ConstructorChain> ParseAsync(
+        public static Chain Parse(
             Scope scope,
             DataType dataType,
-            CodeSpan newKeywordSpan,
-            CodeSpan dataTypeSpan,
+            Span newKeywordSpan,
+            Span dataTypeSpan,
             DkxTokenCollection argumentTokens,
             IResolver resolver)
         {
-            if (!dataType.IsSuitableForNew) await scope.ReportAsync(dataTypeSpan, ErrorCode.DataTypeCannotBeInstantiated);
+            if (dataType.BaseType != BaseType.Class) scope.Report(dataTypeSpan, ErrorCode.DataTypeCannotBeInstantiated);
+
+            var class_ = resolver.GetClassByFullNameOrNull(dataType.ClassName);
+            if (class_ == null)
+            {
+                scope.Report(dataTypeSpan, ErrorCode.ClassNotFound, dataType.ClassName);
+                return new ErrorChain(innerChainOrNull: null, dataTypeSpan);
+            }
 
             var span = newKeywordSpan.Envelope(dataTypeSpan);
             if (argumentTokens != null && argumentTokens.Any()) span = span.Envelope(argumentTokens.Span);
-            var ctor = new ConstructorChain(dataType, span);
+            var ctor = new ConstructorChain(dataType, span, class_);
 
             var argExpressions = new List<Chain>();
             if (argumentTokens.Count != 0)
@@ -44,14 +55,14 @@ namespace DKX.Compilation.Expressions
                 foreach (var argTokens in argumentTokens.SplitByType(DkxTokenType.Delimiter))
                 {
                     var argStream = argTokens.ToStream();
-                    var expression = await ExpressionParser.TryReadExpressionAsync(scope, argStream, resolver);
+                    var expression = ExpressionParser.TryReadExpression(scope, argStream, resolver);
                     if (expression == null)
                     {
-                        await scope.ReportAsync(dataTypeSpan, ErrorCode.ConstructorContainsEmptyArguments);
+                        scope.Report(dataTypeSpan, ErrorCode.ConstructorContainsEmptyArguments);
                     }
                     else if (!argStream.EndOfStream)
                     {
-                        await scope.ReportAsync(argStream.Read().Span, ErrorCode.SyntaxError);
+                        scope.Report(argStream.Read().Span, ErrorCode.SyntaxError);
                     }
                     else
                     {
@@ -68,21 +79,21 @@ namespace DKX.Compilation.Expressions
         public override DataType InferredDataType => _dataType;
         public override bool IsEmptyCode => false;
 
-        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }
 
-        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            return Task.FromResult(new CodeFragment(
-                text: $"{DkxConst.DkxLib.dkx_new}({_dataType.Class.DataSize})",
+            return new CodeFragment(
+                text: $"{DkxConst.DkxLib.dkx_new}({_class.DataSize})",
                 dataType: _dataType,
                 precedence: OpPrec.None,
-                sourceSpan: Span,
-                readOnly: true));
+                span: Span,
+                readOnly: true);
         }
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull) => Task.FromResult<ConstantValue>(null);
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;
     }
 }

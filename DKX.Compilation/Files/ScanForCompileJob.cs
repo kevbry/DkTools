@@ -1,7 +1,8 @@
-﻿using DK.AppEnvironment;
+﻿using DK;
+using DK.AppEnvironment;
 using DK.Diagnostics;
 using DKX.Compilation.Jobs;
-using DKX.Compilation.ObjectFiles;
+using DKX.Compilation.Project;
 using DKX.Compilation.Schema;
 using System;
 using System.Collections.Generic;
@@ -14,30 +15,24 @@ namespace DKX.Compilation.Files
     public class ScanForCompileJob : ICompileJob
     {
         private DkAppContext _app;
-        private string _objectDir;
-        private string _targetSourceDir;
         private ICompileJobQueue _compileQueue;
         private ICompileFileJobFactory _compileFileJobFactory;
         private ITableHashProvider _tableHashProvider;
-        private IObjectFileReaderFactory _objectFileReaderFactory;
+        private IProject _project;
         private Dictionary<string, DateTime> _dateCache = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
         public ScanForCompileJob(
             DkAppContext app,
-            string objectDir,
-            string targetSourceDir,
             ICompileJobQueue compileQueue,
             ICompileFileJobFactory compileFileJobFactory,
             ITableHashProvider tableHashProvider,
-            IObjectFileReaderFactory objectFileReaderFactory)
+            IProject project)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
-            _objectDir = objectDir ?? throw new ArgumentNullException(nameof(objectDir));
-            _targetSourceDir = targetSourceDir ?? throw new ArgumentNullException(nameof(targetSourceDir));
             _compileQueue = compileQueue ?? throw new ArgumentNullException(nameof(compileQueue));
             _compileFileJobFactory = compileFileJobFactory ?? throw new ArgumentNullException(nameof(compileFileJobFactory));
             _tableHashProvider = tableHashProvider ?? throw new ArgumentNullException(nameof(tableHashProvider));
-            _objectFileReaderFactory = objectFileReaderFactory ?? throw new ArgumentNullException(nameof(objectFileReaderFactory));
+            _project = project ?? throw new ArgumentNullException(nameof(project));
         }
 
         public string Description => "Scan DKX Compiles";
@@ -46,129 +41,74 @@ namespace DKX.Compilation.Files
         {
             await _app.Log.DebugAsync("Scanning for compiles");
 
-            var allDkxFiles = ScanForDkxFiles().ToList();
-            var allExportFiles = _app.FileSystem.GetFilesInDirectoryRecursive(_objectDir, "*" + DkxConst.DkxObjectExtension).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var allDkxFiles = FindAllDkxFiles();
 
-            // Process all the known DKX files.
-            foreach (var file in allDkxFiles)
+            foreach (var dkxPathName in allDkxFiles)
             {
-                if (await ShouldCompileFileAsync(file))
+                if (await ShouldCompileFileAsync(dkxPathName))
                 {
-                    var compileFileJob = _compileFileJobFactory.CreateCompileFileJob(file.DkxPathName, file.RelPath, file.ObjectPathName);
+                    var compileFileJob = _compileFileJobFactory.CreateCompileFileJob(dkxPathName);
                     await _compileQueue.EnqueueCompileJobAsync(compileFileJob);
                 }
-                allExportFiles.Remove(file.ObjectPathName);
-            }
-
-            // Everything left in allExportFiles will be just those where the DKX source file was deleted.
-            foreach (var exportPathName in allExportFiles)
-            {
-                await _app.Log.DebugAsync("DKX deletion detected; removing object file: {0}", exportPathName);
-                _app.FileSystem.DeleteFile(exportPathName);
             }
         }
 
-        private IEnumerable<ScanResultFile> ScanForDkxFiles()
+        private List<string> FindAllDkxFiles()
         {
-            var foundFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var files = new List<string>();
 
             foreach (var sourceDir in _app.Settings.SourceDirs)
             {
-                foreach (var result in ScanForDkxFiles(sourceDir, string.Empty))
+                if (string.IsNullOrEmpty(sourceDir)) continue;
+
+                foreach (var pathName in _app.FileSystem.GetFilesInDirectoryRecursive(sourceDir, "*" + DkxConst.DkxExtension))
                 {
-                    if (foundFiles.Contains(result.DkxPathName)) continue;
-                    foundFiles.Add(result.DkxPathName);
-                    yield return result;
+                    if (!files.Any(x => x.EqualsI(pathName))) files.Add(pathName);
                 }
             }
+
+            return files;
         }
 
-        private IEnumerable<ScanResultFile> ScanForDkxFiles(string sourceDir, string relPath)
+        private async Task<bool> ShouldCompileFileAsync(string dkxPathName)
         {
-            foreach (var dkxPathName in _app.FileSystem.GetFilesInDirectory(sourceDir, "*" + DkxConst.DkxExtension))
+            var projectTimeStamp = _project.GetCompileTimeStamp(dkxPathName);
+            var fileTimeStamp = GetFileDate(dkxPathName);
+
+            if (fileTimeStamp > projectTimeStamp)
             {
-                var objPathName = PathUtil.CombinePath(_objectDir, relPath, PathUtil.GetFileNameWithoutExtension(dkxPathName) + DkxConst.DkxObjectExtension);
-                yield return new ScanResultFile(dkxPathName, relPath, objPathName);
+                await _app.Log.DebugAsync("DKX file has changed: {0}", dkxPathName);
+                return true;
             }
 
-            foreach (var path in _app.FileSystem.GetDirectoriesInDirectory(sourceDir))
+            foreach (var depPathName in  _project.GetFileDependencies(dkxPathName))
             {
-                foreach (var result in ScanForDkxFiles(path, PathUtil.CombinePath(relPath, PathUtil.GetFileName(path))))
+                if (_app.FileSystem.FileExists(depPathName))
                 {
-                    yield return result;
+                    var depTimeStamp = GetFileDate(dkxPathName);
+                    if (depTimeStamp > projectTimeStamp)
+                    {
+                        await _app.Log.DebugAsync("DKX file dependency has changed: {0} ({1})", dkxPathName, depPathName);
+                        return true;
+                    }
                 }
-            }
-        }
-
-        private struct ScanResultFile
-        {
-            public string DkxPathName { get; private set; }
-            public string RelPath { get; private set; }
-            public string ObjectPathName { get; private set; }
-
-            public ScanResultFile(string dkxPathName, string relPath, string objectPathName)
-            {
-                DkxPathName = dkxPathName;
-                RelPath = relPath;
-                ObjectPathName = objectPathName;
-            }
-        }
-
-        private async Task<bool> ShouldCompileFileAsync(ScanResultFile file)
-        {
-            // Check if the file is newer than any existing WBDK file.
-            if (_app.FileSystem.FileExists(file.ObjectPathName))
-            {
-                var dkxDate = GetFileDate(file.DkxPathName);
-                var objectDate = GetFileDate(file.ObjectPathName);
-                if (dkxDate > objectDate)
+                else
                 {
-                    await _app.Log.DebugAsync("DKX file is newer than the object file: {0}", file.DkxPathName);
+                    await _app.Log.DebugAsync("DKX file dependency has been deleted: {0} ({1})", dkxPathName, depPathName);
                     return true;
                 }
-
-                // Check file dependencies
-                var objectFileReader = _objectFileReaderFactory.CreateObjectFileReader(file.ObjectPathName);
-                foreach (var fileDep in await objectFileReader.GetFileDependenciesAsync())
-                {
-                    if (_app.FileSystem.FileExists(fileDep))
-                    {
-                        var depDate = GetFileDate(fileDep);
-                        if (dkxDate > depDate)
-                        {
-                            await _app.Log.DebugAsync("DKX file is newer than a file dependency: {0}, {1}", file.DkxPathName, fileDep);
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        await _app.Log.DebugAsync("DKX file is dependent on deleted file: {0}, {1}", file.DkxPathName, fileDep);
-                        return true;
-                    }
-                }
-
-                // Check table dependencies
-                foreach (var tableDep in await objectFileReader.GetTableDependenciesAsync())
-                {
-                    if (_app.Settings.Dict.IsTable(tableDep.Key))
-                    {
-                        if (tableDep.Value != _tableHashProvider.GetTableHash(tableDep.Key))
-                        {
-                            await _app.Log.DebugAsync("DKX file is dependent on changed table '{1}': {0}", file.DkxPathName, tableDep.Key);
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        await _app.Log.DebugAsync("DKX file is dependent on deleted table '{1}': {0}", file.DkxPathName, tableDep.Key);
-                        return true;
-                    }
-                }
             }
-            else
+
+            foreach (var tableDep in _project.GetTableDependencies(dkxPathName))
             {
-                await _app.Log.DebugAsync("Exports file does not yet exist: {0}", file.DkxPathName);
-                return true;
+                var tableName = tableDep.TableName;
+                var projectHash = tableDep.Hash;
+                var currentHash = _tableHashProvider.GetTableHash(tableName);
+                if (projectHash != currentHash)
+                {
+                    await _app.Log.DebugAsync("DKX table dependency has changed: {0} ({1})", dkxPathName, tableName);
+                    return true;
+                }
             }
 
             return false;

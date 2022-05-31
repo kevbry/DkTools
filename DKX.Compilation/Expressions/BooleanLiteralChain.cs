@@ -1,10 +1,9 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables.ConstantValues;
-using System.Threading.Tasks;
+using DKX.Compilation.Variables.ConstTerms;
 
 namespace DKX.Compilation.Expressions
 {
@@ -12,7 +11,7 @@ namespace DKX.Compilation.Expressions
     {
         private bool _value;
 
-        public BooleanLiteralChain(bool value, CodeSpan span)
+        public BooleanLiteralChain(bool value, Span span)
             : base(span)
         {
             _value = value;
@@ -24,19 +23,19 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => DataType.Bool;
 
-        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            return Task.FromResult(new CodeFragment(_value ? "1" : "0", DataType.Bool, OpPrec.None, Span, readOnly: true));
+            return new CodeFragment(_value ? "1" : "0", DataType.Bool, OpPrec.None, Span, readOnly: true);
         }
 
-        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report)
         {
-            return Task.FromResult<ConstantValue>(new BoolConstantValue(_value, Span));
+            return new ConstValueTerm(new BoolConstValue(_value, Span), Span);
         }
     }
 }

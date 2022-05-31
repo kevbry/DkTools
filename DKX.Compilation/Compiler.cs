@@ -1,13 +1,15 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
 using DKX.Compilation.Files;
-using DKX.Compilation.ObjectFiles;
+using DKX.Compilation.PreScanning;
+using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Resolving;
 using DKX.Compilation.Schema;
+using Force.Crc32;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,26 +34,68 @@ namespace DKX.Compilation
         {
             await DetermineWorkDirAsync();
 
-            // Scan for DKX files to be compiled.
-            var exportsProvider = new ExportsProvider(_app);
-            var tableHashProvider = new TableHashProvider(_app);
-            var queue = new CompileQueue(_app, "DKX Compilation Queue");
-            await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
-                app: _app,
-                objectDir: _objectDir,
-                targetSourceDir: _targetSourceDir,
-                compileQueue: queue,
-                compileFileJobFactory: new CompileFileJobFactory(_app, queue, _targetSourceDir, exportsProvider),
-                tableHashProvider: tableHashProvider,
-                objectFileReaderFactory: new ObjectFileReaderFactory(_app)));
+            var projectPathName = PathUtil.CombinePath(_objectDir, DkxConst.ProjectFileName);
+            var project = await DkxProject.CreateAsync(_app, projectPathName);
 
-            await queue.ProcessQueueToCompletionAsync(cancel);
-
-            ImportReportItems(queue.ReportItems);
-            if (HasErrors)
+            try
             {
-                await ReportAsync();
-                return;
+                //// Scan legacy files for exports
+                //await _app.Log.InfoAsync("Checking WBDK exports");
+                //var queue = new CompileQueue(_app, "WBDK Exports Scan Queue");
+                //var tableHashProvider = new TableHashProvider(_app);
+                //await queue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, queue, _objectDir,
+                //    new WbdkExportsFileReaderFactory(_app),
+                //    tableHashProvider));
+
+                //await queue.ProcessQueueToCompletionAsync(cancel);
+
+                //ImportReportItems(queue.ReportItems);
+                //if (HasErrors)
+                //{
+                //    await ReportAsync();
+                //    return;
+                //}
+
+                // Scan DKX files for exports.
+                var queue = new CompileQueue(_app, "DKX Pre-Scan Queue");
+                project.OnPreScanStarted();
+                await queue.EnqueueCompileJobAsync(new PreScanJob(
+                    app: _app,
+                    project: project,
+                    queue: queue));
+
+                await queue.ProcessQueueToCompletionAsync(cancel);
+                project.OnPreScanCompleted(queue);
+
+                ImportReportItems(queue.ReportItems);
+                if (HasErrors)
+                {
+                    await ReportAsync();
+                    return;
+                }
+
+                // Scan for DKX files to be compiled.
+                queue = new CompileQueue(_app, "DKX Compilation Queue");
+                var tableHashProvider = new TableHashProvider(_app);
+                await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
+                    app: _app,
+                    compileQueue: queue,
+                    compileFileJobFactory: new CompileFileJobFactory(_app, queue, _targetSourceDir, project),
+                    tableHashProvider: tableHashProvider,
+                    project: project));
+
+                await queue.ProcessQueueToCompletionAsync(cancel);
+
+                ImportReportItems(queue.ReportItems);
+                if (HasErrors)
+                {
+                    await ReportAsync();
+                    return;
+                }
+            }
+            finally
+            {
+                await project.SaveAsync();
             }
         }
 
@@ -101,19 +145,25 @@ namespace DKX.Compilation
 
         public async Task ReportAsync()
         {
+            var sourceCodeCache = new SourceCodeCache(_app);
+
             foreach (var item in _reportItems)
             {
                 switch (item.Severity)
                 {
                     case ErrorSeverity.Error:
-                        await _app.Log.ErrorAsync(item.ToString());
+                        await _app.Log.ErrorAsync(await item.ToDisplayStringAsync(sourceCodeCache));
                         break;
                     case ErrorSeverity.Warning:
-                        await _app.Log.WarningAsync(item.ToString());
+                        await _app.Log.WarningAsync(await item.ToDisplayStringAsync(sourceCodeCache));
                         break;
                 }
             }
         }
+
+        public static uint ComputeHash(string data) => Crc32Algorithm.Compute(Encoding.UTF8.GetBytes(data));
+
+        public static string GetWbdkClassName(string fullClassName) => string.Concat(DkxConst.ClassHashPrefix, ComputeHash(fullClassName));
     }
 
     class InvalidAppSettingsException : Exception

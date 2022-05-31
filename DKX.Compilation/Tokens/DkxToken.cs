@@ -4,22 +4,24 @@ using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace DKX.Compilation.Tokens
 {
     public struct DkxToken
     {
         private DkxTokenType _type;
-        private CodeSpan _span;
+        private Span _span;
         private string _text;
         private decimal _number;
         private DataType _dataType;
         private bool _hasError;
         private DkxTokenCollection _tokens;
 
+        public static readonly DkxToken None = default;
         public static readonly DkxToken[] EmptyArray = new DkxToken[0];
 
-        private DkxToken(DkxTokenType type, CodeSpan span, string text, decimal number, DataType dataType, bool hasError)
+        private DkxToken(DkxTokenType type, Span span, string text, decimal number, DataType dataType, bool hasError)
         {
             _type = type;
             _span = span;
@@ -38,46 +40,46 @@ namespace DKX.Compilation.Tokens
         public bool IsBrackets => _type == DkxTokenType.Brackets;
         public bool IsChar => _type == DkxTokenType.Char;
         public bool IsDataType => _type == DkxTokenType.DataType;
-        public bool IsDefault => _type == DkxTokenType.None;
         public bool IsDelimiter => _type == DkxTokenType.Delimiter;
         public bool IsGroup => _type == DkxTokenType.Brackets || _type == DkxTokenType.Array || _type == DkxTokenType.Scope;
         public bool IsIdentifier => _type == DkxTokenType.Identifier;
+        public bool IsNone => _type == DkxTokenType.None;
         public bool IsNumber => _type == DkxTokenType.Number;
         public bool IsScope => _type == DkxTokenType.Scope;
         public bool IsStatementEnd => _type == DkxTokenType.StatementEnd;
         public bool IsString => _type == DkxTokenType.String;
         public int Position => _span.Start;
-        public CodeSpan Span => _span;
+        public Span Span => _span;
         public DkxTokenType Type => _type;
 
         public bool IsKeyword(string keyword) => _type == DkxTokenType.Keyword && _text == keyword;
         public bool IsOperator(Operator op) => _type == DkxTokenType.Operator && _number == (decimal)op;
 
-        public static DkxToken CreateIdentifier(string keyword, CodeSpan span) =>
+        public static DkxToken CreateIdentifier(string keyword, Span span) =>
             new DkxToken(DkxTokenType.Identifier, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
-        public static DkxToken CreateKeyword(string keyword, CodeSpan span) =>
+        public static DkxToken CreateKeyword(string keyword, Span span) =>
             new DkxToken(DkxTokenType.Keyword, span, keyword ?? throw new ArgumentNullException(nameof(keyword)), default, DataType.Void, hasError: false);
-        public static DkxToken CreateDataType(DataType dataType, CodeSpan span, bool hasError) =>
+        public static DkxToken CreateDataType(DataType dataType, Span span, bool hasError) =>
             new DkxToken(DkxTokenType.DataType, span, null, default, dataType, hasError);
-        public static DkxToken CreateNumber(decimal number, DataType dataType, CodeSpan span) =>
+        public static DkxToken CreateNumber(decimal number, DataType dataType, Span span) =>
             new DkxToken(DkxTokenType.Number, span, null, number, dataType, hasError: false);
-        public static DkxToken CreateString(string rawText, CodeSpan span, bool hasError) =>
+        public static DkxToken CreateString(string rawText, Span span, bool hasError) =>
             new DkxToken(DkxTokenType.String, span, rawText ?? throw new ArgumentNullException(nameof(rawText)), default, DataType.String255, hasError);
-        public static DkxToken CreateChar(char ch, CodeSpan span, bool hasError) =>
+        public static DkxToken CreateChar(char ch, Span span, bool hasError) =>
             new DkxToken(DkxTokenType.Char, span, null, ch, DataType.Char, hasError);
-        public static DkxToken CreateOperator(Operator op, CodeSpan span) =>
+        public static DkxToken CreateOperator(Operator op, Span span) =>
             new DkxToken(DkxTokenType.Operator, span, null, (decimal)op, DataType.Void, hasError: false);
-        public static DkxToken CreateDelimiter(CodeSpan span) =>
+        public static DkxToken CreateDelimiter(Span span) =>
             new DkxToken(DkxTokenType.Delimiter, span, null, default, DataType.Void, hasError: false);
-        public static DkxToken CreateStatementEnd(CodeSpan span) =>
+        public static DkxToken CreateStatementEnd(Span span) =>
             new DkxToken(DkxTokenType.StatementEnd, span, null, default, DataType.Void, hasError: false);
-        public static DkxToken CreateArguments(CodeSpan openSpan) =>
+        public static DkxToken CreateArguments(Span openSpan) =>
             new DkxToken(DkxTokenType.Brackets, openSpan, null, default, DataType.Void, hasError: false);
-        public static DkxToken CreateArray(CodeSpan openSpan) =>
+        public static DkxToken CreateArray(Span openSpan) =>
             new DkxToken(DkxTokenType.Array, openSpan, null, default, DataType.Void, hasError: false);
-        public static DkxToken CreateScope(CodeSpan openSpan) =>
+        public static DkxToken CreateScope(Span openSpan) =>
             new DkxToken(DkxTokenType.Scope, openSpan, null, default, DataType.Void, hasError: false);
-        public static DkxToken CreateInvalid(char ch, CodeSpan span) =>
+        public static DkxToken CreateInvalid(char ch, Span span) =>
             new DkxToken(DkxTokenType.Invalid, span, null, ch, DataType.Void, hasError: false);
 
         public decimal Number
@@ -99,7 +101,6 @@ namespace DKX.Compilation.Tokens
                 switch (_type)
                 {
                     case DkxTokenType.Keyword:
-                    case DkxTokenType.DataType:
                     case DkxTokenType.Identifier:
                     case DkxTokenType.String:
                         break;
@@ -147,7 +148,7 @@ namespace DKX.Compilation.Tokens
 #endif
             if (_tokens == null) _tokens = new DkxTokenCollection();
             _tokens.Add(token);
-            _span = _span.Envelope(token._span);
+            _span = _span + token._span;
         }
 
         public void AddRange(IEnumerable<DkxToken> tokens)
@@ -162,7 +163,7 @@ namespace DKX.Compilation.Tokens
             if (_number != 0) throw new InvalidOperationException("Token is already closed.");
 #endif
             _number = 1;
-            _span = new CodeSpan(_span.Start, endPosition);
+            _span = _span + endPosition;
         }
 
         public bool Closed
@@ -222,24 +223,57 @@ namespace DKX.Compilation.Tokens
                     throw new InvalidDkxTokenTypeException();
             }
         }
+
+        // TODO: remove
+        //public void Serialize(BinaryWriter bin)
+        //{
+        //    bin.Write((byte)_type);
+        //    _span.Serialize(bin);
+        //    bin.Write(_text != null);
+        //    if (_text != null) bin.Write(_text);
+        //    bin.Write(_number);
+        //    _dataType.Serialize(bin);
+        //    bin.Write(_hasError);
+        //    bin.Write(_tokens != null);
+        //    if (_tokens != null) _tokens.Serialize(bin);
+        //}
+
+        //public static DkxToken Deserialize(BinaryReader bin)
+        //{
+        //    var typeValue = bin.ReadByte();
+        //    if (!Enum.IsDefined(typeof(DkxTokenType), typeValue)) throw new InvalidBaseTypeException();
+        //    var type = (DkxTokenType)typeValue;
+
+        //    string text = null;
+        //    DkxTokenCollection tokens = null;
+
+        //    var span = Span.Deserialize(bin);
+        //    if (bin.ReadBoolean()) text = bin.ReadString();
+        //    var number = bin.ReadDecimal();
+        //    var dataType = DataType.Deserialize(bin);
+        //    var hasError = bin.ReadBoolean();
+        //    if (bin.ReadBoolean()) tokens = DkxTokenCollection.Deserialize(bin);
+
+        //    return new DkxToken(type, span, text, number, dataType, hasError) { _tokens = tokens };
+        //}
     }
 
     public enum DkxTokenType
     {
-        None,
-        Invalid,
-        Keyword,
-        DataType,
-        Identifier,
-        Number,
-        String,
-        Char,
-        Operator,
-        Delimiter,
-        StatementEnd,
-        Brackets,
-        Array,
-        Scope
+        None = 0,
+        Invalid = 1,
+        Keyword = 2,
+        DataType = 3,
+        Identifier = 4,
+        Number = 5,
+        String = 6,
+        Char = 7,
+        Operator = 8,
+        Delimiter = 9,
+        StatementEnd = 10,
+        Brackets = 16,
+        Array = 17,
+        Scope = 18
     }
 
     class InvalidDkxTokenTypeException : CompilerException { }

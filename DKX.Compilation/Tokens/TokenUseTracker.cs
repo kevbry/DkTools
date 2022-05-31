@@ -10,7 +10,7 @@ namespace DKX.Compilation.Tokens
         {
             foreach (var token in tokens)
             {
-                if (token.IsDefault) continue;
+                if (token.IsNone) continue;
                 if (!_indices.Contains(token.Position)) _indices.Add(token.Position);
             }
         }
@@ -19,7 +19,7 @@ namespace DKX.Compilation.Tokens
         {
             foreach (var token in tokens)
             {
-                if (token.IsDefault) continue;
+                if (token.IsNone) continue;
                 if (!_indices.Contains(token.Position)) _indices.Add(token.Position);
             }
         }

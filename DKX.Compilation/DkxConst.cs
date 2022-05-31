@@ -8,6 +8,8 @@ namespace DKX.Compilation
         public const string DkxExtension = ".dkx";
         public const string DkxObjectExtension = ".dkxx";
         public const string WbdkExportsExtension = ".wbdkx";
+        public const string ClassHashPrefix = "c";
+        public const string ProjectFileName = "dkx.dat";
 
         public static string[] EmptyStringArray = new string[0];
         public static char[] EmptyCharArray = new char[0];
@@ -19,7 +21,7 @@ namespace DKX.Compilation
 
         public static class Namespaces
         {
-            public const int MaxNamespaceLength = 12;
+            //public const int MaxNamespaceLength = 12;
         }
 
         public static class Properties
@@ -46,7 +48,7 @@ namespace DKX.Compilation
             public const int MaxWidth = 38;
             public const int MinWidth = 1;
             public const int MaxScale = 18;
-            public const int MinScale = 1;
+            public const int MinScale = 0;
 
             public const int MaxLiteralDigits = 28;
         }

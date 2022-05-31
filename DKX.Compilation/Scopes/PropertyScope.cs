@@ -1,24 +1,23 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
-using DKX.Compilation.Exceptions;
-using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes.Statements;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
+using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
-    public class PropertyScope : Scope, IField, IObjectReferenceScope
+    class PropertyScope : Scope, IField, IObjectReferenceScope
     {
-        private string _className;
+        private ClassScope _class;
         private string _name;
-        private CodeSpan _nameSpan;
+        private Span _nameSpan;
         private DataType _dataType;
         private bool _static;
         private Privacy _privacy;
@@ -27,15 +26,15 @@ namespace DKX.Compilation.Scopes
         private PropertyAccessorScope _setter;
 
         private PropertyScope(
-            Scope parent,
+            ClassScope class_,
             string className,
             string name,
-            CodeSpan nameSpan,
+            Span nameSpan,
             DataType dataType,
             Modifiers modifiers)
-            : base(parent)
+            : base(class_)
         {
-            _className = className ?? throw new ArgumentNullException(nameof(className));
+            _class = class_;
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _nameSpan = nameSpan;
             _dataType = dataType;
@@ -45,10 +44,17 @@ namespace DKX.Compilation.Scopes
             _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
         }
 
-        public string ClassName => _className;
+        public FieldAccessMethod AccessMethod => FieldAccessMethod.Property;
+        public ClassScope Class => _class;
+        IClass IField.Class => _class;
+        public string ClassName => _class.Name;
+        public ConstTerm ConstantExpression => null;
+        public ConstValue ConstantValue => null;
         public DataType DataType => _dataType;
+        public Span DefinitionSpan => _nameSpan;
         public bool IsConstant => false;
         public string Name => _name;
+        public uint Offset => default;
         public bool ReadOnly => _setter == null;
         public Privacy ReadPrivacy => _getter?.Privacy ?? Privacy.Private;
         public DataType ScopeDataType => Parent.GetScope<IObjectReferenceScope>().ScopeDataType;
@@ -56,27 +62,27 @@ namespace DKX.Compilation.Scopes
         public bool Static => _static;
         public Privacy WritePrivacy => _setter?.Privacy ?? Privacy.Private;
 
-        public static async Task<PropertyScope> ParseAsync(
-            Scope parent,
+        public static PropertyScope Parse(
+            ClassScope class_,
             string className,
             string name,
-            CodeSpan nameSpan,
+            Span nameSpan,
             DataType dataType,
             Modifiers modifiers,
             DkxTokenCollection bodyTokens,
             ProcessingDepth depth,
             IResolver resolver)
         {
-            var propertyScope = new PropertyScope(parent, className, name, nameSpan, dataType, modifiers);
+            var propertyScope = new PropertyScope(class_, className, name, nameSpan, dataType, modifiers);
 
-            await ParseAccessorsAsync(propertyScope, bodyTokens, depth, resolver, nameSpan);
+            ParseAccessors(propertyScope, bodyTokens, depth, resolver, nameSpan);
 
             return propertyScope;
         }
 
-        private static async Task ParseAccessorsAsync(PropertyScope propertyScope, DkxTokenCollection tokens, ProcessingDepth depth, IResolver resolver, CodeSpan nameSpan)
+        private static void ParseAccessors(PropertyScope propertyScope, DkxTokenCollection tokens, ProcessingDepth depth, IResolver resolver, Span nameSpan)
         {
-            if (!tokens.Any()) await propertyScope.ReportAsync(nameSpan, ErrorCode.PropertyHasNoGetterOrSetter);
+            if (!tokens.Any()) propertyScope.Report(nameSpan, ErrorCode.PropertyHasNoGetterOrSetter);
 
             var used = new TokenUseTracker();
 
@@ -90,13 +96,13 @@ namespace DKX.Compilation.Scopes
                     var bodyToken = tokens[index + 1];
                     used.Use(bodyToken);
 
-                    var modifiers = await Modifiers.ReadModifiersAsync(tokens, index, used, propertyScope);
-                    await modifiers.CheckForPropertyAccessorAsync(propertyScope, modifiers);
+                    var modifiers = Modifiers.ReadModifiers(tokens, index, used, propertyScope);
+                    modifiers.CheckForPropertyAccessor(propertyScope, modifiers);
 
                     if (keywordToken.IsKeyword(DkxConst.Keywords.Get))
                     {
-                        if (propertyScope._getter != null) await propertyScope.ReportAsync(keywordToken.Span, ErrorCode.DuplicatePropertyGetter);
-                        else propertyScope._getter = await PropertyAccessorScope.ParseAsync(
+                        if (propertyScope._getter != null) propertyScope.Report(keywordToken.Span, ErrorCode.DuplicatePropertyGetter);
+                        else propertyScope._getter = PropertyAccessorScope.Parse(
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Getter,
                             privacy: modifiers.Privacy ?? Privacy.Private,
@@ -105,8 +111,8 @@ namespace DKX.Compilation.Scopes
                     }
                     else
                     {
-                        if (propertyScope._setter != null) await propertyScope.ReportAsync(keywordToken.Span, ErrorCode.DuplicatePropertySetter);
-                        else propertyScope._setter = await PropertyAccessorScope.ParseAsync(
+                        if (propertyScope._setter != null) propertyScope.Report(keywordToken.Span, ErrorCode.DuplicatePropertySetter);
+                        else propertyScope._setter = PropertyAccessorScope.Parse(
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Setter,
                             privacy: modifiers.Privacy ?? Privacy.Private,
@@ -116,29 +122,15 @@ namespace DKX.Compilation.Scopes
                 }
             }
 
-            await propertyScope.ReportUnusedTokensAsync(tokens, used);
+            propertyScope.ReportUnusedTokens(tokens, used);
         }
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             if (_getter == null) throw new InvalidOperationException("Property has no getter.");
 
-            await _getter.GenerateWbdkCodeAsync(cw);
-            await (_setter?.GenerateWbdkCodeAsync(cw) ?? Task.CompletedTask);
-        }
-
-        public async Task<CodeFragment> ToWbdkCode_ReadAsync(CodeFragment parentFragment, CodeSpan fieldSpan, ISourceCodeReporter report)
-        {
-            if (_getter == null) throw new InvalidOperationException("Property has no getter.");
-
-            return await _getter.ToWbdkCode_ReadAsync(parentFragment, fieldSpan, report);
-        }
-
-        public async Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment parentFragment, CodeSpan fieldSpan, CodeFragment valueFragment, ISourceCodeReporter report)
-        {
-            if (_setter == null) throw new CodeException(fieldSpan, ErrorCode.PropertyIsReadOnly, _name);
-
-            return await _setter.ToWbdkCode_WriteAsync(parentFragment, fieldSpan, valueFragment, report);
+            _getter.GenerateWbdkCode(context, cw);
+            _setter?.GenerateWbdkCode(context, cw);
         }
 
         class PropertyAccessorScope : Scope, IReturnScope, IVariableScope
@@ -161,6 +153,7 @@ namespace DKX.Compilation.Scopes
                 {
                     // Add the implicit 'value' argument
                     _variableStore.AddVariable(new Variable(
+                        class_: _property._class,
                         name: DkxConst.Properties.SetterArgumentName,
                         wbdkName: DkxConst.Properties.SetterArgumentName,
                         dataType: _property.DataType,
@@ -169,7 +162,8 @@ namespace DKX.Compilation.Scopes
                         static_: false,
                         local: true,
                         privacy: Privacy.Public,
-                        initializer: null));
+                        initializer: null,
+                        span: _property._nameSpan));
                 }
             }
 
@@ -177,7 +171,7 @@ namespace DKX.Compilation.Scopes
             public DataType ReturnDataType => _property.DataType;
             public IVariableStore VariableStore => _variableStore;
 
-            public static async Task<PropertyAccessorScope> ParseAsync(
+            public static PropertyAccessorScope Parse(
                 PropertyScope property,
                 PropertyAccessorType accessorType,
                 Privacy privacy,
@@ -188,20 +182,18 @@ namespace DKX.Compilation.Scopes
 
                 if (bodyTokens != null)
                 {
-                    accessorScope._statements = await StatementParser.SplitTokensIntoStatementsAsync(accessorScope, bodyTokens, resolver);
+                    accessorScope._statements = StatementParser.SplitTokensIntoStatements(accessorScope, bodyTokens, resolver);
                 }
 
                 return accessorScope;
             }
 
-            internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+            internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
             {
                 if (_accessorType == PropertyAccessorType.Getter)
                 {
                     cw.Write(_property.DataType.ToWbdkCode());
                     cw.Write(' ');
-                    cw.Write(_property.ClassName);
-                    cw.Write('_');
                     cw.Write(DkxConst.Properties.GetterPrefix);
                     cw.Write(_property.Name);
                     cw.Write('(');
@@ -212,8 +204,6 @@ namespace DKX.Compilation.Scopes
                 {
                     cw.Write(DkxConst.Keywords.Void);
                     cw.Write(' ');
-                    cw.Write(_property.ClassName);
-                    cw.Write('_');
                     cw.Write(DkxConst.Properties.SetterPrefix);
                     cw.Write(_property.Name);
                     cw.Write('(');
@@ -231,66 +221,10 @@ namespace DKX.Compilation.Scopes
                     {
                         foreach (var statement in _statements)
                         {
-                            await statement.GenerateWbdkCodeAsync(cw);
+                            statement.GenerateWbdkCode(context, cw);
                         }
                     }
                 }
-            }
-
-            public Task<CodeFragment> ToWbdkCode_ReadAsync(CodeFragment parentFragment, CodeSpan fieldSpan, ISourceCodeReporter report)
-            {
-                var sb = new StringBuilder();
-
-                var cls = GetScope<ClassScope>();
-                var nameParts = cls.FullClassNameParts.ToArray();
-                if (nameParts.Length < 2) throw new InvalidOperationException("Class did not return enough name parts.");
-                for (int i = 0, ii = nameParts.Length - 1; i <= ii; i++)
-                {
-                    sb.Append(nameParts[i]);
-                    if (i == 0) sb.Append('.');
-                    else sb.Append('_');
-                }
-                sb.Append(DkxConst.Properties.GetterPrefix);
-                sb.Append(_property.Name);
-                sb.Append('(');
-                if (!_property.Static)
-                {
-                    // Pass the 'this' pointer.
-                    sb.Append(parentFragment);
-                }
-                sb.Append(')');
-
-                return Task.FromResult(new CodeFragment(sb.ToString(), _property.DataType, Expressions.OpPrec.None, fieldSpan, readOnly: true));
-            }
-
-            public async Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment parentFragment, CodeSpan fieldSpan, CodeFragment valueFragment, ISourceCodeReporter report)
-            {
-                await Conversions.ConversionValidator.CheckConversionAsync(_property.DataType, valueFragment, report);
-
-                var sb = new StringBuilder();
-
-                var cls = GetScope<ClassScope>();
-                var nameParts = cls.FullClassNameParts.ToArray();
-                if (nameParts.Length < 2) throw new InvalidOperationException("Class did not return enough name parts.");
-                for (int i = 0, ii = nameParts.Length - 1; i <= ii; i++)
-                {
-                    sb.Append(nameParts[i]);
-                    if (i == 0) sb.Append('.');
-                    else sb.Append('_');
-                }
-                sb.Append(DkxConst.Properties.SetterPrefix);
-                sb.Append(_property.Name);
-                sb.Append('(');
-                if (!_property.Static)
-                {
-                    // Pass the 'this' pointer.
-                    sb.Append(parentFragment);
-                    sb.Append(", ");
-                }
-                sb.Append(valueFragment);
-                sb.Append(')');
-
-                return new CodeFragment(sb.ToString(), _property.DataType, Expressions.OpPrec.None, fieldSpan, readOnly: true);
             }
         }
 

@@ -1,16 +1,14 @@
-﻿using DK.Code;
-
-namespace DKX.Compilation.Scopes.Statements
+﻿namespace DKX.Compilation.Scopes.Statements
 {
     abstract class Statement : Scope
     {
         public abstract bool IsEmpty { get; }
 
-        private CodeSpan _span;
+        private Span _span;
 
         public static readonly Statement[] EmptyArray = new Statement[0];
 
-        public Statement(Scope parent, CodeSpan span)
+        public Statement(Scope parent, Span span)
             : base(parent)
         {
             _span = span;
@@ -18,7 +16,7 @@ namespace DKX.Compilation.Scopes.Statements
             if (parent is Statement stmt) stmt.Span = stmt.Span.Envelope(span);
         }
 
-        public CodeSpan Span
+        public Span Span
         {
             get => _span;
             protected set

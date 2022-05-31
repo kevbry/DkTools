@@ -1,18 +1,18 @@
 ﻿using DK;
 using DK.Code;
-using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
-using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
+using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Variables
 {
     public class Variable : IField, IArgument
     {
+        private IClass _class;
         private string _name;
         private string _wbdkName;
         private DataType _dataType;
@@ -23,6 +23,7 @@ namespace DKX.Compilation.Variables
         private bool _local;
         private Privacy _privacy;
         private uint _offset;
+        private Span _span;
 
         public static readonly Variable[] EmptyArray = new Variable[0];
 
@@ -39,6 +40,7 @@ namespace DKX.Compilation.Variables
         /// <param name="privacy">For member variables, their privacy.</param>
         /// <param name="initializer">For member variables, their initializer. Not used for arguments and local variables.</param>
         internal Variable(
+            IClass class_,
             string name,
             string wbdkName,
             DataType dataType,
@@ -47,8 +49,11 @@ namespace DKX.Compilation.Variables
             bool static_,
             bool local,
             Privacy privacy,
-            Chain initializer)
+            Chain initializer,
+            Span span)
         {
+            _class = class_ ?? throw new ArgumentNullException(nameof(class_));
+
             _name = name ?? throw new ArgumentNullException();
             if (!_name.IsWord()) throw new ArgumentException("Variable name must be a single word identifier.");
 
@@ -60,11 +65,16 @@ namespace DKX.Compilation.Variables
             _local = local;
             _privacy = privacy;
             _initializer = initializer;
+            _span = span;
         }
 
+        public FieldAccessMethod AccessMethod => _static || _local ? FieldAccessMethod.Variable : FieldAccessMethod.Object;
         public ArgumentPassType? ArgumentType => _passType;
-        ArgumentPassType IArgument.PassType => _passType ?? ArgumentPassType.ByValue;
+        public IClass Class => _class;
+        public ConstTerm ConstantExpression => null;
+        public ConstValue ConstantValue => null;
         public DataType DataType => _dataType;
+        public Span DefinitionSpan => _span;
         internal Chain Initializer { get => _initializer; set => _initializer = value ?? throw new ArgumentNullException(); }
         public FileContext FileContext => _fileContext;
         public bool IsArgument => _passType != null;
@@ -72,6 +82,7 @@ namespace DKX.Compilation.Variables
         public bool Local => _local;
         public string Name => _name;
         public uint Offset { get => _offset; set => _offset = value; }
+        ArgumentPassType IArgument.PassType => _passType ?? ArgumentPassType.ByValue;
         public Privacy Privacy => _privacy;
         public bool ReadOnly => false;
         public Privacy ReadPrivacy => _privacy;
@@ -79,32 +90,33 @@ namespace DKX.Compilation.Variables
         public string WbdkName => _wbdkName;
         public Privacy WritePrivacy => _privacy;
 
-        public Task<CodeFragment> ToWbdkCode_ReadAsync(CodeFragment parentFragment, CodeSpan fieldSpan, ISourceCodeReporter report)
-        {
-            if (_static || _passType != null)
-            {
-                // Stored as a WBDK variable.
-                return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
-            }
-            else
-            {
-                // Member variable which needs to use DKX accessor functions.
-                return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableGetter(parentFragment, _offset, _dataType, fieldSpan));
-            }
-        }
+        // TODO: remove
+        //public Task<CodeFragment> ToWbdkCode_ReadAsync(CodeFragment parentFragment, CodeSpan fieldSpan, ISourceCodeReporter report)
+        //{
+        //    if (_static || _passType != null)
+        //    {
+        //        // Stored as a WBDK variable.
+        //        return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
+        //    }
+        //    else
+        //    {
+        //        // Member variable which needs to use DKX accessor functions.
+        //        return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableGetter(parentFragment, _offset, _dataType, fieldSpan));
+        //    }
+        //}
 
-        public Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment parentFragment, CodeSpan fieldSpan, CodeFragment valueFragment, ISourceCodeReporter report)
-        {
-            if (_static || _passType != null)
-            {
-                // Stored as a WBDK variable.
-                return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
-            }
-            else
-            {
-                // Member variable which needs to use DKX accessor functions.
-                return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableSetter(parentFragment, _offset, _dataType, fieldSpan, valueFragment));
-            }
-        }
+        //public Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment parentFragment, CodeSpan fieldSpan, CodeFragment valueFragment, ISourceCodeReporter report)
+        //{
+        //    if (_static || _passType != null)
+        //    {
+        //        // Stored as a WBDK variable.
+        //        return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
+        //    }
+        //    else
+        //    {
+        //        // Member variable which needs to use DKX accessor functions.
+        //        return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableSetter(parentFragment, _offset, _dataType, fieldSpan, valueFragment));
+        //    }
+        //}
     }
 }

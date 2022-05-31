@@ -1,10 +1,8 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -12,7 +10,7 @@ namespace DKX.Compilation.Expressions
     {
         private DataType _dataType;
 
-        public ThisChain(DataType dataType, CodeSpan span)
+        public ThisChain(DataType dataType, Span span)
             : base(span)
         {
             if (dataType.BaseType != BaseType.Class) throw new ArgumentException("Data type must be a class.");
@@ -23,17 +21,17 @@ namespace DKX.Compilation.Expressions
         public override DataType InferredDataType => _dataType;
         public override bool IsEmptyCode => false;
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull) => Task.FromResult<ConstantValue>(null);
-
-        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            return Task.FromResult(new CodeFragment(DkxConst.This, _dataType, OpPrec.None, Span, readOnly: true));
-        }
-
-        public override async Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
-        {
-            await report.ReportAsync(valueFragment.SourceSpan, ErrorCode.ThisCannotBeModified);
             return new CodeFragment(DkxConst.This, _dataType, OpPrec.None, Span, readOnly: true);
         }
+
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        {
+            context.Report.Report(valueFragment.SourceSpan, ErrorCode.ThisCannotBeModified);
+            return new CodeFragment(DkxConst.This, _dataType, OpPrec.None, Span, readOnly: true);
+        }
+
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;
     }
 }

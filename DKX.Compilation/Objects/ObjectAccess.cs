@@ -6,7 +6,7 @@ namespace DKX.Compilation.Objects
 {
     static class ObjectAccess
     {
-        public static CodeFragment GenerateMemberVariableGetter(CodeFragment thisFragment, uint varOffset, DataType varDataType, CodeSpan span)
+        public static CodeFragment GenerateMemberVariableGetter(CodeFragment thisFragment, uint varOffset, DataType varDataType, Span span)
         {
             switch (varDataType.BaseType)
             {
@@ -41,7 +41,7 @@ namespace DKX.Compilation.Objects
             }
         }
 
-        public static CodeFragment GenerateMemberVariableSetter(CodeFragment thisFragment, uint varOffset, DataType varDataType, CodeSpan span, CodeFragment valueFragment)
+        public static CodeFragment GenerateMemberVariableSetter(CodeFragment thisFragment, uint varOffset, DataType varDataType, Span span, CodeFragment valueFragment)
         {
             switch (varDataType.BaseType)
             {

@@ -1,6 +1,4 @@
-﻿using DK;
-using DK.Code;
-using DKX.Compilation.DataTypes;
+﻿using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
 using System;
 
@@ -20,42 +18,22 @@ namespace DKX.Compilation.Exceptions
 
     class CodeException : CompilerException
     {
-        private CodeSpan _span;
+        private Span _span;
         private ErrorCode _errorCode;
         private object[] _args;
 
-        public CodeException(CodeSpan span, ErrorCode errorCode, params object[] args)
+        public CodeException(Span span, ErrorCode errorCode, params object[] args)
         {
             _span = span;
             _errorCode = errorCode;
             _args = args;
         }
 
-        public CodeException(int pos, ErrorCode errorCode, params object[] args)
-        {
-            _span = new CodeSpan(pos, pos);
-            _errorCode = errorCode;
-            _args = args;
-        }
-
-        public CodeSpan Span => _span;
+        public Span Span => _span;
         public ErrorCode ErrorCode => _errorCode;
         public object[] Arguments => _args;
 
-        public ReportItem ToReportItem(string pathName, string source)
-        {
-            var start = _span.Start;
-            if (start > source.Length) start = source.Length;
-
-            StringHelper.CalcLineAndPosFromOffset(source, start, out var startLine, out var startOffset);
-
-            var end = _span.End;
-            if (end > source.Length) end = source.Length;
-
-            StringHelper.CalcLineAndPosFromOffset(source, end, out var endLine, out var endOffset);
-
-            return new ReportItem(pathName, startLine, startOffset, endLine, endOffset, _errorCode, _args);
-        }
+        public ReportItem ToReportItem() => new ReportItem(_span, _errorCode, _args);
     }
 
     class InvalidOpCodeSourceException : CompilerException
@@ -65,6 +43,7 @@ namespace DKX.Compilation.Exceptions
 
     class InvalidBaseTypeException : CompilerException
     {
+        public InvalidBaseTypeException() : base("Invalid base type.") { }
         public InvalidBaseTypeException(BaseType baseType) : base($"Invalid base type '{baseType}'.") { }
     }
 }

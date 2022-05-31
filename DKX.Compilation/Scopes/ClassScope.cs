@@ -5,19 +5,20 @@ using DKX.Compilation.Expressions;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
-using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
-    class ClassScope : Scope, IClass, IVariableScope, IClassNamingScope, IObjectReferenceScope
+    class ClassScope : Scope, IClass, IVariableScope, IObjectReferenceScope
     {
         private string _name;
+        private string _namespaceName;
         private string _fullName;
-        private string[] _fullNameParts;
+        private string _wbdkClassName;
+        private string _dkxPathName;
         private Privacy _privacy;
         private bool _static;
         private List<MethodScope> _methods = new List<MethodScope>();
@@ -27,35 +28,37 @@ namespace DKX.Compilation.Scopes
         private uint _dataSize;
         private DataType _dataType;
 
-        public ClassScope(Scope parent, string className, Modifiers modifiers)
+        public ClassScope(Scope parent, string namespaceName, string className, string dkxPathName, Modifiers modifiers)
             : base(parent)
         {
             _name = className ?? throw new ArgumentNullException(nameof(className));
+            _namespaceName = namespaceName ?? throw new ArgumentNullException(nameof(namespaceName));
+            _dkxPathName = dkxPathName;
             _variableStore = new VariableStore(parent?.GetScope<IVariableScope>());
-
             _privacy = modifiers.Privacy ?? Privacy.Public;
             _static = modifiers.Static;
 
-            var parentNamingScope = parent.GetScope<IClassNamingScope>();
-            if (parentNamingScope == null) throw new InvalidOperationException("Class has no parent naming scope.");
-
-            _fullName = string.Concat(parentNamingScope.FullClassName, DkxConst.Operators.Dot, _name);
-            _fullNameParts = parentNamingScope.FullClassNameParts.Concat(new string[] { _name }).ToArray();
+            _fullName = string.Concat(_namespaceName, DkxConst.Operators.Dot, _name);
+            _wbdkClassName = Compiler.GetWbdkClassName(_fullName);
             _dataType = new DataType(this);
         }
 
         public uint DataSize => _dataSize;
+        public string ClassName => _name;
+        public string DkxPathName => _dkxPathName;
         public string FullClassName => _fullName;
-        public IEnumerable<string> FullClassNameParts => _fullNameParts;
         public IEnumerable<MethodScope> Methods => _methods;
+        IEnumerable<IMethod> IClass.Methods => _methods;
         public string Name => _name;
+        public string NamespaceName => _namespaceName;
         public Privacy Privacy => _privacy;
         public DataType ScopeDataType => _dataType;
         public bool ScopeStatic => true;
         public bool Static => _static;
         public IVariableStore VariableStore => _variableStore;
+        public string WbdkClassName => _wbdkClassName;
 
-        public async Task ProcessTokensAsync(DkxTokenCollection tokens, ProcessingDepth depth, IResolver resolver)
+        public void ProcessTokens(DkxTokenCollection tokens, ProcessingDepth depth, IResolver resolver)
         {
             var used = new TokenUseTracker();
             var classResolver = new ClassResolver(this, resolver);
@@ -82,10 +85,10 @@ namespace DKX.Compilation.Scopes
                         var scopeToken = tokens[pos + 3];
                         used.Use(scopeToken);
 
-                        var modifiers = await Modifiers.ReadModifiersAsync(tokens, pos, used, this);
-                        await modifiers.CheckForMethodAsync(this);
+                        var modifiers = Modifiers.ReadModifiers(tokens, pos, used, this);
+                        modifiers.CheckForMethod(this);
 
-                        var method = await MethodScope.ParseAsync(
+                        var method = MethodScope.Parse(
                             parent: this,
                             className: _name,
                             name: nameToken.Text,
@@ -101,7 +104,7 @@ namespace DKX.Compilation.Scopes
                     }
                     else
                     {
-                        await ReportAsync(argsToken.Span, ErrorCode.ExpectedToken, '{');
+                        Report(argsToken.Span, ErrorCode.ExpectedToken, '{');
                         pos += 3;
                     }
                 }
@@ -111,11 +114,11 @@ namespace DKX.Compilation.Scopes
                     var scopeToken = tokens[pos + 2];
                     used.Use(dataTypeToken, nameToken, scopeToken);
 
-                    var modifiers = await Modifiers.ReadModifiersAsync(tokens, pos, used, this);
-                    await modifiers.CheckForPropertyAsync(this);
+                    var modifiers = Modifiers.ReadModifiers(tokens, pos, used, this);
+                    modifiers.CheckForProperty(this);
 
-                    var property = await PropertyScope.ParseAsync(
-                        parent: this,
+                    var property = PropertyScope.Parse(
+                        class_: this,
                         className: _name,
                         name: nameToken.Text,
                         nameSpan: nameToken.Span,
@@ -132,14 +135,14 @@ namespace DKX.Compilation.Scopes
                 {
                     // This is a constant or member variable
                     used.Use(dataTypeToken, nameToken);
-                    var modifiers = await Modifiers.ReadModifiersAsync(tokens, pos, used, this);
+                    var modifiers = Modifiers.ReadModifiers(tokens, pos, used, this);
 
                     if (tokens[pos + 2].IsOperator(Operator.Assign))
                     {
                         var assignToken = tokens[pos + 2];
                         used.Use(assignToken);
 
-                        var end = tokens.FindIndex(t => t.IsStatementEnd, pos + 4);
+                        var end = tokens.FindStatementEnd(pos + 4);
                         if (end > 0)
                         {
                             var initializerTokens = tokens.GetRange(pos + 4, end - (pos + 4));
@@ -147,42 +150,50 @@ namespace DKX.Compilation.Scopes
                             used.Use(tokens[end]);
 
                             var initializerStream = initializerTokens.ToStream();
-                            var initializerChain = await ExpressionParser.TryReadExpressionAsync(this, initializerStream, resolver);
-                            if (initializerChain == null) await ReportAsync(initializerTokens.Span, ErrorCode.ExpectedExpression);
-                            else if (!initializerStream.EndOfStream) await ReportAsync(initializerStream.Read().Span, ErrorCode.SyntaxError);
+                            var initializerChain = ExpressionParser.TryReadExpression(this, initializerStream, resolver);
+                            if (initializerChain == null) Report(initializerTokens.Span, ErrorCode.ExpectedExpression);
+                            else if (!initializerStream.EndOfStream) Report(initializerStream.Read().Span, ErrorCode.SyntaxError);
 
                             if (modifiers.Const)
                             {
-                                var constValue = await initializerChain.GetConstantOrNullAsync(this);
-                                if (constValue == null)
+                                var constTerm = initializerChain.ToConstTermOrNull(this);
+                                if (constTerm == null)
                                 {
-                                    await ReportAsync(initializerChain.Span, ErrorCode.ExpressionNotConstant);
-                                    constValue = new NullConstantValue(initializerChain.Span);
+                                    Report(initializerChain.Span, ErrorCode.ExpressionNotConstant);
+                                    constTerm = new ConstErrorTerm(initializerChain.Span);
                                 }
-                                var constant = new Constant(nameToken.Text, dataTypeToken.DataType, constValue, modifiers.Privacy ?? Privacy.Private);
+
+                                var constant = new Constant(
+                                    class_: this,
+                                    name: nameToken.Text,
+                                    dataType: dataTypeToken.DataType,
+                                    constTerm: constTerm,
+                                    privacy: modifiers.Privacy ?? Privacy.Private,
+                                    span: nameToken.Span);
                                 _constants.Add(constant);
                             }
                             else
                             {
                                 var variable = new Variable(
+                                    class_: this,
                                     name: nameToken.Text,
-                                    wbdkName: string.Concat(_name, "_", nameToken.Text),
+                                    wbdkName: nameToken.Text,
                                     dataType: dataTypeToken.DataType,
                                     fileContext: FileContext.NeutralClass,
                                     passType: null,
                                     static_: modifiers.Static,
                                     local: false,
                                     privacy: modifiers.Privacy ?? Privacy.Private,
-                                    initializer: initializerChain);
+                                    initializer: initializerChain,
+                                    span: nameToken.Span);
 
                                 _variableStore.AddVariable(variable);
                             }
-
                             pos = end + 1;
                         }
                         else
                         {
-                            await ReportAsync(assignToken.Span, ErrorCode.ExpectedExpression);
+                            Report(assignToken.Span, ErrorCode.ExpectedExpression);
                             pos += 2;
                         }
                     }
@@ -190,7 +201,7 @@ namespace DKX.Compilation.Scopes
                     {
                         if (modifiers.Const)
                         {
-                            await ReportAsync(nameToken.Span, ErrorCode.ConstantsMustHaveInitializer);
+                            Report(nameToken.Span, ErrorCode.ConstantsMustHaveInitializer);
                             pos += 2;
                         }
                         else
@@ -200,22 +211,24 @@ namespace DKX.Compilation.Scopes
                                 used.Use(tokens[pos + 2]);
 
                                 var variable = new Variable(
+                                    class_: this,
                                     name: nameToken.Text,
-                                    wbdkName: string.Concat(_name, "_", nameToken.Text),
+                                    wbdkName: nameToken.Text,
                                     dataType: dataTypeToken.DataType,
                                     fileContext: FileContext.NeutralClass,
                                     passType: null,
                                     static_: modifiers.Static,
                                     local: false,
                                     privacy: modifiers.Privacy ?? Privacy.Private,
-                                    initializer: null);
+                                    initializer: null,
+                                    span: nameToken.Span);
 
                                 _variableStore.AddVariable(variable);
                                 pos += 3;
                             }
                             else
                             {
-                                await ReportAsync(nameToken.Span, ErrorCode.ExpectedToken, ';');
+                                Report(nameToken.Span, ErrorCode.ExpectedToken, ';');
                                 pos += 2;
                             }
                         }
@@ -223,7 +236,7 @@ namespace DKX.Compilation.Scopes
                 }
             }
 
-            foreach (var badToken in tokens.GetUnused(used)) await ReportAsync(badToken.Span, ErrorCode.SyntaxError);
+            foreach (var badToken in tokens.GetUnused(used)) Report(badToken.Span, ErrorCode.SyntaxError);
 
             CalculateLayout();
         }
@@ -242,7 +255,7 @@ namespace DKX.Compilation.Scopes
             return fileContexts;
         }
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             // Generate global variables for any static member variables
             var gotMemberVariable = false;
@@ -261,13 +274,13 @@ namespace DKX.Compilation.Scopes
 
             foreach (var property in _properties)
             {
-                await property.GenerateWbdkCodeAsync(cw);
+                property.GenerateWbdkCode(context, cw);
                 cw.WriteLine();
             }
 
             foreach (var method in _methods)
             {
-                await method.GenerateWbdkCodeAsync(cw);
+                method.GenerateWbdkCode(context, cw);
                 cw.WriteLine();
             }
         }
@@ -296,18 +309,27 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        Task<IEnumerable<IMethod>> IClass.GetMethods(string name) => Task.FromResult<IEnumerable<IMethod>>(_methods);
+        IEnumerable<IMethod> IClass.GetMethods(string name) => _methods;
 
-        Task<IEnumerable<IField>> IClass.GetFields(string name)
+        IEnumerable<IField> IClass.GetFields(string name)
         {
-            return Task.FromResult
-            (
-                _variableStore.GetVariables(includeParents: false)
+            return _variableStore.GetVariables(includeParents: false)
                 .Where(x => x.ArgumentType == null && x.Name == name)
                 .Cast<IField>()
                 .Concat(_constants.Where(x => x.Name == name).Cast<IField>())
-                .Concat(_properties.Where(x => x.Name == name).Cast<IField>())
-            );
+                .Concat(_properties.Where(x => x.Name == name).Cast<IField>());
+        }
+
+        IEnumerable<IField> IClass.Fields
+        {
+            get
+            {
+                return _variableStore.GetVariables(includeParents: false)
+                    .Where(x => x.ArgumentType == null)
+                    .Cast<IField>()
+                    .Concat(_constants.Cast<IField>())
+                    .Concat(_properties.Cast<IField>());
+            }
         }
     }
 }

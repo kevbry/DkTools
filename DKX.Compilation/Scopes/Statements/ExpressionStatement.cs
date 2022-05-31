@@ -1,6 +1,5 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Expressions;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes.Statements
 {
@@ -14,11 +13,11 @@ namespace DKX.Compilation.Scopes.Statements
             _expression = expression;
         }
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             if (_expression != null && !_expression.IsEmptyCode)
             {
-                var fragment = await _expression.ToWbdkCode_ReadAsync(this);
+                var fragment = _expression.ToWbdkCode_Read(context);
                 cw.Write(fragment);
                 cw.Write(DkxConst.StatementEndToken);
                 cw.WriteLine();

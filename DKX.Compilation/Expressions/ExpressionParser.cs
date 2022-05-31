@@ -1,5 +1,4 @@
-﻿using DK.Code;
-using DKX.Compilation.Conversions;
+﻿using DKX.Compilation.Conversions;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
@@ -7,28 +6,26 @@ using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
     static class ExpressionParser
     {
-        public static async Task<Chain> TryReadExpressionAsync(Scope scope, DkxTokenStream stream, IResolver resolver)
+        public static Chain TryReadExpression(Scope scope, DkxTokenStream stream, IResolver resolver)
         {
-            var chain = await TryReadValueAsync(scope, stream, 0, resolver);
+            var chain = TryReadValue(scope, stream, 0, resolver);
             if (chain == null) return null;
             return chain;
         }
 
-        private static async Task<Chain> TryReadValueAsync(Scope scope, DkxTokenStream stream, OpPrec leftPrec, IResolver resolver)
+        private static Chain TryReadValue(Scope scope, DkxTokenStream stream, OpPrec leftPrec, IResolver resolver)
         {
             var startPos = stream.Position;
 
-            var dataTypeResult = await TryReadDataTypeAsync(scope, stream, resolver);
-            if (dataTypeResult.Success)
+            if (TryReadDataType(scope, stream, resolver, out var dataType, out var dataTypeSpan))
             {
-                var chain = new DataTypeChain(dataTypeResult.DataType, dataTypeResult.Span);
-                return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                var chain = new DataTypeChain(dataType, dataTypeSpan);
+                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
             }
 
             var token = stream.Read();
@@ -40,24 +37,23 @@ namespace DKX.Compilation.Expressions
                 {
                     case DkxConst.Keywords.True:
                         chain = new BooleanLiteralChain(true, token.Span);
-                        return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
                     case DkxConst.Keywords.False:
                         chain = new BooleanLiteralChain(false, token.Span);
-                        return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
 
                     case DkxConst.Keywords.New:
-                        var dtResult = await TryReadDataTypeAsync(scope, stream, resolver);
-                        if (dtResult.Success)
+                        if (TryReadDataType(scope, stream, resolver, out dataType, out dataTypeSpan))
                         {
-                            chain = await ConstructorChain.ParseAsync(scope, dtResult.DataType, token.Span, dtResult.Span,
+                            chain = ConstructorChain.Parse(scope, dataType, token.Span, dataTypeSpan,
                                 stream.Peek().IsBrackets ? stream.Read().Tokens : null, resolver);
                             return chain;
                         }
-                        await scope.ReportAsync(token.Span, ErrorCode.ExpectedDataType);
+                        scope.Report(token.Span, ErrorCode.ExpectedDataType);
                         return new ErrorChain(innerChainOrNull: null, token.Span);
 
                     default:
-                        await scope.ReportAsync(token.Span, ErrorCode.SyntaxError);
+                        scope.Report(token.Span, ErrorCode.SyntaxError);
                         return new ErrorChain(innerChainOrNull: null, token.Span);
                 }
             }
@@ -78,51 +74,51 @@ namespace DKX.Compilation.Expressions
                     {
                         var objRefScope = scope.GetScope<IObjectReferenceScope>();
                         if (objRefScope == null) throw new InvalidOperationException("No object reference scope is available.");
-                        if (objRefScope.ScopeStatic) await scope.ReportAsync(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
+                        if (objRefScope.ScopeStatic) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
                         thisChain = new ThisChain(objRefScope.ScopeDataType, token.Span);
                     }
 
                     chain = new VariableChain(variable, token.Span, thisChain);
-                    return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                    return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
                 }
 
                 var constantStore = scope.GetScope<IConstantScope>()?.ConstantStore;
                 if (constantStore != null && constantStore.TryGetConstant(token.Text, out var constant))
                 {
                     chain = new ConstantChain(constant, token.Span);
-                    return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                    return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
                 }
 
-                await scope.ReportAsync(token.Span, ErrorCode.UnknownIdentifier, token.Text);
+                scope.Report(token.Span, ErrorCode.UnknownIdentifier, token.Text);
                 return new ErrorChain(innerChainOrNull: null, token.Span);
             }
             else if (token.IsString)
             {
-                if (token.HasError) await scope.ReportAsync(token.Span, ErrorCode.InvalidStringLiteral);
+                if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidStringLiteral);
                 var chain = new StringLiteralChain(token.Text, token.Span);
-                return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
             }
             else if (token.IsChar)
             {
-                if (token.HasError) await scope.ReportAsync(token.Span, ErrorCode.InvalidCharLiteral);
+                if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidCharLiteral);
                 var chain = new CharLiteralChain(token.Char, token.Span);
-                return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
             }
             else if (token.IsNumber)
             {
                 var chain = new NumericLiteralChain(token.Number, token.DataType, token.Span);
-                return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
             }
             else if (token.IsBrackets)
             {
                 var subStream = new DkxTokenStream(token.Tokens);
-                var chain = await TryReadValueAsync(scope, subStream, 0, resolver);
+                var chain = TryReadValue(scope, subStream, 0, resolver);
                 if (chain == null)
                 {
-                    await scope.ReportAsync(token.Span, ErrorCode.ExpectedExpression);
+                    scope.Report(token.Span, ErrorCode.ExpectedExpression);
                     return new ErrorChain(null, token.Span);
                 }
-                return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
             }
             else
             {
@@ -131,7 +127,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        private static async Task<Chain> TryReadAfterValue(Scope scope, DkxTokenStream stream, Chain chain, OpPrec leftPrec, IResolver resolver)
+        private static Chain TryReadAfterValue(Scope scope, DkxTokenStream stream, Chain chain, OpPrec leftPrec, IResolver resolver)
         {
             var startPos = stream.Position;
             var token = stream.Read();
@@ -139,10 +135,10 @@ namespace DKX.Compilation.Expressions
             {
                 var op = token.Operator;
 
-                if (op == Operator.Dot) return await ReadDotSequenceAsync(scope, stream, chain, leftPrec, resolver);
+                if (op == Operator.Dot) return ReadDotSequence(scope, stream, chain, leftPrec, resolver);
 
                 var opPrec = op.GetPrecedence();
-                if (leftPrec >= opPrec)
+                if ((leftPrec > opPrec) || (leftPrec == opPrec && op.IsLeftToRight()))
                 {
                     // The left expression takes priority over the new operator,
                     // so don't consume the right operator at this time.
@@ -153,22 +149,22 @@ namespace DKX.Compilation.Expressions
                 if (op.IsUnaryPost())
                 {
                     var newChain = new OperatorChain(op, chain, right: null);
-                    return await TryReadAfterValue(scope, stream, newChain, leftPrec, resolver);
+                    return TryReadAfterValue(scope, stream, newChain, leftPrec, resolver);
                 }
                 else
                 {
-                    var right = await TryReadValueAsync(scope, stream, opPrec, resolver);
+                    var right = TryReadValue(scope, stream, opPrec, resolver);
                     if (right == null)
                     {
                         // Was unable to read a value to the right of the operator, so stop the expression before this operator.
                         stream.Position = startPos;
-                        await scope.ReportAsync(chain.Span.Envelope(token.Span), ErrorCode.OperatorExpectsValueOnRight, op.GetText());
+                        scope.Report(chain.Span.Envelope(token.Span), ErrorCode.OperatorExpectsValueOnRight, op.GetText());
                         return chain;
                     }
                     else
                     {
                         var newChain = new OperatorChain(op, chain, right);
-                        return await TryReadAfterValue(scope, stream, newChain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, newChain, leftPrec, resolver);
                     }
                 }
             }
@@ -179,7 +175,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        private static async Task<Chain> ReadDotSequenceAsync(Scope scope, DkxTokenStream stream, Chain leftChain, OpPrec leftPrec, IResolver resolver)
+        private static Chain ReadDotSequence(Scope scope, DkxTokenStream stream, Chain leftChain, OpPrec leftPrec, IResolver resolver)
         {
             // This method assumes the dot has just been read and the current token is the next token after the dot.
 
@@ -190,69 +186,78 @@ namespace DKX.Compilation.Expressions
                 {
                     // Method call
                     var argsToken = stream.Read();
-                    var args = await SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span, resolver);
+                    var args = SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span, resolver);
 
-                    var methods = (await resolver.GetMethods(leftChain.DataType, nameToken.Text)).ToList();
-                    var method = await FindBestMethodForArgumentsAsync(scope, methods, args, nameToken.Span);
+                    var methods = resolver.GetMethods(leftChain.DataType, nameToken.Text).ToList();
+                    var method = FindBestMethodForArguments(scope, methods, args, nameToken.Span);
                     if (method != null)
                     {
                         var chain = new MethodCallChain(leftChain, nameToken, args, argsToken.Span, method);
-                        return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
                     }
                     else return leftChain;
                 }
                 else
                 {
                     // Property, field, or const
-                    var fields = (await resolver.GetFields(leftChain.DataType, nameToken.Text)).ToList();
+                    var fields = resolver.GetFields(leftChain.DataType, nameToken.Text).ToList();
                     if (fields.Count == 0)
                     {
-                        await scope.ReportAsync(nameToken.Span, ErrorCode.FieldNotFound, nameToken.Text);
+                        scope.Report(nameToken.Span, ErrorCode.FieldNotFound, nameToken.Text);
                         return leftChain;
                     }
                     else if (fields.Count != 1)
                     {
-                        await scope.ReportAsync(nameToken.Span, ErrorCode.AmbiguousField, nameToken.Text);
+                        scope.Report(nameToken.Span, ErrorCode.AmbiguousField, nameToken.Text);
                         return leftChain;
                     }
                     else
                     {
                         var chain = new FieldChain(leftChain, nameToken, fields[0]);
-                        return await TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
                     }
                 }
             }
             else
             {
-                await scope.ReportAsync(nameToken.Span, ErrorCode.ExpectedMemberName);
+                scope.Report(nameToken.Span, ErrorCode.ExpectedMemberName);
                 return leftChain;
             }
         }
 
-        public static async Task<ReadDataTypeResult> TryReadDataTypeAsync(Scope scope, DkxTokenStream stream, IResolver resolver)
+        public static bool TryReadDataType(Scope scope, DkxTokenStream stream, IResolver resolver, out DataType dataTypeOut, out Span spanOut)
         {
             var startPos = stream.Position;
             var token = stream.Peek();
             if (token.Type == DkxTokenType.DataType)
             {
                 stream.Position++;
-                if (token.HasError) await scope.ReportAsync(token.Span, ErrorCode.InvalidDataType);
-                return new ReadDataTypeResult(true, token.DataType, token.Span);
+                if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidDataType);
+                dataTypeOut = token.DataType;
+                spanOut = token.Span;
+                return true;
             }
 
             if (token.Type == DkxTokenType.Identifier)
             {
                 stream.Position++;
                 var name = token.Text;
-                var class_ = await resolver.ResolveClassAsync(name);
-                if (class_ != null) return new ReadDataTypeResult(true, new DataType(class_), token.Span);
+                var class_ = resolver.ResolveClass(name);
+                if (class_ != null)
+                {
+                    dataTypeOut = new DataType(class_);
+                    spanOut = token.Span;
+                    return true;
+                }
             }
 
             stream.Position = startPos;
-            return new ReadDataTypeResult(false, default, default);
+            dataTypeOut = default;
+            spanOut = default;
+            return false;
         }
 
-        public static async Task<Chain[]> SplitArgumentExpressions(Scope scope, DkxTokenCollection argBracketsTokens, CodeSpan errorSpan, IResolver resolver)
+        public static Chain[] SplitArgumentExpressions(Scope scope, DkxTokenCollection argBracketsTokens, Span errorSpan, IResolver resolver)
         {
             if (argBracketsTokens.Count == 0) return Chain.EmptyArray;
 
@@ -264,34 +269,34 @@ namespace DKX.Compilation.Expressions
                 {
                     if (!reportedEmptyArg)
                     {
-                        await scope.ReportAsync(errorSpan, ErrorCode.MethodContainsEmptyArguments);
+                        scope.Report(errorSpan, ErrorCode.MethodContainsEmptyArguments);
                         reportedEmptyArg = true;
                     }
                 }
 
                 var argStream = new DkxTokenStream(argTokens);
-                var expression = await TryReadExpressionAsync(scope, argStream, resolver);
+                var expression = TryReadExpression(scope, argStream, resolver);
                 if (expression == null)
                 {
-                    await scope.ReportAsync(argTokens.Span, ErrorCode.ExpectedExpression);
+                    scope.Report(argTokens.Span, ErrorCode.ExpectedExpression);
                 }
                 args.Add(expression);
 
                 if (!argStream.EndOfStream)
                 {
-                    await scope.ReportAsync(argStream.Read().Span, ErrorCode.SyntaxError);
+                    scope.Report(argStream.Read().Span, ErrorCode.SyntaxError);
                 }
             }
 
             return args.ToArray();
         }
 
-        public static async Task<IMethod> FindBestMethodForArgumentsAsync(Scope scope, IEnumerable<IMethod> methods, Chain[] args, CodeSpan errorSpan)
+        public static IMethod FindBestMethodForArguments(Scope scope, IEnumerable<IMethod> methods, Chain[] args, Span errorSpan)
         {
             var methodsWithSameNumberOfArguments = methods.Where(m => m.Arguments.Length == args.Length).ToArray();
             if (methodsWithSameNumberOfArguments.Length == 0)
             {
-                await scope.ReportAsync(errorSpan, ErrorCode.NoMethodWithSameNumberOfArguments);
+                scope.Report(errorSpan, ErrorCode.NoMethodWithSameNumberOfArguments);
                 return null;
             }
 
@@ -306,7 +311,7 @@ namespace DKX.Compilation.Expressions
                 var warning = false;
                 for (var i = 0; i < methodArgs.Length; i++)
                 {
-                    switch (ConversionValidator.TestCompatibility(methodArgs[i].DataType, args[i].DataType, await args[i].GetConstantOrNullAsync(reportOrNull: null)))
+                    switch (ConversionValidator.TestCompatibility(methodArgs[i].DataType, args[i].DataType, srcConstant: null))
                     {
                         case DataTypeCompatibility.Good:
                             break;
@@ -332,7 +337,7 @@ namespace DKX.Compilation.Expressions
             }
             else if (methodsAllGood.Count > 1)
             {
-                await scope.ReportAsync(errorSpan, ErrorCode.MethodAmbiguous);
+                scope.Report(errorSpan, ErrorCode.MethodAmbiguous);
                 return methodsAllGood[0];
             }
             else if (methodsWithWarnings.Count == 1)
@@ -341,28 +346,14 @@ namespace DKX.Compilation.Expressions
             }
             else if (methodsWithWarnings.Count > 1)
             {
-                await scope.ReportAsync(errorSpan, ErrorCode.MethodAmbiguous);
+                scope.Report(errorSpan, ErrorCode.MethodAmbiguous);
                 return methodsWithWarnings[0];
             }
             else
             {
-                await scope.ReportAsync(errorSpan, ErrorCode.NoMethodWithCompatibleArguments);
+                scope.Report(errorSpan, ErrorCode.NoMethodWithCompatibleArguments);
                 return null;
             }
-        }
-    }
-
-    struct ReadDataTypeResult
-    {
-        public bool Success { get; private set; }
-        public DataType DataType { get; private set; }
-        public CodeSpan Span { get; private set; }
-
-        public ReadDataTypeResult(bool success, DataType dataType, CodeSpan span)
-        {
-            Success = success;
-            DataType = dataType;
-            Span = span;
         }
     }
 }

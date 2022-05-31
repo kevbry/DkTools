@@ -1,11 +1,10 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -14,7 +13,7 @@ namespace DKX.Compilation.Expressions
         private decimal _value;
         private DataType _dataType;
 
-        public NumericLiteralChain(decimal value, DataType dataType, CodeSpan span)
+        public NumericLiteralChain(decimal value, DataType dataType, Span span)
             : base(span)
         {
             _value = value;
@@ -61,19 +60,19 @@ namespace DKX.Compilation.Expressions
             return decimal.Parse(text);
         }
 
-        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            return Task.FromResult(new CodeFragment(_value.ToString(), _dataType, OpPrec.None, Span, readOnly: true));
+            return new CodeFragment(_value.ToString(), _dataType, OpPrec.None, Span, readOnly: true);
         }
 
-        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report)
         {
-            return Task.FromResult<ConstantValue>(new NumberConstantValue(_value, _dataType, Span));
+            return new ConstValueTerm(new NumberConstValue(_value, _dataType, Span), Span);
         }
     }
 }

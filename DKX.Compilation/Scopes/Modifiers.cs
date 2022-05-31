@@ -9,19 +9,19 @@ namespace DKX.Compilation.Scopes
     public struct Modifiers
     {
         public Privacy? Privacy { get; private set; }
-        public CodeSpan PrivacySpan { get; private set; }
+        public Span PrivacySpan { get; private set; }
         public FileContext? FileContext { get; private set; }
-        public CodeSpan FileContextSpan { get; private set; }
+        public Span FileContextSpan { get; private set; }
         public bool Const { get; private set; }
-        public CodeSpan ConstSpan { get; private set; }
+        public Span ConstSpan { get; private set; }
         public bool Static { get; private set; }
-        public CodeSpan StaticSpan { get; private set; }
+        public Span StaticSpan { get; private set; }
 
         public Modifiers(
-            Privacy? privacy, CodeSpan privacySpan,
-            FileContext? fileContext, CodeSpan fileContextSpan,
-            bool const_, CodeSpan constSpan,
-            bool static_, CodeSpan staticSpan)
+            Privacy? privacy, Span privacySpan,
+            FileContext? fileContext, Span fileContextSpan,
+            bool const_, Span constSpan,
+            bool static_, Span staticSpan)
         {
             Privacy = privacy;
             PrivacySpan = privacySpan;
@@ -35,16 +35,16 @@ namespace DKX.Compilation.Scopes
 
         public bool IsEmpty => Privacy == null && FileContext == null && Const == false;
 
-        public static async Task<Modifiers> ReadModifiersAsync(DkxTokenCollection tokens, int beforeIndex, TokenUseTracker used, ISourceCodeReporter report)
+        public static Modifiers ReadModifiers(DkxTokenCollection tokens, int beforeIndex, TokenUseTracker used, IReportItemCollector report)
         {
             var privacy = null as Privacy?;
-            var privacySpan = CodeSpan.Empty;
+            var privacySpan = Span.Empty;
             var fileContext = null as FileContext?;
-            var fileContextSpan = CodeSpan.Empty;
+            var fileContextSpan = Span.Empty;
             var const_ = false;
-            var constSpan = CodeSpan.Empty;
+            var constSpan = Span.Empty;
             var static_ = false;
-            var staticSpan = CodeSpan.Empty;
+            var staticSpan = Span.Empty;
 
             for (var pos = beforeIndex - 1; pos >= 0; pos--)
             {
@@ -54,49 +54,49 @@ namespace DKX.Compilation.Scopes
                 switch (token.Text)
                 {
                     case DkxConst.Keywords.Public:
-                        if (privacy != null) await report.ReportAsync(token.Span, ErrorCode.DuplicatePrivacyModifier);
+                        if (privacy != null) report.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
                         privacy = Scopes.Privacy.Public;
                         privacySpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Protected:
-                        if (privacy != null) await report.ReportAsync(token.Span, ErrorCode.DuplicatePrivacyModifier);
+                        if (privacy != null) report.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
                         privacy = Scopes.Privacy.Protected;
                         privacySpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Private:
-                        if (privacy != null) await report.ReportAsync(token.Span, ErrorCode.DuplicatePrivacyModifier);
+                        if (privacy != null) report.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
                         privacy = Scopes.Privacy.Private;
                         privacySpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Neutral:
-                        if (fileContext != null) await report.ReportAsync(token.Span, ErrorCode.DuplicateFileContextModifier);
+                        if (fileContext != null) report.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
                         fileContext = DK.Code.FileContext.NeutralClass;
                         fileContextSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Client:
-                        if (fileContext != null) await report.ReportAsync(token.Span, ErrorCode.DuplicateFileContextModifier);
+                        if (fileContext != null) report.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
                         fileContext = DK.Code.FileContext.ClientClass;
                         fileContextSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Server:
-                        if (fileContext != null) await report.ReportAsync(token.Span, ErrorCode.DuplicateFileContextModifier);
+                        if (fileContext != null) report.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
                         fileContext = DK.Code.FileContext.ServerClass;
                         fileContextSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Const:
-                        if (const_) await report.ReportAsync(token.Span, ErrorCode.DuplicateConstModifier);
+                        if (const_) report.Report(token.Span, ErrorCode.DuplicateConstModifier);
                         const_ = true;
                         constSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Static:
-                        if (static_) await report.ReportAsync(token.Span, ErrorCode.DuplicateStaticModifier);
+                        if (static_) report.Report(token.Span, ErrorCode.DuplicateStaticModifier);
                         static_ = true;
                         staticSpan = token.Span;
                         used.Use(token);
@@ -110,24 +110,21 @@ namespace DKX.Compilation.Scopes
             return new Modifiers(privacy, privacySpan, fileContext, fileContextSpan, const_, constSpan, static_, staticSpan);
         }
 
-        public Task CheckForClassAsync(ISourceCodeReporter report, CodeSpan classKeywordSpan)
+        public void CheckForClass(IReportItemCollector report, Span classKeywordSpan) { }
+
+        public void CheckForMethod(IReportItemCollector report)
         {
-            return Task.CompletedTask;
+            if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
         }
 
-        public async Task CheckForMethodAsync(ISourceCodeReporter report)
+        public void CheckForProperty(IReportItemCollector report)
         {
-            if (Const) await report.ReportAsync(ConstSpan, ErrorCode.InvalidConst);
+            if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
         }
 
-        public async Task CheckForPropertyAsync(ISourceCodeReporter report)
+        public void CheckForPropertyAccessor(IReportItemCollector report, Modifiers propertyModifiers)
         {
-            if (Const) await report.ReportAsync(ConstSpan, ErrorCode.InvalidConst);
-        }
-
-        public async Task CheckForPropertyAccessorAsync(ISourceCodeReporter report, Modifiers propertyModifiers)
-        {
-            if (Const) await report.ReportAsync(ConstSpan, ErrorCode.InvalidConst);
+            if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
 
             if (FileContext != null)
             {
@@ -138,27 +135,27 @@ namespace DKX.Compilation.Scopes
                     case DK.Code.FileContext.ServerClass:
                         break;
                     default:
-                        await report.ReportAsync(FileContextSpan, ErrorCode.InvalidFileContext);
+                        report.Report(FileContextSpan, ErrorCode.InvalidFileContext);
                         break;
                 }
             }
 
             if (Privacy != null && propertyModifiers.Privacy != null)
             {
-                if (Privacy.Value < propertyModifiers.Privacy) await report.ReportAsync(PrivacySpan, ErrorCode.PropertyAccessorMoreAccessibleThanProperty);
+                if (Privacy.Value < propertyModifiers.Privacy) report.Report(PrivacySpan, ErrorCode.PropertyAccessorMoreAccessibleThanProperty);
             }
         }
 
-        public async Task CheckForMemberVariableAsync(ISourceCodeReporter report)
+        public void CheckForMemberVariable(IReportItemCollector report)
         {
-            if (Const) await report.ReportAsync(ConstSpan, ErrorCode.InvalidConst);
+            if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
 
-            if (Privacy.HasValue && Privacy != Scopes.Privacy.Private) await report.ReportAsync(PrivacySpan, ErrorCode.MemberVariableMustBePrivate);
+            if (Privacy.HasValue && Privacy != Scopes.Privacy.Private) report.Report(PrivacySpan, ErrorCode.MemberVariableMustBePrivate);
         }
 
-        public async Task CheckForConstantAsync(ISourceCodeReporter report)
+        public void CheckForConstant(IReportItemCollector report)
         {
-            if (FileContext != null) await report.ReportAsync(FileContextSpan, ErrorCode.InvalidFileContext);
+            if (FileContext != null) report.Report(FileContextSpan, ErrorCode.InvalidFileContext);
         }
 
         public string ToSignature()

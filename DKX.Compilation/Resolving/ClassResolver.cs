@@ -2,7 +2,6 @@
 using DKX.Compilation.Scopes;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Resolving
 {
@@ -17,14 +16,16 @@ namespace DKX.Compilation.Resolving
             _globalResolver = globalResolver ?? throw new ArgumentNullException(nameof(globalResolver));
         }
 
-        public async Task<IClass> ResolveClassAsync(string className)
+        public IClass ResolveClass(string className)
         {
             // TODO: Eventually when nested classes are implemented, they will need to be resolved here.
-            return await _globalResolver.ResolveClassAsync(className);
+            return _globalResolver.ResolveClass(className);
         }
 
-        public async Task<IEnumerable<IMethod>> GetMethods(DataType dataType, string name) => await _globalResolver.GetMethods(dataType, name);
+        public IClass GetClassByFullNameOrNull(string fullClassName) => _globalResolver.GetClassByFullNameOrNull(fullClassName);
 
-        public async Task<IEnumerable<IField>> GetFields(DataType dataType, string name) => await _globalResolver.GetFields(dataType, name);
+        public IEnumerable<IMethod> GetMethods(DataType dataType, string name) => _globalResolver.GetMethods(dataType, name);
+
+        public IEnumerable<IField> GetFields(DataType dataType, string name) => _globalResolver.GetFields(dataType, name);
     }
 }

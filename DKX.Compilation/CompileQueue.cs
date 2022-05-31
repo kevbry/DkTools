@@ -87,7 +87,7 @@ namespace DKX.Compilation
                             task = jobToRun.ExecuteAsync(cancel);
                             if (task.IsFaulted)
                             {
-                                _reportItems.Add(new ReportItem(null, -1, -1, -1, -1, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, task.Exception));
+                                _reportItems.Add(new ReportItem(Span.Empty, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, task.Exception));
                                 _haltErrors = true;
                             }
 
@@ -103,7 +103,7 @@ namespace DKX.Compilation
                         }
                         catch (Exception ex)
                         {
-                            _reportItems.Add(new ReportItem(null, -1, -1, -1, -1, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, ex));
+                            _reportItems.Add(new ReportItem(Span.Empty, ErrorCode.DKX0001_CompileJobFailed, jobToRun.Description, ex));
                             _haltErrors = true;
                         }
                     }
@@ -155,6 +155,8 @@ namespace DKX.Compilation
                 _reportItems.Add(item);
             }
         }
+
+        public void Report(Span span, ErrorCode errorCode, params object[] args) => AddReportItem(new ReportItem(span, errorCode, args));
 
         public bool HasErrors => _haltErrors;
 

@@ -1,5 +1,4 @@
 ﻿using DK.Code;
-using DKX.Compilation.ObjectFiles;
 using NUnit.Framework;
 using System.Threading.Tasks;
 
@@ -11,7 +10,7 @@ namespace DKX.Compilation.Tests.Classes
         [Test]
         public async Task MemberClass()
         {
-            var dkxCode = @"
+            var app = await SetupCompileSingle(@"x:\src\Test.dkx", @"
 namespace Test
 {
     class Member
@@ -43,48 +42,106 @@ namespace Test
             int no;
             Member mbr = new Member();
             no = mbr.Number;
-            //Member.SetData(123, ""John"");
+            mbr.SetData(123, ""John"");
+            string name = mbr.Name;
+            name = ""Bob"";
+            mbr.Name = name;
+            mbr.Name = ""Bob2"";
         }
     }
 }
-";
-            var wbdkCode = @"
-char(255) Member__inst;
+");
+            await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 
-int Member_GetNumber(unsigned int this) { return dkx_getint4(this, 0); }
-char(255) Member_GetName(unsigned int this) { return dkx_getstr(this, 4); }
-void Member_SetName(unsigned int this, char(255) value) { dkx_setstr(this, 4, value); }
-char(255) Member_GetInst() { return Member__inst; }
-void Member_SetInst(char(255) value) { Member__inst = value; }
+char(255) _inst;
 
-void Member_SetData(unsigned int this, int no, char(255) name)
+int GetNumber(unsigned int this) { return dkx_getint4(this, 0); }
+char(255) GetName(unsigned int this) { return dkx_getstr(this, 4); }
+void SetName(unsigned int this, char(255) value) { dkx_setstr(this, 4, value); }
+char(255) GetInst() { return _inst; }
+void SetInst(char(255) value) { _inst = value; }
+
+void SetData_%1(unsigned int this, int no, char(255) name)
 {
     dkx_setint4(this, 0, no);
     dkx_setstr(this, 4, name);
 }
 
-void Member_SetInstitution(char(255) inst)
+void SetInstitution_%2(char(255) inst)
 {
-    Member__inst = inst;
+    _inst = inst;
 }
-
-void User_DoTest()
+".Replace("%1", Compiler.ComputeHash("void, int, string").ToString("X"))
+.Replace("%2", Compiler.ComputeHash("void, string").ToString("X"))
+);
+            await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
+void DoTest_%0()
 {
     int no;
     unsigned int mbr;
+    char(255) name;
     mbr = dkx_new(516);
-    no = Test.Member_GetNumber(mbr);
+    no = %M.GetNumber(mbr);
+    %M.SetData_%1(mbr, 123, ""John"");
+    name = %M.GetName(mbr);
+    name = ""Bob"";
+    %M.SetName(mbr, name);
+    %M.SetName(mbr, ""Bob2"");
 }
-";
-            var objectModel = new ObjectFileModel
-            {
-                FileContexts = new ObjectFileContext[]
-                {
-                    new ObjectFileContext { Context = FileContext.NeutralClass }
-                }
-            };
-
-            await SetupCompileSingle(@"x:\src\Test.dkx", @"x:\gen\.dkx\Test.nc", @"x:\bin\.dkx\Test.dkxx", dkxCode, wbdkCode, objectModel);
+".Replace("%0", Compiler.ComputeHash("void").ToString("X"))
+.Replace("%1", Compiler.ComputeHash("void, int, string").ToString("X"))
+.Replace("%M", Compiler.GetWbdkClassName("Test.Member"))
+);
         }
+
+        [Test]
+        public async Task StaticMethodCall()
+        {
+            var app = await SetupCompileSingle(@"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private static string _inst;
+
+        public static void SetInstitution(string inst)
+        {
+            _inst = inst;
+        }
+    }
+
+    static class User
+    {
+        public static void DoTest()
+        {
+            Member.SetInstitution(""Bank1"");
+        }
+    }
+}
+");
+            await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+char(255) _inst;
+
+void SetInstitution_%1(char(255) inst)
+{
+    _inst = inst;
+}
+".Replace("%1", Compiler.ComputeHash("void, string").ToString("X"))
+);
+            await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
+void DoTest_%2()
+{
+    %M.SetInstitution_%1(""Bank1"");
+}
+".Replace("%1", Compiler.ComputeHash("void, string").ToString("X"))
+.Replace("%2", Compiler.ComputeHash("void").ToString("X"))
+.Replace("%M", Compiler.GetWbdkClassName("Test.Member"))
+);
+        }
+
+        // TODO: using the 'this' keyword to get at a member variable or method
+        // TODO: Can't call static method using an object reference.
+        // TODO: Can't call non-static members with a static class name.
+        // TODO: A property that is named the same as its data type should still work fine.
     }
 }

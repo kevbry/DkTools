@@ -8,6 +8,8 @@ namespace DKX.Compilation.ReportItems
 
         void AddReportItems(IEnumerable<ReportItem> reportItems);
 
+        void Report(Span span, ErrorCode errorCode, params object[] args);
+
         bool HasErrors { get; }
     }
 }

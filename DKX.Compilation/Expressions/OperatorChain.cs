@@ -3,9 +3,8 @@ using DKX.Compilation.Conversions;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -45,17 +44,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public override async Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
-        {
-            return await ToWbdkCodeAsync(reading: true, report);
-        }
-
-        public override async Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
-        {
-            return await ToWbdkCodeAsync(reading: false, report);
-        }
-
-        private async Task<CodeFragment> ToWbdkCodeAsync(bool reading, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
             CodeFragment leftFrag, rightFrag;
             OpPrec prec;
@@ -64,7 +53,7 @@ namespace DKX.Compilation.Expressions
             {
                 case Operator.Increment:
                 case Operator.Decrement:
-                    leftFrag = await _left.ToWbdkCode_ReadAsync(report);
+                    leftFrag = _left.ToWbdkCode_Read(context);
                     if (leftFrag.ReadOnly) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, _op.GetText());
                     if (!leftFrag.DataType.IsSuitableForIncDec) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
                     return new CodeFragment($"{leftFrag.Protect(OpPrec.IncDec)} {_op.GetText()} 1", leftFrag.DataType, OpPrec.IncDec, Span, readOnly: false);
@@ -74,18 +63,17 @@ namespace DKX.Compilation.Expressions
                 case Operator.Multiply:
                 case Operator.Divide:
                 case Operator.Modulus:
-                    if (!reading) throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo, _op.GetText());
-                    leftFrag = await _left.ToWbdkCode_ReadAsync(report);
+                    leftFrag = _left.ToWbdkCode_Read(context);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    rightFrag = await _right.ToWbdkCode_ReadAsync(report);
+                    rightFrag = _right.ToWbdkCode_Read(context);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(rightFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    await ConversionValidator.CheckConversionAsync(leftFrag.DataType, rightFrag, report);
+                    ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
                     return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
 
                 case Operator.Assign:
-                    rightFrag = await _right.ToWbdkCode_ReadAsync(report);
-                    leftFrag = await _left.ToWbdkCode_WriteAsync(rightFrag, report);
+                    rightFrag = _right.ToWbdkCode_Read(context);
+                    leftFrag = _left.ToWbdkCode_Write(context, rightFrag);
                     return leftFrag.Protect(OpPrec.Assign);
 
                 case Operator.AssignAdd:
@@ -93,12 +81,12 @@ namespace DKX.Compilation.Expressions
                 case Operator.AssignMultiply:
                 case Operator.AssignDivide:
                 case Operator.AssignModulus:
-                    leftFrag = await _left.ToWbdkCode_ReadAsync(report);
+                    leftFrag = _left.ToWbdkCode_Read(context);
                     if (leftFrag.ReadOnly) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, _op.GetText());
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    rightFrag = await _right.ToWbdkCode_ReadAsync(report);
+                    rightFrag = _right.ToWbdkCode_Read(context);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(rightFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    await ConversionValidator.CheckConversionAsync(leftFrag.DataType, rightFrag, report);
+                    ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
                     return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
 
@@ -107,9 +95,16 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public override async Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
-            ConstantValue left, right;
+            // Right-to-left operator associativity should take care of cascaded writes to operators.
+            // For example { a = b = c; } should result in { b = c; } then { a = b; }
+            throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo, _op.GetText());
+        }
+
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector reportOrNull)
+        {
+            ConstTerm left, right;
             switch (_op)
             {
                 case Operator.Add:
@@ -117,25 +112,18 @@ namespace DKX.Compilation.Expressions
                 case Operator.Multiply:
                 case Operator.Divide:
                 case Operator.Modulus:
-                    left = await _left.GetConstantOrNullAsync(reportOrNull);
-                    right = await _right.GetConstantOrNullAsync(reportOrNull);
-                    if (left != null && right != null) return await left.GetMathResultOrNullAsync(_op, right, reportOrNull);
+                    left = _left.ToConstTermOrNull(reportOrNull);
+                    right = _right.ToConstTermOrNull(reportOrNull);
+                    if (left != null && right != null) return new ConstMathTerm(_op, left, right, Span);
                     return null;
 
                 case Operator.And:
-                    left = await _left.GetConstantOrNullAsync(reportOrNull);
-                    right = await _right.GetConstantOrNullAsync(reportOrNull);
-                    if (left != null && !left.IsBool) await reportOrNull?.ReportAsync(_left.Span, ErrorCode.ConditionMustBeBool);
-                    if (right != null && !right.IsBool) await reportOrNull?.ReportAsync(_right.Span, ErrorCode.ConditionMustBeBool);
-                    if (left != null && right != null) return new BoolConstantValue(left.Bool && right.Bool, Span);
-                    return null;
-
                 case Operator.Or:
-                    left = await _left.GetConstantOrNullAsync(reportOrNull);
-                    right = await _right.GetConstantOrNullAsync(reportOrNull);
-                    if (left != null && !left.IsBool) await reportOrNull?.ReportAsync(_left.Span, ErrorCode.ConditionMustBeBool);
-                    if (right != null && !right.IsBool) await reportOrNull?.ReportAsync(_right.Span, ErrorCode.ConditionMustBeBool);
-                    if (left != null && right != null) return new BoolConstantValue(left.Bool || right.Bool, Span);
+                    left = _left.ToConstTermOrNull(reportOrNull);
+                    right = _right.ToConstTermOrNull(reportOrNull);
+                    if (left != null && left.DataType.BaseType != BaseType.Bool) reportOrNull?.Report(_left.Span, ErrorCode.ExpressionMustBeBool);
+                    if (right != null && right.DataType.BaseType != BaseType.Bool) reportOrNull?.Report(_right.Span, ErrorCode.ExpressionMustBeBool);
+                    if (left != null && right != null) return new ConstLogicalTerm(_op, left, right, Span);
                     return null;
 
                 case Operator.Equal:
@@ -144,13 +132,9 @@ namespace DKX.Compilation.Expressions
                 case Operator.LessEqual:
                 case Operator.GreaterThan:
                 case Operator.GreaterEqual:
-                    left = await _left.GetConstantOrNullAsync(reportOrNull);
-                    right = await _right.GetConstantOrNullAsync(reportOrNull);
-                    if (left != null && right != null)
-                    {
-                        var result = await left.GetComparisonResultOrNullAsync(_op, right, reportOrNull);
-                        if (result != null) return new BoolConstantValue(result.Value, Span);
-                    }
+                    left = _left.ToConstTermOrNull(reportOrNull);
+                    right = _right.ToConstTermOrNull(reportOrNull);
+                    if (left != null && right != null) return new ConstComparisonTerm(_op, left, right, Span);
                     return null;
 
                 default:

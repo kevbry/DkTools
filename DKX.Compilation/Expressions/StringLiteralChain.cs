@@ -4,8 +4,8 @@ using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Variables.ConstantValues;
+using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -13,7 +13,7 @@ namespace DKX.Compilation.Expressions
     {
         private string _text;
 
-        public StringLiteralChain(string text, CodeSpan span)
+        public StringLiteralChain(string text, Span span)
             : base(span)
         {
             _text = text ?? throw new ArgumentNullException(nameof(text));
@@ -25,19 +25,19 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => DataType.String255;
 
-        public override Task<CodeFragment> ToWbdkCode_ReadAsync(ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            return Task.FromResult(new CodeFragment(CodeParser.StringToStringLiteral(_text), DataType, OpPrec.None, Span, readOnly: true));
+            return new CodeFragment(CodeParser.StringToStringLiteral(_text), DataType, OpPrec.None, Span, readOnly: true);
         }
 
-        public override Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment valueFragment, ISourceCodeReporter report)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }
 
-        public override Task<ConstantValue> GetConstantOrNullAsync(ISourceCodeReporter reportOrNull)
+        public override ConstTerm ToConstTermOrNull(IReportItemCollector report)
         {
-            return Task.FromResult<ConstantValue>(new StringConstantValue(_text, DataType, Span));
+            return new ConstValueTerm(new StringConstValue(_text, DataType, Span), Span);
         }
     }
 }

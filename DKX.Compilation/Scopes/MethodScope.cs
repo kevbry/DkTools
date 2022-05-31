@@ -18,7 +18,7 @@ namespace DKX.Compilation.Scopes
     {
         private string _className;
         private string _name;
-        private CodeSpan _nameSpan;
+        private Span _nameSpan;
         private string _wbdkName;
         private DataType _returnDataType;
         private VariableStore _variableStore;
@@ -32,7 +32,7 @@ namespace DKX.Compilation.Scopes
             Scope parent,
             string className,
             string name,
-            CodeSpan nameSpan,
+            Span nameSpan,
             DataType returnDataType,
             VariableStore variableStore,
             Modifiers modifiers)
@@ -47,12 +47,13 @@ namespace DKX.Compilation.Scopes
             _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
             _privacy = modifiers.Privacy ?? Privacy.Public;
             _static = modifiers.Static;
-
-            _wbdkName = string.Concat(_className, "_", _name);
         }
 
         public IEnumerable<Variable> Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue);
         IArgument[] IMethod.Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue).Cast<IArgument>().ToArray();
+        ClassScope Class => GetScope<ClassScope>();
+        IClass IMethod.Class => GetScope<IClass>();
+        public Span DefinitionSpan => _nameSpan;
         public FileContext FileContext => _fileContext;
         public string Name => _name;
         public Privacy Privacy => _privacy;
@@ -62,12 +63,13 @@ namespace DKX.Compilation.Scopes
         public Statement[] Statements { get => _statements ?? Statement.EmptyArray; private set => _statements = value; }
         public bool Static => _static;
         public IVariableStore VariableStore => _variableStore;
+        public string WbdkName => _wbdkName;
 
-        public static async Task<MethodScope> ParseAsync(
+        public static MethodScope Parse(
             Scope parent,
             string className,
             string name,
-            CodeSpan nameSpan,
+            Span nameSpan,
             DataType returnDataType,
             DkxTokenCollection argumentTokens,
             Modifiers modifiers,
@@ -77,18 +79,19 @@ namespace DKX.Compilation.Scopes
             var variableStore = new VariableStore(parent.GetScope<IVariableScope>());
             var methodScope = new MethodScope(parent, className, name, nameSpan, returnDataType, variableStore, modifiers);
 
-            variableStore.AddVariables(await methodScope.ProcessArgumentsAsync(argumentTokens));
+            variableStore.AddVariables(methodScope.ProcessArguments(argumentTokens, resolver));
+            methodScope._wbdkName = string.Concat(methodScope._name, "_", methodScope.CalculateDecoration());
 
             if (bodyTokens != null)
             {
                 var methodResolver = new MethodResolver(methodScope, resolver);
-                methodScope.Statements = (await StatementParser.SplitTokensIntoStatementsAsync(methodScope, bodyTokens, methodResolver)).ToArray();
+                methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens, methodResolver).ToArray();
             }
 
             return methodScope;
         }
 
-        private async Task<IEnumerable<Variable>> ProcessArgumentsAsync(DkxTokenCollection tokens)
+        private IEnumerable<Variable> ProcessArguments(DkxTokenCollection tokens, IResolver resolver)
         {
             var unnamedIndex = 0;
             var reportedEmptyArgs = false;
@@ -98,62 +101,65 @@ namespace DKX.Compilation.Scopes
             {
                 foreach (var argTokens in tokens.SplitByType(DkxTokenType.Delimiter))
                 {
-                    DataType dataType = DataType.Int;
+                    var stream = new DkxTokenStream(argTokens);
+
                     string name = null;
+                    Span nameSpan;
                     ArgumentPassType passType = ArgumentPassType.ByValue;
 
-                    if (tokens.Count == 0)
+                    if (stream.EndOfStream)
                     {
-                        if (!reportedEmptyArgs) await ReportAsync(_nameSpan, ErrorCode.MethodContainsEmptyArguments);
+                        if (!reportedEmptyArgs) Report(_nameSpan, ErrorCode.MethodContainsEmptyArguments);
                         reportedEmptyArgs = true;
                         name = string.Format(DkxConst.Variables.UnnamedArgumentFormat, ++unnamedIndex);
+                        nameSpan = _nameSpan;
                     }
 
-                    var pos = 0;
-                    var len = argTokens.Count;
-                    if (pos < len && argTokens[pos].Type == DkxTokenType.Keyword)
+                    var token = stream.Peek();
+                    if (token.IsKeyword(DkxConst.Keywords.Ref))
                     {
-                        if (argTokens[pos].Text == DkxConst.Keywords.Ref) passType = ArgumentPassType.ByReference;
-                        else if (argTokens[pos].Text == DkxConst.Keywords.Out) passType = ArgumentPassType.Out;
-                        else await ReportAsync(argTokens[pos].Span, ErrorCode.SyntaxError);
-                        pos++;
+                        passType = ArgumentPassType.ByReference;
+                    }
+                    else if (token.IsKeyword(DkxConst.Keywords.Out))
+                    {
+                        passType = ArgumentPassType.Out;
                     }
 
-                    if (pos < len && argTokens[pos].Type == DkxTokenType.DataType)
+                    if (!ExpressionParser.TryReadDataType(this, stream, resolver, out var dataType, out var dataTypeSpan))
                     {
-                        dataType = argTokens[pos].DataType;
-                        pos++;
+                        Report(argTokens.First().Span, ErrorCode.ExpectedDataType);
+                        dataType = DataType.Int;
                     }
                     else
                     {
-                        await ReportAsync(argTokens.First().Span, ErrorCode.ExpectedDataType);
-                    }
-
-                    if (pos < len && argTokens[pos].Type == DkxTokenType.Identifier)
-                    {
-                        name = argTokens[pos].Text;
-                        if (args.Any(x => x.Name == name))
+                        token = stream.Peek();
+                        if (token.IsIdentifier)
                         {
-                            await ReportAsync(argTokens[pos].Span, ErrorCode.DuplicateArgumentName);
+                            name = token.Text;
+                            nameSpan = token.Span;
+                            if (args.Any(x => x.Name == name)) Report(token.Span, ErrorCode.DuplicateArgumentName);
+                            stream.Position++;
                         }
-                        pos++;
-                    }
-                    else
-                    {
-                        await ReportAsync(argTokens.First().Span, ErrorCode.ExpectedArgumentName);
-                        name = string.Format(DkxConst.Variables.UnnamedArgumentFormat, ++unnamedIndex);
-                    }
+                        else
+                        {
+                            Report(argTokens.First().Span, ErrorCode.ExpectedArgumentName);
+                            name = string.Format(DkxConst.Variables.UnnamedArgumentFormat, ++unnamedIndex);
+                            nameSpan = dataTypeSpan;
+                        }
 
-                    args.Add(new Variable(
-                        name: name,
-                        wbdkName: name,
-                        dataType: dataType,
-                        fileContext: FileContext.NeutralClass,
-                        passType: passType,
-                        static_: false,
-                        local: true,
-                        privacy: Privacy.Public,
-                        initializer: null));
+                        args.Add(new Variable(
+                            class_: Class,
+                            name: name,
+                            wbdkName: name,
+                            dataType: dataType,
+                            fileContext: FileContext.NeutralClass,
+                            passType: passType,
+                            static_: false,
+                            local: true,
+                            privacy: Privacy.Public,
+                            initializer: null,
+                            nameSpan));
+                    }
                 }
             }
 
@@ -211,7 +217,7 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        internal override async Task GenerateWbdkCodeAsync(CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             cw.Write(_returnDataType.ToWbdkCode());
             cw.Write(' ');
@@ -249,27 +255,40 @@ namespace DKX.Compilation.Scopes
                 // Statements
                 foreach (var statement in _statements ?? Statement.EmptyArray)
                 {
-                    await statement.GenerateWbdkCodeAsync(cw);
+                    statement.GenerateWbdkCode(context, cw);
                 }
             }
         }
 
-        public Task<CodeFragment> ToWbdkCode_MethodCallAsync(CodeFragment parentFragment, IEnumerable<CodeFragment> arguments, CodeSpan span)
+        private string CalculateDecoration()
         {
             var sb = new StringBuilder();
 
-            var cls = GetScope<ClassScope>();
-            var nameParts = cls.FullClassNameParts.ToArray();
-            if (nameParts.Length < 2) throw new InvalidOperationException("Class did not return enough name parts.");
-            sb.Append(nameParts[0]);
+            sb.Append(_returnDataType.ToString());
+            foreach (var arg in Arguments)
+            {
+                sb.Append(", ");
+                sb.Append(arg.DataType.ToString());
+            }
+
+            return Compiler.ComputeHash(sb.ToString()).ToString("X");
+        }
+    }
+
+    static class MethodScopeHelper
+    {
+        public static Task<CodeFragment> ToWbdkCode_MethodCallAsync(this IMethod method, CodeFragment parentFragment, IEnumerable<CodeFragment> arguments, Span span)
+        {
+            var sb = new StringBuilder();
+
+            var cls = method.Class;
+            sb.Append(cls.WbdkClassName);
             sb.Append('.');
-            sb.Append(string.Join("_", nameParts.Skip(1)));
-            sb.Append('_');
-            sb.Append(_name);
+            sb.Append(method.WbdkName);
             sb.Append('(');
 
             var firstArg = true;
-            if (!_static)
+            if (!method.Static)
             {
                 // First argument is the 'this' pointer.
                 sb.Append(parentFragment);
@@ -284,7 +303,7 @@ namespace DKX.Compilation.Scopes
 
             sb.Append(')');
 
-            return Task.FromResult(new CodeFragment(sb.ToString(), _returnDataType, OpPrec.None, span, readOnly: true));
+            return Task.FromResult(new CodeFragment(sb.ToString(), method.ReturnDataType, OpPrec.None, span, readOnly: true));
         }
     }
 }
