@@ -16,7 +16,10 @@ namespace DKX.Compilation.Resolving
             _globalResolver = globalResolver ?? throw new ArgumentNullException(nameof(globalResolver));
         }
 
-        public IClass ResolveClass(string className) => _namespace.GetClass(className) ?? _globalResolver.ResolveClass(className);
+        public IClass ResolveClass(string className)
+        {
+            return _namespace.Project.GetNamespaceOrNull(_namespace.Name)?.GetClass(className) ?? _globalResolver.ResolveClass(className);
+        }
 
         public IClass GetClassByFullNameOrNull(string fullClassName) => _globalResolver.GetClassByFullNameOrNull(fullClassName);
 

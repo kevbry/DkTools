@@ -63,6 +63,21 @@ namespace DKX.Compilation.Expressions
                 case Operator.Multiply:
                 case Operator.Divide:
                 case Operator.Modulus:
+                    // Try to optimize away constants first
+                    var leftConst = _left.ToConstTermOrNull(reportOrNull: null);
+                    if (leftConst != null)
+                    {
+                        var rightConst = _right.ToConstTermOrNull(reportOrNull: null);
+                        if (rightConst != null)
+                        {
+                            var term = new ConstMathTerm(_op, leftConst, rightConst, Span);
+                            var report = new ReportItemCollector();
+                            var constContext = new ConstResolutionContext(report, context.Project);
+                            var constant = term.ResolveConstantOrNull(constContext, DkxConst.EmptyStringArray);
+                            if (constant != null) return constant.ToWbdkCode();
+                        }
+                    }
+
                     leftFrag = _left.ToWbdkCode_Read(context);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
                     rightFrag = _right.ToWbdkCode_Read(context);

@@ -80,7 +80,7 @@ namespace DKX.Compilation.Scopes
         {
             var results = new List<GeneratedCodeResult>();
 
-            var context = new CodeGenerationContext(this);
+            var context = new CodeGenerationContext(this, Project);
 
             foreach (var cls in _classes.Values)
             {

@@ -28,6 +28,8 @@ namespace DKX.Compilation.Expressions
         public override DataType InferredDataType => _field.DataType;
         public override bool IsEmptyCode => false;
 
+        public override string ToString() => $"{{FieldChain: {_field.Name}}}";
+
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
             switch (_field.AccessMethod)
@@ -79,6 +81,7 @@ namespace DKX.Compilation.Expressions
             {
                 var value = _field.ConstantValue;
                 if (value != null) return new ConstValueTerm(value, Span);
+                else return new ConstFieldTerm(_field.Class.FullClassName, _field.Name, _field.DataType, Span);
             }
 
             return null;
