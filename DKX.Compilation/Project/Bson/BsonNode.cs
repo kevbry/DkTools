@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.IO;
 
 namespace DKX.Compilation.Project.Bson
 {
     public abstract class BsonNode : IBsonCreator
     {
-        protected enum NodeType
+        protected enum NodeType : byte
         {
             Object = 1,
             Array = 2,
@@ -70,5 +71,7 @@ namespace DKX.Compilation.Project.Bson
 
             return (BsonNode)Activator.CreateInstance(GetNodeType((NodeType)id), new object[] { file, bin });
         }
+
+        public abstract void WriteJson(JsonWriter json);
     }
 }

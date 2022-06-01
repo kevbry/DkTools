@@ -4,6 +4,7 @@ using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.Schema;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
 using System;
@@ -21,6 +22,7 @@ namespace DKX.Compilation.Files
         private IReportItemCollector _reportCollector;
         private IProject _project;
         private CompilePhase _phase;
+        private ITableHashProvider _tableHashProvider;
 
         public CompileFileJob(
             DkAppContext app,
@@ -28,7 +30,8 @@ namespace DKX.Compilation.Files
             string targetPath,
             IReportItemCollector reportCollector,
             IProject project,
-            CompilePhase phase)
+            CompilePhase phase,
+            ITableHashProvider tableHashProvider)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _dkxPathName = dkxPathName ?? throw new ArgumentNullException(nameof(dkxPathName));
@@ -36,6 +39,7 @@ namespace DKX.Compilation.Files
             _reportCollector = reportCollector ?? throw new ArgumentNullException(nameof(reportCollector));
             _project = project ?? throw new ArgumentNullException(nameof(project));
             _phase = phase;
+            _tableHashProvider = tableHashProvider ?? throw new ArgumentNullException(nameof(tableHashProvider));
         }
 
         public string Description => $"Compile File: {_dkxPathName}";
@@ -55,14 +59,15 @@ namespace DKX.Compilation.Files
             fileScope.ClearReportItems();
             if (reportItems.Any(e => e.Severity == ErrorSeverity.Error)) return;
 
+            GeneratedCodeResult genResult = null;
             if (_phase == CompilePhase.FullCompilation)
             {
-                var generatedFiles = fileScope.GenerateWbdkCode(_targetPath);
+                genResult = fileScope.GenerateWbdkCode(_targetPath);
                 reportItems = fileScope.ReportItems.ToList();
                 _reportCollector.AddReportItems(reportItems);
                 if (reportItems.Any(e => e.Severity == ErrorSeverity.Error)) return;
 
-                foreach (var generatedFile in generatedFiles)
+                foreach (var generatedFile in genResult.GeneratedFiles)
                 {
                     await _app.Log.DebugAsync("Writing: {0}", generatedFile.WbdkPathName);
                     _app.FileSystem.CreateDirectoryRecursive(PathUtil.GetDirectoryName(generatedFile.WbdkPathName));
@@ -76,8 +81,8 @@ namespace DKX.Compilation.Files
             {
                 _project.OnCompileCompleted(
                     dkxPathName: _dkxPathName,
-                    fileDependencies: DkxConst.EmptyStringArray,    // TODO
-                    tableDependencies: TableHash.EmptyArray);       // TODO
+                    fileDependencies: genResult.FileDependencies,
+                    tableDependencies: genResult.TableDependencies.Select(x => new TableHash(x, _tableHashProvider.GetTableHash(x))));
             }
         }
     }

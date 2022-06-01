@@ -1,4 +1,5 @@
 ﻿using DKX.Compilation.DataTypes;
+using Newtonsoft.Json;
 using System.IO;
 
 namespace DKX.Compilation.Project.Bson
@@ -28,5 +29,10 @@ namespace DKX.Compilation.Project.Bson
         protected override NodeType NodeTypeId => NodeType.DataType;
 
         public override string ToString() => _dataType.ToString();
+
+        public override void WriteJson(JsonWriter json)
+        {
+            json.WriteValue(_dataType.ToString());
+        }
     }
 }

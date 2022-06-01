@@ -4,9 +4,11 @@ using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.Schema;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DKX.Compilation.Scopes
 {
@@ -77,10 +79,9 @@ namespace DKX.Compilation.Scopes
             return fileContexts;
         }
 
-        public List<GeneratedCodeResult> GenerateWbdkCode(string targetPath)
+        public GeneratedCodeResult GenerateWbdkCode(string targetPath)
         {
-            var results = new List<GeneratedCodeResult>();
-
+            var results = new List<GeneratedCodeFile>();
             var context = new CodeGenerationContext(this, Project);
 
             foreach (var cls in _classes.Values)
@@ -95,7 +96,7 @@ namespace DKX.Compilation.Scopes
                         var wbdkFileName = cls.WbdkClassName + fileContext.GetExtension();
                         var wbdkPathName = PathUtil.CombinePath(targetPath, wbdkFileName);
 
-                        results.Add(new GeneratedCodeResult(wbdkPathName, cw.Code, cls.FullClassName, cls.NamespaceName));
+                        results.Add(new GeneratedCodeFile(wbdkPathName, cw.Code, cls.FullClassName, cls.NamespaceName));
                     }
                     catch (CodeException ex)
                     {
@@ -104,7 +105,7 @@ namespace DKX.Compilation.Scopes
                 }
             }
 
-            return results;
+            return new GeneratedCodeResult(results.ToArray(), context.FileDependencies.ToArray(), context.TableDependencies.ToArray());
         }
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)

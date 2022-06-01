@@ -26,6 +26,8 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
+            context.DependsOnFile(_constant.DefinitionSpan);
+
             var value = _constant.ConstantValue;
             if (value == null) throw new CodeException(Span, ErrorCode.ConstantNotResolved);
             return value.ToWbdkCode();

@@ -1,9 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Project.Bson
 {
@@ -75,6 +73,13 @@ namespace DKX.Compilation.Project.Bson
             if (value == null) throw new ArgumentNullException(nameof(value));
             if (value.File != File) throw new ArgumentException("BSON node does not belong to the same file.");
             _elements.Insert(index, value);
+        }
+
+        public override void WriteJson(JsonWriter json)
+        {
+            json.WriteStartArray();
+            foreach (var element in _elements) element.WriteJson(json);
+            json.WriteEndArray();
         }
     }
 }

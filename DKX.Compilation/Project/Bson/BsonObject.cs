@@ -1,4 +1,5 @@
 ﻿using DKX.Compilation.DataTypes;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -249,6 +250,17 @@ namespace DKX.Compilation.Project.Bson
         public void SetSpan(string propertyName, Span value)
         {
             this[propertyName ?? throw new ArgumentNullException(nameof(propertyName))] = new BsonSpan(File, value);
+        }
+
+        public override void WriteJson(JsonWriter json)
+        {
+            json.WriteStartObject();
+            foreach (var prop in _properties)
+            {
+                json.WritePropertyName(File.GetString(prop.Key));
+                prop.Value.WriteJson(json);
+            }
+            json.WriteEndObject();
         }
     }
 }

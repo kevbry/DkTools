@@ -25,7 +25,7 @@ namespace Test
     }
 }
 ");
-            await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Unit")}.nc", @"
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Unit")}.nc", @"
 // Test.Unit
 void DoTest_%1()
 {

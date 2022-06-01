@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Project.Bson
 {
@@ -34,6 +31,11 @@ namespace DKX.Compilation.Project.Bson
         {
             if (!Enum.IsDefined(typeof(T), _value)) throw new InvalidBsonDataException($"Cannot convert integer '{_value}' to enum type '{typeof(T)}'");
             return (T)(object)_value;
+        }
+
+        public override void WriteJson(JsonWriter json)
+        {
+            json.WriteValue(_value.ToString());
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.IO;
 
 namespace DKX.Compilation.Project.Bson
@@ -28,5 +29,10 @@ namespace DKX.Compilation.Project.Bson
         public string Value => File.GetString(_stringId);
 
         public override string ToString() => File.GetString(_stringId);
+
+        public override void WriteJson(JsonWriter json)
+        {
+            json.WriteValue(File.GetString(_stringId));
+        }
     }
 }

@@ -172,7 +172,7 @@ namespace DKX.Compilation.DataTypes
 
         public static BaseType Deserialize(BinaryReader bin)
         {
-            var value = (int)bin.ReadByte();
+            var value = bin.ReadByte();
             if (!Enum.IsDefined(typeof(BaseType), value)) throw new InvalidBaseTypeException();
             return (BaseType)value;
         }

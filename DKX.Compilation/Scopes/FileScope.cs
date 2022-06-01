@@ -103,16 +103,31 @@ namespace DKX.Compilation.Scopes
 
         public override bool HasErrors => _reportItems.Any(x => x.Severity == ErrorSeverity.Error);
 
-        public List<GeneratedCodeResult> GenerateWbdkCode(string targetPath)
+        public GeneratedCodeResult GenerateWbdkCode(string targetPath)
         {
-            var results = new List<GeneratedCodeResult>();
+            var files = new List<GeneratedCodeFile>();
+            var fileDeps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tableDeps = new HashSet<string>();
 
             foreach (var ns in _namespaces)
             {
-                results.AddRange(ns.GenerateWbdkCode(targetPath));
+                var result = ns.GenerateWbdkCode(targetPath);
+                files.AddRange(result.GeneratedFiles);
+
+                foreach (var fileDep in result.FileDependencies)
+                {
+                    if (!fileDeps.Contains(fileDep)) fileDeps.Add(fileDep);
+                }
+
+                foreach (var tableDep in result.TableDependencies)
+                {
+                    if (!tableDeps.Contains(tableDep)) tableDeps.Add(tableDep);
+                }
             }
 
-            return results;
+            fileDeps.Remove(_sourcePathName);   // Remove dependencies on itself
+
+            return new GeneratedCodeResult(files.ToArray(), fileDeps.ToArray(), tableDeps.ToArray());
         }
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
@@ -126,14 +141,28 @@ namespace DKX.Compilation.Scopes
         public NamespaceScope GetNamespaceOrNull(string name) => _namespaces.Where(x => x.Name == name).FirstOrDefault();
     }
 
-    public struct GeneratedCodeResult
+    public class GeneratedCodeResult
+    {
+        public GeneratedCodeFile[] GeneratedFiles { get; private set; }
+        public string[] FileDependencies { get; private set; }
+        public string[] TableDependencies { get; private set; }
+
+        public GeneratedCodeResult(GeneratedCodeFile[] files, string[] fileDeps, string[] tableDeps)
+        {
+            GeneratedFiles = files ?? throw new ArgumentNullException(nameof(files));
+            FileDependencies = fileDeps ?? throw new ArgumentNullException(nameof(fileDeps));
+            TableDependencies = tableDeps ?? throw new ArgumentNullException(nameof(tableDeps));
+        }
+    }
+
+    public struct GeneratedCodeFile
     {
         public string WbdkPathName { get; private set; }
         public string Code { get; private set; }
         public string FullClassName { get; private set; }
         public string Namespace { get; private set; }
 
-        public GeneratedCodeResult(string wbdkPathName, string code, string fullClassName, string namespaceName)
+        public GeneratedCodeFile(string wbdkPathName, string code, string fullClassName, string namespaceName)
         {
             WbdkPathName = wbdkPathName ?? throw new ArgumentNullException(nameof(wbdkPathName));
             Code = code ?? throw new ArgumentNullException(nameof(code));

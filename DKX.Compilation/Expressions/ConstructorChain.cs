@@ -6,12 +6,10 @@ using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
-using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -85,6 +83,8 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
+            context.DependsOnFile(_class.DkxPathName);
+
             return new CodeFragment(
                 text: $"{DkxConst.DkxLib.dkx_new}({_class.DataSize})",
                 dataType: _dataType,

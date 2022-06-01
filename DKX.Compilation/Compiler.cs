@@ -135,7 +135,7 @@ namespace DKX.Compilation
         private async Task DoCompilePhase(CompilePhase phase, IProject project, ITableHashProvider tableHashProvider, CancellationToken cancel)
         {
             var queue = new CompileQueue(_app, $"DKX Compile Queue ({phase})");
-            var compileFileJobFactory = new CompileFileJobFactory(_app, queue, _targetSourceDir, project, phase);
+            var compileFileJobFactory = new CompileFileJobFactory(_app, queue, _targetSourceDir, project, phase, tableHashProvider);
 
             project.OnCompilePhaseStarted(phase);
 

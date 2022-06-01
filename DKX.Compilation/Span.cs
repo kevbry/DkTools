@@ -27,6 +27,8 @@ namespace DKX.Compilation
         public bool IsEmpty => _pathName == null;
         public int Length => _end - _start;
 
+        public override string ToString() => $"[{_pathName} - {_start}..{_end}]";
+
         public static Span operator +(Span a, Span b)
         {
             if (a.PathName != b.PathName) throw new ArgumentException("Both spans are not from the same file.");

@@ -32,6 +32,8 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
+            context.DependsOnFile(_method.Class.DkxPathName);
+
             if (_method.AccessType == MethodAccessType.System)
             {
                 var cls = SystemClass.SystemClasses.Where(x => x.FullClassName == _method.Class.FullClassName).FirstOrDefault();

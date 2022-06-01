@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -68,10 +69,10 @@ namespace DKX.Compilation.Project.Bson
             using (var bin = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true))
             {
                 var sig = bin.ReadUInt32();
-                if (sig != FileSignature) throw new InvalidBsonDataException("File signature does not match.");
+                if (sig != FileSignature) throw new InvalidBsonDataException($"File signature does not match (expected 0x{FileSignature:X} but was 0x{sig:X})");
 
                 var version = bin.ReadUInt32();
-                if (version != FileVersion) throw new InvalidBsonDataException("File version does not match.");
+                if (version != FileVersion) throw new InvalidBsonDataException($"File version does not match (expected {FileVersion} but was {version})");
 
                 var numStrings = bin.ReadInt32();
                 _strings.Clear();
@@ -87,6 +88,20 @@ namespace DKX.Compilation.Project.Bson
                 if (!(root is BsonObject obj)) throw new InvalidBsonDataException("Root node is not an object.");
                 _root = obj;
             }
+        }
+
+        public string ToJson(Formatting formatting = Formatting.None)
+        {
+            var sb = new StringBuilder();
+
+            using (var textWriter = new StringWriter(sb))
+            using (var jsonWriter = new JsonTextWriter(textWriter))
+            {
+                jsonWriter.Formatting = formatting;
+                _root.WriteJson(jsonWriter);
+            }
+
+            return sb.ToString();
         }
     }
 

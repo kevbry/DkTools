@@ -2,11 +2,13 @@
 using DK.AppEnvironment;
 using DK.Implementation.Virtual;
 using DK.Repository;
+using DKX.Compilation.Project.Bson;
 using DKX.Compilation.ReportItems;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -15,6 +17,8 @@ namespace DKX.Compilation.Tests
 {
     class CompileTestClass
     {
+        public static string DkxProjectPathName = "X:\\bin\\.dkx\\dkx.dat";
+
         protected DkAppContext CreateAppContext()
         {
             var app = CreateApp();
@@ -162,16 +166,80 @@ namespace DKX.Compilation.Tests
                 Assert.IsFalse(compiler.HasErrors, "Compiler returned errors.");
             }
 
+            //await DumpBsonFile(app, "X:\\bin\\.dkx\\dkx.dat");
+
             return app;
         }
 
-        protected async Task ValidateOutput(DkAppContext app, string wbdkPathName, string wbdkCode)
+        protected async Task<DkAppContext> RunCompileAsync(DkAppContext app, ReportItem? expectedError = null)
+        {
+            var compiler = new Compiler(app);
+            await compiler.CompileAsync(cancel: default);
+
+            if (expectedError.HasValue) TestContext.Out.WriteLine($"Expected Error: {expectedError.ToString()}");
+
+            if (expectedError.HasValue)
+            {
+                Assert.IsTrue(compiler.HasErrors, "Compiler did not return any errors.");
+
+                var errorText = expectedError.Value.ToString();
+                Assert.IsTrue(compiler.ReportItems.Any(x => x.ToString().EqualsI(errorText)), "Compiler returned errors, but not the expected one.");
+                return app;
+            }
+            else
+            {
+                Assert.IsFalse(compiler.HasErrors, "Compiler returned errors.");
+            }
+
+            return app;
+        }
+
+        protected async Task ValidateOutputAsync(DkAppContext app, string wbdkPathName, string wbdkCode)
         {
             Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
 
             var actualWbdkCode = await app.FileSystem.ReadFileTextAsync(wbdkPathName);
             TestContext.Out.WriteLine($"WBDK Code Generated: {wbdkPathName}\n{actualWbdkCode}");
             WbdkCodeValidator.Validate(wbdkCode, actualWbdkCode);
+        }
+
+        protected async Task DumpBsonFileAsync(DkAppContext app, string pathName)
+        {
+            Assert.IsTrue(app.FileSystem.FileExists(pathName));
+
+            var bsonContent = await app.FileSystem.ReadFileBytesAsync(pathName);
+            using (var memStream = new MemoryStream(bsonContent))
+            {
+                var bson = new BsonFile();
+                bson.Read(memStream);
+                var json = bson.ToJson(Formatting.Indented);
+                TestContext.Out.WriteLine(json);
+            }
+        }
+
+        protected async Task<string[]> GetFileDependenciesAsync(DkAppContext app, string dkxPathName)
+        {
+            Assert.IsTrue(app.FileSystem.FileExists(DkxProjectPathName));
+
+            var bsonContent = await app.FileSystem.ReadFileBytesAsync(DkxProjectPathName);
+            using (var memStream = new MemoryStream(bsonContent))
+            {
+                var bson = new BsonFile();
+                bson.Read(memStream);
+                var bsonFilesArray = bson.Root.GetProperty("Files") as BsonArray;
+                foreach (var element in bsonFilesArray.Values)
+                {
+                    if (element is BsonObject obj)
+                    {
+                        if (obj.GetProperty("DkxPathName").ToString().EqualsI(dkxPathName))
+                        {
+                            return (obj.GetProperty("FileDependencies") as BsonArray).Values.Select(x => x.ToString()).ToArray();
+                        }
+                    }
+                }
+            }
+
+            return DkxConst.EmptyStringArray;
         }
     }
 }

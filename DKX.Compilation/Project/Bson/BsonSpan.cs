@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Newtonsoft.Json;
+using System.IO;
 
 namespace DKX.Compilation.Project.Bson
 {
@@ -32,5 +33,10 @@ namespace DKX.Compilation.Project.Bson
 
         protected override NodeType NodeTypeId => NodeType.Span;
         public Span Value => _span;
+
+        public override void WriteJson(JsonWriter json)
+        {
+            json.WriteValue(_span.ToString());
+        }
     }
 }

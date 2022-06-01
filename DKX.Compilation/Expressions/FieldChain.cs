@@ -32,6 +32,8 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
+            context.DependsOnFile(_field.Class.DkxPathName);
+
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
@@ -57,6 +59,8 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
         {
+            context.DependsOnFile(_field.Class.DkxPathName);
+
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
