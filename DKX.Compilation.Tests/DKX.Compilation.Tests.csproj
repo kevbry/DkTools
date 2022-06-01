@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\ConstantsTests.cs" />
+    <Compile Include="SystemClasses\SystemConsoleTests.cs" />
     <Compile Include="WbdkCodeValidator.cs" />
     <Compile Include="CompileTestClass.cs" />
     <Compile Include="DkDataTypeParserTests.cs" />

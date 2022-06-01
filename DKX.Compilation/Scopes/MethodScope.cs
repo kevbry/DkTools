@@ -55,6 +55,7 @@ namespace DKX.Compilation.Scopes
             Resolver = new MethodResolver(this, resolver);
         }
 
+        public MethodAccessType AccessType => MethodAccessType.Normal;
         public IEnumerable<Variable> Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue);
         IArgument[] IMethod.Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue).Cast<IArgument>().ToArray();
         ClassScope Class => GetScope<ClassScope>();

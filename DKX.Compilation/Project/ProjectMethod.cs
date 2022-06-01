@@ -19,6 +19,7 @@ namespace DKX.Compilation.Project
         private bool _static;
         private FileContext _fileContext;
         private Span _span;
+        private MethodAccessType _accessType;
 
         public ProjectMethod(ProjectClass class_, IMethod fileMethod)
         {
@@ -31,10 +32,11 @@ namespace DKX.Compilation.Project
             _static = fileMethod.Static;
             _fileContext = fileMethod.FileContext;
             _span = fileMethod.DefinitionSpan;
+            _accessType = fileMethod.AccessType;
         }
 
         private ProjectMethod(ProjectClass class_, string name, string wbdkName, DataType returnDataType, Privacy privacy,
-            bool static_, FileContext fileContext, Span span, ProjectArgument[] args)
+            bool static_, FileContext fileContext, Span span, MethodAccessType accessType, ProjectArgument[] args)
         {
             _class = class_;
             _name = name;
@@ -44,9 +46,11 @@ namespace DKX.Compilation.Project
             _static = static_;
             _fileContext = fileContext;
             _span = span;
+            _accessType = accessType;
             _arguments = args;
         }
 
+        public MethodAccessType AccessType => _accessType;
         public IArgument[] Arguments => _arguments;
         public ProjectClass Class => _class;
         IClass IMethod.Class => _class;
@@ -69,6 +73,7 @@ namespace DKX.Compilation.Project
             obj.SetBoolean("Static", _static);
             obj.SetEnum("FileContext", _fileContext);
             obj.SetSpan("DefinitionSpan", _span);
+            obj.SetEnum("AccessType", _accessType);
             obj.SetArray("Arguments", _arguments.Select(x => x.ToBson(bson)));
 
             return obj;
@@ -85,9 +90,10 @@ namespace DKX.Compilation.Project
             var static_ = obj.GetBoolean("Static");
             var fileContext = obj.GetEnum<FileContext>("FileContext");
             var span = obj.GetSpan("DefinitionSpan");
+            var accessType = obj.GetEnum<MethodAccessType>("AccessType");
             var args = obj.GetArray("Arguments").Select(x => ProjectArgument.FromBson(x)).ToArray();
 
-            return new ProjectMethod(class_, name, wbdkName, returnDataType, privacy, static_, fileContext, span, args);
+            return new ProjectMethod(class_, name, wbdkName, returnDataType, privacy, static_, fileContext, span, accessType, args);
         }
     }
 }

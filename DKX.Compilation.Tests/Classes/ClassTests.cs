@@ -52,6 +52,7 @@ namespace Test
 }
 ");
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
 
 char(255) _inst;
 
@@ -75,6 +76,8 @@ void SetInstitution_%2(char(255) inst)
 .Replace("%2", Compiler.ComputeHash("void, string").ToString("X"))
 );
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
+// Test.User
+
 void DoTest_%0()
 {
     int no;
@@ -120,6 +123,8 @@ namespace Test
 }
 ");
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
 char(255) _inst;
 
 void SetInstitution_%1(char(255) inst)
@@ -129,6 +134,8 @@ void SetInstitution_%1(char(255) inst)
 ".Replace("%1", Compiler.ComputeHash("void, string").ToString("X"))
 );
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
+// Test.User
+
 void DoTest_%2()
 {
     %M.SetInstitution_%1(""Bank1"");

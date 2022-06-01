@@ -13,6 +13,7 @@ namespace DKX.Compilation.Project
         private string _name;
         private Dictionary<string, ProjectClass> _classes = new Dictionary<string, ProjectClass>();
         private DateTime _scanTime;
+        private bool _system;
 
         public ProjectNamespace(string name, DateTime? scanTime = null)
         {
@@ -27,10 +28,18 @@ namespace DKX.Compilation.Project
             _classes = classes;
         }
 
+        public ProjectNamespace(string name, bool system)
+        {
+            _name = name;
+            _system = system;
+        }
+
+        public NamespaceAccessType AccessType => _system ? NamespaceAccessType.System : NamespaceAccessType.Normal;
         public IEnumerable<ProjectClass> Classes => _classes.Values;
         IEnumerable<IClass> INamespace.Classes => _classes.Values;
         public string NamespaceName => _name;
         public DateTime ScanTime => _scanTime;
+        public bool System => _system;
 
         IClass INamespace.GetClass(string name)
         {
@@ -42,6 +51,11 @@ namespace DKX.Compilation.Project
         {
             if (_classes.TryGetValue(name, out var class_)) return class_;
             return null;
+        }
+
+        public void AddClass(ProjectClass class_)
+        {
+            _classes[(class_ ?? throw new ArgumentNullException(nameof(class_))).ClassName] = class_;
         }
 
         public void Update(CompilePhase phase, INamespace fileNamespace)

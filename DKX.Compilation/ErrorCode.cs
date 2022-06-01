@@ -117,6 +117,9 @@ namespace DKX.Compilation
         /// </summary>
         [Description("A circular dependency was found in constant '{0}'.")]
         CircularConstantDependency = 1117,
+
+        [Description("Namespace '{0}' is not valid here.")]
+        NamespaceNotValidHere = 1118,
         #endregion
 
         #region Methods (1200-1299)
@@ -207,6 +210,9 @@ namespace DKX.Compilation
 
         [Description("Static class references cannot be modified.")]
         StaticReferenceCannotBeModified = 1413,
+
+        [Description("Invalid number of arguments.")]
+        InvalidNumberOfArguments = 1414,
         #endregion
 
         #region Expressions (1500-1599)

@@ -6,6 +6,7 @@ using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace DKX.Compilation.Expressions
 {
@@ -87,6 +88,11 @@ namespace DKX.Compilation.Expressions
                 {
                     chain = new ConstantChain(constant, token.Span);
                     return TryReadAfterValue(scope, stream, chain, leftPrec);
+                }
+
+                if (scope.Project.IsNamespaceStart(token.Text))
+                {
+                    return ReadNamespaceStart(scope, stream, token, leftPrec);
                 }
 
                 scope.Report(token.Span, ErrorCode.UnknownIdentifier, token.Text);
@@ -222,6 +228,66 @@ namespace DKX.Compilation.Expressions
             {
                 scope.Report(nameToken.Span, ErrorCode.ExpectedMemberName);
                 return leftChain;
+            }
+        }
+
+        private static Chain ReadNamespaceStart(Scope scope, DkxTokenStream stream, DkxToken nsStartToken, OpPrec leftPrec)
+        {
+            // This method must return a Chain.
+
+            var nsSpan = nsStartToken.Span;
+            var sb = new StringBuilder(nsStartToken.Text);
+
+            while (true)
+            {
+                if (!stream.Peek().IsOperator(Operator.Dot))
+                {
+                    scope.Report(nsSpan, ErrorCode.NamespaceNotValidHere, sb.ToString());
+                    return new ErrorChain(innerChainOrNull: null, nsSpan);
+                }
+                stream.Position++;
+
+                var token = stream.Read();
+                if (!token.IsIdentifier)
+                {
+                    scope.Report(token.Span, ErrorCode.SyntaxError);
+                    return new ErrorChain(innerChainOrNull: null, nsSpan + token.Span);
+                }
+
+                var ns = scope.Project.GetNamespaceOrNull(sb.ToString());
+                if (ns == null) throw new InvalidOperationException("Namespace not found even though it was verified earlier.");
+
+                var cls = ns.GetClass(token.Text);
+                if (cls != null)
+                {
+                    var classChain = new DataTypeChain(new DataType(cls), nsSpan + token.Span);
+                    if (stream.Peek().IsOperator(Operator.Dot))
+                    {
+                        stream.Position++;
+                        return ReadDotSequence(scope, stream, classChain, leftPrec);
+                    }
+                    else
+                    {
+                        // Just a class name sitting by itself.
+                        var chain = new DataTypeChain(new DataType(cls), nsSpan + token.Span);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
+                    }
+                }
+
+                sb.Append(DkxConst.Operators.Dot);
+                sb.Append(token.Text);
+
+                if (scope.Project.IsNamespaceStart(sb.ToString()))
+                {
+                    // This is the next part of the namespace string.
+                    nsSpan += token.Span;
+                    continue;
+                }
+                else
+                {
+                    scope.Report(token.Span, ErrorCode.ClassNotFound, token.Text);
+                    return new ErrorChain(innerChainOrNull: null, token.Span);
+                }
             }
         }
 

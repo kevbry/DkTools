@@ -26,6 +26,8 @@ namespace Test
 ");
 
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Unit")}.nc", @"
+// Test.Unit
+
 void DoTest_%1()
 {
     int x;
@@ -54,6 +56,8 @@ namespace Test
 ");
 
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Unit")}.nc", @"
+// Test.Unit
+
 void DoTest_%1()
 {
     int x;
@@ -84,6 +88,8 @@ namespace Test
 ");
 
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Unit")}.nc", @"
+// Test.Unit
+
 void DoTest_%1()
 {
     int x;
@@ -136,6 +142,8 @@ namespace Test
 }
 ");
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.ClassA")}.nc", @"
+// Test.ClassA
+
 void DoTest_%1()
 {
     int a;
@@ -144,6 +152,8 @@ void DoTest_%1()
 ".Replace("%1", Compiler.ComputeHash("void").ToString("X"))
 );
             await ValidateOutput(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.ClassB")}.nc", @"
+// Test.ClassB
+
 void DoTest_%1()
 {
     int x;

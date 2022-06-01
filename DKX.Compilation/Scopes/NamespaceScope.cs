@@ -23,6 +23,7 @@ namespace DKX.Compilation.Scopes
             Resolver = new NamespaceResolver(this, parent.Resolver);
         }
 
+        public NamespaceAccessType AccessType => NamespaceAccessType.Normal;
         public IEnumerable<ClassScope> Classes => _classes.Values;
         public string Name => _name;
         public string NamespaceName => _name;

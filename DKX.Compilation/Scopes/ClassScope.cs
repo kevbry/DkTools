@@ -349,6 +349,10 @@ namespace DKX.Compilation.Scopes
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
+            // Put the original class name at the top of the file, for troubleshooting if needed.
+            cw.WriteLine($"// {_fullName}");
+            cw.WriteLine();
+
             // Generate global variables for any static member variables
             var gotMemberVariable = false;
             foreach (var memberVariable in _variableStore.GetVariables(includeParents: false))

@@ -3,6 +3,7 @@ using DK.Diagnostics;
 using DKX.Compilation.Project.Bson;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.SystemClasses;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Collections.Generic;
@@ -127,6 +128,14 @@ namespace DKX.Compilation.Project
             return null;
         }
 
+        public bool IsNamespaceStart(string name)
+        {
+            if (_namespaces.ContainsKey(name)) return true;
+
+            var prefix = name + DkxConst.Operators.Dot;
+            return _namespaces.Keys.Any(x => x.StartsWith(prefix));
+        }
+
         public IClass GetClassByFullNameOrNull(string fullClassName)
         {
             var parts = fullClassName.Split('.');
@@ -157,7 +166,11 @@ namespace DKX.Compilation.Project
 
             var bsonNamespaces = new BsonArray(bson);
             bson.Root.AddProperty("Namespaces", bsonNamespaces);
-            foreach (var ns in _namespaces.Values) bsonNamespaces.Add(ns.ToBson(bson));
+            foreach (var ns in _namespaces.Values)
+            {
+                if (ns.System) continue;
+                bsonNamespaces.Add(ns.ToBson(bson));
+            }
 
             using (var memStream = new MemoryStream())
             {
@@ -190,6 +203,8 @@ namespace DKX.Compilation.Project
                 _files.Clear();
                 _namespaces.Clear();
             }
+
+            LoadSystemClasses();
         }
 
         private void Load(byte[] data)
@@ -208,6 +223,26 @@ namespace DKX.Compilation.Project
                 {
                     _namespaces[ns.NamespaceName] = ns;
                 }
+            }
+        }
+
+        private void LoadSystemClasses()
+        {
+            foreach (var sysClass in SystemClass.SystemClasses)
+            {
+                var nsName = sysClass.NamespaceName;
+                if (_namespaces.TryGetValue(nsName, out var ns))
+                {
+                    if (!ns.System) throw new InvalidOperationException("System namespace is not system.");
+                }
+                else
+                {
+                    _namespaces[nsName] = ns = new ProjectNamespace(nsName, system: true);
+                }
+
+                var cls = new ProjectClass(sysClass.ClassName, sysClass.FullClassName, sysClass.NamespaceName, sysClass.WbdkClassName, sysClass.DkxPathName);
+                cls.Update(CompilePhase.FullCompilation, sysClass);
+                ns.AddClass(cls);
             }
         }
 

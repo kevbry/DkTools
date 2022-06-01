@@ -1,16 +1,14 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.SystemClasses;
 using DKX.Compilation.Tokens;
-using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Expressions
 {
@@ -34,26 +32,40 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            var sb = new StringBuilder();
-            sb.Append(_method.Class.WbdkClassName);
-            sb.Append('.');
-            sb.Append(_method.WbdkName);
-            sb.Append('(');
-            var firstArg = true;
-            if (!_method.Static)
+            if (_method.AccessType == MethodAccessType.System)
             {
-                sb.Append(_thisChain.ToWbdkCode_Read(context));
-                firstArg = false;
-            }
-            foreach (var arg in _args)
-            {
-                if (firstArg) firstArg = false;
-                else sb.Append(", ");
-                sb.Append(arg.ToWbdkCode_Read(context));
-            }
-            sb.Append(')');
+                var cls = SystemClass.SystemClasses.Where(x => x.FullClassName == _method.Class.FullClassName).FirstOrDefault();
+                if (cls == null) throw new InvalidOperationException($"System class '{_method.Class.FullClassName}' not found.");
 
-            return new CodeFragment(sb.ToString(), _method.ReturnDataType, OpPrec.None, Span, readOnly: true);
+                var method = cls.GetMethods(_method.Name).FirstOrDefault() as SystemMethod;
+                if (method == null) throw new InvalidOperationException($"System method '{_method.Class.FullClassName}.{_method.Name}' not found.");
+
+                return method.WbdkCodeGenerator(context, _args, Span);
+            }
+            else
+            {
+                var sb = new StringBuilder();
+
+                sb.Append(_method.Class.WbdkClassName);
+                sb.Append('.');
+                sb.Append(_method.WbdkName);
+                sb.Append('(');
+                var firstArg = true;
+                if (!_method.Static)
+                {
+                    sb.Append(_thisChain.ToWbdkCode_Read(context));
+                    firstArg = false;
+                }
+                foreach (var arg in _args)
+                {
+                    if (firstArg) firstArg = false;
+                    else sb.Append(", ");
+                    sb.Append(arg.ToWbdkCode_Read(context));
+                }
+                sb.Append(')');
+
+                return new CodeFragment(sb.ToString(), _method.ReturnDataType, OpPrec.None, Span, readOnly: true);
+            }
         }
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)

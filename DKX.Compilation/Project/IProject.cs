@@ -27,6 +27,8 @@ namespace DKX.Compilation.Project
         INamespace GetNamespaceOrNull(string namespaceName);
 
         IClass GetClassByFullNameOrNull(string fullClassName);
+
+        bool IsNamespaceStart(string name);
     }
 
     public struct TableHash

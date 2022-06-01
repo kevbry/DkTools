@@ -113,6 +113,9 @@
     <Compile Include="Scopes\Statements\Statement.cs" />
     <Compile Include="Scopes\Statements\StatementParser.cs" />
     <Compile Include="Scopes\Statements\VariableDeclarationStatement.cs" />
+    <Compile Include="SystemClasses\Console\SystemConsoleClass.cs" />
+    <Compile Include="SystemClasses\SystemClass.cs" />
+    <Compile Include="SystemClasses\SystemMethod.cs" />
     <Compile Include="Tokens\DkxCodeParser.cs" />
     <Compile Include="Tokens\DkxToken.cs" />
     <Compile Include="Tokens\DkxTokenCollection.cs" />

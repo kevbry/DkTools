@@ -9,5 +9,13 @@ namespace DKX.Compilation.Resolving
         IEnumerable<IClass> Classes { get; }
 
         IClass GetClass(string name);
+
+        NamespaceAccessType AccessType { get; }
+    }
+
+    public enum NamespaceAccessType
+    {
+        Normal,
+        System
     }
 }

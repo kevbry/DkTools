@@ -19,6 +19,8 @@ namespace DKX.Compilation.Resolving
 
         Privacy Privacy { get; }
 
+        MethodAccessType AccessType { get; }
+
         bool Static { get; }
 
         FileContext FileContext { get; }
@@ -38,5 +40,11 @@ namespace DKX.Compilation.Resolving
         DataType DataType { get; }
 
         ArgumentPassType PassType { get; }
+    }
+
+    public enum MethodAccessType
+    {
+        Normal,
+        System
     }
 }
