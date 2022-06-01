@@ -90,6 +90,7 @@ void DoTest_%0()
     name = ""Bob"";
     %M.SetName(mbr, name);
     %M.SetName(mbr, ""Bob2"");
+    dkx_release(mbr);
 }
 ".Replace("%0", Compiler.ComputeHash("void").ToString("X"))
 .Replace("%1", Compiler.ComputeHash("void, int, string").ToString("X"))

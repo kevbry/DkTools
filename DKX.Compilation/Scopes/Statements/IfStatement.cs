@@ -108,6 +108,8 @@ namespace DKX.Compilation.Scopes.Statements
                     {
                         stmt.GenerateWbdkCode(context, cw);
                     }
+
+                    this.GenerateScopeEndingWbdkCode(cw);
                 }
             }
         }

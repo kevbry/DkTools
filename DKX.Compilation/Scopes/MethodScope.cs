@@ -266,6 +266,8 @@ namespace DKX.Compilation.Scopes
                 {
                     statement.GenerateWbdkCode(context, cw);
                 }
+
+                this.GenerateScopeEndingWbdkCode(cw);
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Expressions;
 
 namespace DKX.Compilation.Objects
 {
@@ -74,6 +75,11 @@ namespace DKX.Compilation.Objects
                 default:
                     return new CodeFragment($"dkx_setuns4({thisFragment}, {varOffset}, {valueFragment})", varDataType, Expressions.OpPrec.None, span, readOnly: true);
             }
+        }
+
+        public static CodeFragment GenerateLeaveScope(CodeFragment thisFragment)
+        {
+            return new CodeFragment($"dkx_release({thisFragment})", thisFragment.DataType, OpPrec.None, thisFragment.SourceSpan, readOnly: true);
         }
     }
 }
