@@ -58,7 +58,7 @@ namespace DKX.Compilation.Project
         public bool Static => _static;
         public string WbdkClassName => _wbdkClassName;
 
-        public void Update(IClass fileClass)
+        public void Update(CompilePhase phase, IClass fileClass)
         {
             _scanTime = DateTime.Now;
 
@@ -67,6 +67,17 @@ namespace DKX.Compilation.Project
             _dataSize = fileClass.DataSize;
             _methods = fileClass.Methods.Select(x => new ProjectMethod(this, x)).ToList();
             _fields = fileClass.Fields.Select(x => new ProjectField(this, x)).ToList();
+
+            if (phase == CompilePhase.ConstantResolution)
+            {
+                foreach (var field in _fields)
+                {
+                    if (field.AccessMethod == Variables.FieldAccessMethod.Constant)
+                    {
+                        if (field.ConstantExpression == null) throw new InvalidOperationException("A constant field was received with no expression.");
+                    }
+                }
+            }
         }
 
         IEnumerable<IMethod> IClass.GetMethods(string name) => ((IEnumerable<IMethod>)_methods ?? IMethodHelper.EmptyArray).Where(x => x.Name == name);

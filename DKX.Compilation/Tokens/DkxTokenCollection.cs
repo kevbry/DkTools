@@ -64,7 +64,7 @@ namespace DKX.Compilation.Tokens
         public DkxTokenCollection GetRange(int start, int count)
         {
             var ret = new DkxTokenCollection();
-            for (int i = 0, ii = start + count; i < ii; i++)
+            for (int i = start, ii = start + count; i < ii; i++)
             {
                 if (i >= 0 && i < _tokens.Count) ret.Add(_tokens[i]);
             }

@@ -11,10 +11,10 @@ namespace DKX.Compilation.Resolving
         private IProject _project;
         private List<string> _usingNamespaces;
 
-        public GlobalResolver(IProject project, IEnumerable<string> usingNamespaces)
+        public GlobalResolver(IProject project, IEnumerable<string> usingNamespaces = null)
         {
             _project = project ?? throw new ArgumentNullException(nameof(project));
-            _usingNamespaces = (usingNamespaces ?? throw new ArgumentNullException(nameof(usingNamespaces))).ToList();
+            _usingNamespaces = (usingNamespaces ?? DkxConst.EmptyStringArray).ToList();
         }
 
         public void AddUsingNamespace(string namespaceName)

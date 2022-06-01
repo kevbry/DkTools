@@ -39,7 +39,7 @@ namespace DKX.Compilation.Scopes.Statements
                 if (stream.Peek().IsOperator(Operator.Assign))
                 {
                     var assignToken = stream.Read();
-                    var initializerExp = ExpressionParser.TryReadExpression(varDeclStmt, stream, resolver);
+                    var initializerExp = ExpressionParser.TryReadExpression(varDeclStmt, stream);
                     if (initializerExp == null)
                     {
                         varDeclStmt.Report(assignToken.Span, ErrorCode.ExpectedExpression);
@@ -53,6 +53,7 @@ namespace DKX.Compilation.Scopes.Statements
                             dataType: dataType,
                             fileContext: FileContext.NeutralClass,
                             passType: null,
+                            accessMethod: FieldAccessMethod.Variable,
                             static_: false,
                             local: true,
                             privacy: Privacy.Public,
@@ -74,6 +75,7 @@ namespace DKX.Compilation.Scopes.Statements
                         dataType: dataType,
                         fileContext: FileContext.NeutralClass,
                         passType: null,
+                        accessMethod: FieldAccessMethod.Variable,
                         static_: false,
                         local: true,
                         privacy: Privacy.Public,

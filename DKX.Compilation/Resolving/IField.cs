@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.DataTypes;
+﻿using DK.Code;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables;
 using DKX.Compilation.Variables.ConstantValues;
@@ -26,6 +27,8 @@ namespace DKX.Compilation.Resolving
         bool Static { get; }
 
         FieldAccessMethod AccessMethod { get; }
+
+        FileContext FileContext { get; }
 
         uint Offset { get; }
 

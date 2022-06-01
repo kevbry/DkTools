@@ -2,6 +2,7 @@
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes.Statements;
 using DKX.Compilation.Tokens;
@@ -35,8 +36,11 @@ namespace DKX.Compilation.Scopes
             Span nameSpan,
             DataType returnDataType,
             VariableStore variableStore,
-            Modifiers modifiers)
-            : base(parent)
+            Modifiers modifiers,
+            CompilePhase phase,
+            IResolver resolver,
+            IProject project)
+            : base(parent, phase, resolver, project)
         {
             _className = className ?? throw new ArgumentNullException(nameof(className));
             _name = name ?? throw new ArgumentNullException(nameof(name));
@@ -47,6 +51,8 @@ namespace DKX.Compilation.Scopes
             _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
             _privacy = modifiers.Privacy ?? Privacy.Public;
             _static = modifiers.Static;
+
+            Resolver = new MethodResolver(this, resolver);
         }
 
         public IEnumerable<Variable> Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue);
@@ -74,24 +80,25 @@ namespace DKX.Compilation.Scopes
             DkxTokenCollection argumentTokens,
             Modifiers modifiers,
             DkxTokenCollection bodyTokens,
-            IResolver resolver)
+            CompilePhase phase,
+            IResolver resolver,
+            IProject project)
         {
             var variableStore = new VariableStore(parent.GetScope<IVariableScope>());
-            var methodScope = new MethodScope(parent, className, name, nameSpan, returnDataType, variableStore, modifiers);
+            var methodScope = new MethodScope(parent, className, name, nameSpan, returnDataType, variableStore, modifiers, phase, resolver, project);
 
-            variableStore.AddVariables(methodScope.ProcessArguments(argumentTokens, resolver));
+            variableStore.AddVariables(methodScope.ProcessArguments(argumentTokens));
             methodScope._wbdkName = string.Concat(methodScope._name, "_", methodScope.CalculateDecoration());
 
             if (bodyTokens != null)
             {
-                var methodResolver = new MethodResolver(methodScope, resolver);
-                methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens, methodResolver).ToArray();
+                methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens).ToArray();
             }
 
             return methodScope;
         }
 
-        private IEnumerable<Variable> ProcessArguments(DkxTokenCollection tokens, IResolver resolver)
+        private IEnumerable<Variable> ProcessArguments(DkxTokenCollection tokens)
         {
             var unnamedIndex = 0;
             var reportedEmptyArgs = false;
@@ -125,7 +132,7 @@ namespace DKX.Compilation.Scopes
                         passType = ArgumentPassType.Out;
                     }
 
-                    if (!ExpressionParser.TryReadDataType(this, stream, resolver, out var dataType, out var dataTypeSpan))
+                    if (!ExpressionParser.TryReadDataType(this, stream, out var dataType, out var dataTypeSpan))
                     {
                         Report(argTokens.First().Span, ErrorCode.ExpectedDataType);
                         dataType = DataType.Int;
@@ -154,6 +161,7 @@ namespace DKX.Compilation.Scopes
                             dataType: dataType,
                             fileContext: FileContext.NeutralClass,
                             passType: passType,
+                            accessMethod: FieldAccessMethod.Variable,
                             static_: false,
                             local: true,
                             privacy: Privacy.Public,

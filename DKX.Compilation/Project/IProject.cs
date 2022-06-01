@@ -4,20 +4,19 @@ using DKX.Compilation.Resolving;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace DKX.Compilation.Project
 {
     public interface IProject
     {
-        DateTime GetScanTimeStamp(string dkxPathName);
+        void OnCompilePhaseStarted(CompilePhase phase);
 
-        void OnPreScanStarted();
+        void OnFileScanCompleted(CompilePhase phase, string dkxPathName, IEnumerable<INamespace> namespaces);
 
-        void OnPreScanFileComplete(string dkxPathName, IEnumerable<INamespace> namespaces);
+        Task OnCompilePhaseCompleted(CompilePhase phase, IReportItemCollector report);
 
-        void OnPreScanCompleted(IReportItemCollector report);
-
-        DateTime GetCompileTimeStamp(string dkxPathName);
+        DateTime GetCompileTimeStamp(CompilePhase phase, string dkxPathName);
 
         IEnumerable<string> GetFileDependencies(string dkxPathName);
 

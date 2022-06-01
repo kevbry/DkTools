@@ -1,4 +1,6 @@
-﻿namespace DKX.Compilation.Scopes.Statements
+﻿using System;
+
+namespace DKX.Compilation.Scopes.Statements
 {
     abstract class Statement : Scope
     {
@@ -9,7 +11,7 @@
         public static readonly Statement[] EmptyArray = new Statement[0];
 
         public Statement(Scope parent, Span span)
-            : base(parent)
+            : base(parent ?? throw new ArgumentNullException(nameof(parent)), parent.Phase, parent.Resolver, parent.Project)
         {
             _span = span;
 

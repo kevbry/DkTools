@@ -44,7 +44,7 @@ namespace DKX.Compilation.Project
             return null;
         }
 
-        public void Update(INamespace fileNamespace)
+        public void Update(CompilePhase phase, INamespace fileNamespace)
         {
             _scanTime = DateTime.Now;
 
@@ -55,7 +55,7 @@ namespace DKX.Compilation.Project
                     _classes[fileClass.ClassName] = projectClass = new ProjectClass(fileClass.ClassName, fileClass.FullClassName, fileClass.NamespaceName, fileClass.WbdkClassName, fileClass.DkxPathName);
                 }
 
-                projectClass.Update(fileClass);
+                projectClass.Update(phase, fileClass);
             }
         }
 

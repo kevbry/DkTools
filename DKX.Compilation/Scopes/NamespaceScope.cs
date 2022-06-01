@@ -2,6 +2,7 @@
 using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Exceptions;
+using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
@@ -15,19 +16,20 @@ namespace DKX.Compilation.Scopes
         private Dictionary<string, ClassScope> _classes = new Dictionary<string, ClassScope>();
 
         public NamespaceScope(Scope parent, string name)
-            : base(parent)
+            : base(parent, parent.Phase, parent.Resolver, parent.Project)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
+
+            Resolver = new NamespaceResolver(this, parent.Resolver);
         }
 
         public IEnumerable<ClassScope> Classes => _classes.Values;
         public string Name => _name;
         public string NamespaceName => _name;
 
-        public void ProcessTokens(string namespaceName, DkxTokenCollection tokens, ProcessingDepth depth, IResolver globalResolver)
+        public void ProcessTokens(string namespaceName, DkxTokenCollection tokens, CompilePhase phase, IResolver globalResolver, IProject project)
         {
             var used = new TokenUseTracker();
-            var namespaceResolver = new NamespaceResolver(this, globalResolver);
 
             foreach (var classIndex in tokens.FindIndices((t,i) =>
                 t.Type == DkxTokenType.Keyword && t.Text == DkxConst.Keywords.Class &&
@@ -42,17 +44,20 @@ namespace DKX.Compilation.Scopes
                 var className = classNameToken.Text;
 
                 var modifiers = Modifiers.ReadModifiers(tokens, classIndex, used, this);
-                if (depth == ProcessingDepth.Full) modifiers.CheckForClass(this, classNameToken.Span);
+                if (phase == CompilePhase.FullCompilation) modifiers.CheckForClass(this, classNameToken.Span);
 
                 var class_ = new ClassScope(this, namespaceName, classNameToken.Text, GetScope<FileScope>().DkxPathName, modifiers);
 
                 if (_classes.ContainsKey(className)) Report(classNameToken.Span, ErrorCode.DuplicateClass, className);
                 else _classes[className] = class_;
 
-                class_.ProcessTokens(classScopeToken.Tokens, depth, namespaceResolver);
+                if (phase >= CompilePhase.MemberScan)
+                {
+                    class_.ProcessTokens(classScopeToken.Tokens);
+                }
             }
 
-            if (depth == ProcessingDepth.Full)
+            if (phase == CompilePhase.FullCompilation)
             {
                 foreach (var badToken in tokens.GetUnused(used)) Report(badToken.Span, ErrorCode.SyntaxError, badToken.ToString());
             }

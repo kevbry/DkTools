@@ -33,12 +33,11 @@ namespace DKX.Compilation.Expressions
             DataType dataType,
             Span newKeywordSpan,
             Span dataTypeSpan,
-            DkxTokenCollection argumentTokens,
-            IResolver resolver)
+            DkxTokenCollection argumentTokens)
         {
             if (dataType.BaseType != BaseType.Class) scope.Report(dataTypeSpan, ErrorCode.DataTypeCannotBeInstantiated);
 
-            var class_ = resolver.GetClassByFullNameOrNull(dataType.ClassName);
+            var class_ = scope.Resolver.GetClassByFullNameOrNull(dataType.ClassName);
             if (class_ == null)
             {
                 scope.Report(dataTypeSpan, ErrorCode.ClassNotFound, dataType.ClassName);
@@ -55,7 +54,7 @@ namespace DKX.Compilation.Expressions
                 foreach (var argTokens in argumentTokens.SplitByType(DkxTokenType.Delimiter))
                 {
                     var argStream = argTokens.ToStream();
-                    var expression = ExpressionParser.TryReadExpression(scope, argStream, resolver);
+                    var expression = ExpressionParser.TryReadExpression(scope, argStream);
                     if (expression == null)
                     {
                         scope.Report(dataTypeSpan, ErrorCode.ConstructorContainsEmptyArguments);

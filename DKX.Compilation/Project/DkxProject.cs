@@ -18,7 +18,8 @@ namespace DKX.Compilation.Project
         private string _pathName;
         private Dictionary<string, ProjectFile> _files = new Dictionary<string, ProjectFile>(StringComparer.OrdinalIgnoreCase);
         private Dictionary<string, ProjectNamespace> _namespaces = new Dictionary<string, ProjectNamespace>();
-        private DateTime _preScanStartTime;
+        private CompilePhase _currentPhase;
+        private DateTime _phaseStartTime;
 
         private DkxProject(DkAppContext app, string pathName)
         {
@@ -33,48 +34,61 @@ namespace DKX.Compilation.Project
             return project;
         }
 
-        public DateTime GetScanTimeStamp(string dkxPathName)
+        public void OnCompilePhaseStarted(CompilePhase phase)
         {
-            if (_files.TryGetValue(dkxPathName, out var file)) return file.PreScanTime;
-            return DateTime.MinValue;
+            _currentPhase = phase;
+            _phaseStartTime = DateTime.Now;
         }
 
-        public void OnPreScanStarted()
+        public async Task OnCompilePhaseCompleted(CompilePhase phase, IReportItemCollector report)
         {
-            _preScanStartTime = DateTime.Now;
-        }
+            if (phase != _currentPhase) throw new InvalidOperationException($"Expected completion of phase '{_currentPhase}'.");
 
-        public void OnPreScanCompleted(IReportItemCollector report)
-        {
-            var deletedFiles = _files.Where(x => x.Value.PreScanTime < _preScanStartTime).Select(x => x.Key).ToList();
-            foreach (var deletedFile in deletedFiles)
+            if (phase == CompilePhase.ClassScan)
             {
-                _files.Remove(deletedFile);
-            }
-
-            ResolveAllConstants(report);
-        }
-
-        public void OnPreScanFileComplete(string dkxPathName, IEnumerable<INamespace> namespaces)
-        {
-            if (_files.TryGetValue(dkxPathName, out var projectFile))
-            {
-                projectFile.PreScanTime = DateTime.Now;
-            }
-            else
-            {
-                _files[dkxPathName] = projectFile = new ProjectFile(dkxPathName);
-                projectFile.PreScanTime = DateTime.Now;
-            }
-
-            foreach (var fileNamespace in namespaces)
-            {
-                if (!_namespaces.TryGetValue(fileNamespace.NamespaceName, out var projectNamespace))
+                await _app.Log.DebugAsync("Purging old files from project.");
+                var deletedFiles = _files.Where(x => x.Value.GetCompileTime(phase) < _phaseStartTime).Select(x => x.Key).ToList();
+                foreach (var deletedFile in deletedFiles)
                 {
-                    _namespaces[fileNamespace.NamespaceName] = projectNamespace = new ProjectNamespace(fileNamespace.NamespaceName);
+                    await _app.Log.DebugAsync("Purging file from project: {0}", deletedFile);
+                    _files.Remove(deletedFile);
                 }
+            }
+            else if (phase == CompilePhase.ConstantResolution)
+            {
+                await ResolveAllConstantsAsync(report);
+            }
+        }
 
-                projectNamespace.Update(fileNamespace);
+        public void OnFileScanCompleted(CompilePhase phase, string dkxPathName, IEnumerable<INamespace> namespaces)
+        {
+            if (phase == CompilePhase.ClassScan)
+            {
+                if (!_files.TryGetValue(dkxPathName, out var projectFile))
+                {
+                    _files[dkxPathName] = projectFile = new ProjectFile(dkxPathName);
+                }
+                projectFile.SetCompileTime(phase, DateTime.Now);
+
+                foreach (var fileNamespace in namespaces)
+                {
+                    if (!_namespaces.TryGetValue(fileNamespace.NamespaceName, out var projectNamespace))
+                    {
+                        _namespaces[fileNamespace.NamespaceName] = projectNamespace = new ProjectNamespace(fileNamespace.NamespaceName);
+                    }
+                }
+            }
+            else if (phase == CompilePhase.MemberScan || phase == CompilePhase.ConstantResolution)
+            {
+                foreach (var fileNamespace in namespaces)
+                {
+                    if (!_namespaces.TryGetValue(fileNamespace.NamespaceName, out var projectNamespace))
+                    {
+                        throw new InvalidOperationException($"Namespace '{fileNamespace.NamespaceName}' could not be found.");
+                    }
+
+                    projectNamespace.Update(phase, fileNamespace);
+                }
             }
         }
 
@@ -87,12 +101,11 @@ namespace DKX.Compilation.Project
 
             projectFile.FileDependencies = fileDependencies;
             projectFile.TableDependencies = tableDependencies;
-            projectFile.CompileTime = DateTime.Now;
         }
 
-        public DateTime GetCompileTimeStamp(string dkxPathName)
+        public DateTime GetCompileTimeStamp(CompilePhase phase, string dkxPathName)
         {
-            if (_files.TryGetValue(dkxPathName, out var file)) return file.CompileTime;
+            if (_files.TryGetValue(dkxPathName, out var file)) return file.GetCompileTime(phase);
             return DateTime.MinValue;
         }
 
@@ -198,8 +211,10 @@ namespace DKX.Compilation.Project
             }
         }
 
-        private void ResolveAllConstants(IReportItemCollector report)
+        private async Task ResolveAllConstantsAsync(IReportItemCollector report)
         {
+            await _app.Log.DebugAsync("Resolving constants");
+
             var context = new ConstResolutionContext(report, this);
 
             try
@@ -207,6 +222,7 @@ namespace DKX.Compilation.Project
                 ClearAllConstants();
 
                 var numUnresolved = CountUnresolvedConstants();
+                await _app.Log.DebugAsync("Number of unresolved constants: {0}", numUnresolved);
                 while (numUnresolved > 0)
                 {
                     foreach (var ns in _namespaces.Values)
@@ -215,6 +231,7 @@ namespace DKX.Compilation.Project
                     }
 
                     var nowUnresolved = CountUnresolvedConstants();
+                    await _app.Log.DebugAsync("Number of unresolved constants: {0}", nowUnresolved);
                     if (nowUnresolved >= numUnresolved) throw new InvalidOperationException("The number of unresolved constants did not decrease in an iteration.");
                     numUnresolved = nowUnresolved;
                 }

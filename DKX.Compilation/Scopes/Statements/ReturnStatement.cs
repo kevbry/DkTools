@@ -16,7 +16,7 @@ namespace DKX.Compilation.Scopes.Statements
 
         public override bool IsEmpty => false;
 
-        public static ReturnStatement Parse(Scope parent, Span keywordSpan, DkxTokenStream stream, IResolver resolver)
+        public static ReturnStatement Parse(Scope parent, Span keywordSpan, DkxTokenStream stream)
         {
             var ret = new ReturnStatement(parent, keywordSpan);
 
@@ -31,7 +31,7 @@ namespace DKX.Compilation.Scopes.Statements
             }
             else
             {
-                var expression = ExpressionParser.TryReadExpression(ret, stream, resolver);
+                var expression = ExpressionParser.TryReadExpression(ret, stream);
                 if (expression == null) ret.Report(keywordSpan, ErrorCode.ExpectedExpression);
                 ret._expression = expression;
             }

@@ -18,7 +18,7 @@ namespace DKX.Compilation.Scopes.Statements
 
         public override bool IsEmpty => false;
 
-        public static IfStatement Parse(Scope parent, Span keywordSpan, DkxTokenStream stream, IResolver resolver)
+        public static IfStatement Parse(Scope parent, Span keywordSpan, DkxTokenStream stream)
         {
             var ifStatement = new IfStatement(parent, keywordSpan);
 
@@ -31,13 +31,13 @@ namespace DKX.Compilation.Scopes.Statements
                     ifStatement.Report(conditionToken.Span, ErrorCode.ExpectedCondition);
                     return ifStatement;
                 }
-                var condition = ExpressionParser.TryReadExpression(ifStatement, conditionToken.Tokens.ToStream(), resolver);
+                var condition = ExpressionParser.TryReadExpression(ifStatement, conditionToken.Tokens.ToStream());
                 if (condition == null) ifStatement.Report(conditionToken.Span, ErrorCode.ExpectedCondition);
                 stream.Position++;
 
                 var ifCase = new IfCase(ifStatement, condition?.Span ?? keywordSpan, condition, first);
                 first = false;
-                ifCase.Statements = StatementParser.ReadBodyOrExpression(ifCase, stream, conditionToken.Span, resolver);
+                ifCase.Statements = StatementParser.ReadBodyOrExpression(ifCase, stream, conditionToken.Span);
                 ifStatement._cases.Add(ifCase);
 
                 if (stream.Test(t => t.IsKeyword(DkxConst.Keywords.Else)))
@@ -51,7 +51,7 @@ namespace DKX.Compilation.Scopes.Statements
                     else
                     {
                         var elseCase = new IfCase(ifStatement, elseToken.Span, null, first: false);
-                        elseCase.Statements = StatementParser.ReadBodyOrExpression(elseCase, stream, elseToken.Span, resolver);
+                        elseCase.Statements = StatementParser.ReadBodyOrExpression(elseCase, stream, elseToken.Span);
                         ifStatement._cases.Add(elseCase);
                     }
                 }

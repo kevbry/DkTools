@@ -1,7 +1,7 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Files;
-using DKX.Compilation.PreScanning;
 using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Schema;
@@ -36,57 +36,39 @@ namespace DKX.Compilation
 
             var projectPathName = PathUtil.CombinePath(_objectDir, DkxConst.ProjectFileName);
             var project = await DkxProject.CreateAsync(_app, projectPathName);
+            var tableHashProvider = new TableHashProvider(_app);
 
             try
             {
-                //// Scan legacy files for exports
-                //await _app.Log.InfoAsync("Checking WBDK exports");
-                //var queue = new CompileQueue(_app, "WBDK Exports Scan Queue");
-                //var tableHashProvider = new TableHashProvider(_app);
-                //await queue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, queue, _objectDir,
-                //    new WbdkExportsFileReaderFactory(_app),
-                //    tableHashProvider));
-
-                //await queue.ProcessQueueToCompletionAsync(cancel);
-
-                //ImportReportItems(queue.ReportItems);
-                //if (HasErrors)
-                //{
-                //    await ReportAsync();
-                //    return;
-                //}
-
-                // Scan DKX files for exports.
-                var queue = new CompileQueue(_app, "DKX Pre-Scan Queue");
-                project.OnPreScanStarted();
-                await queue.EnqueueCompileJobAsync(new PreScanJob(
-                    app: _app,
-                    project: project,
-                    queue: queue));
-
-                await queue.ProcessQueueToCompletionAsync(cancel);
-                project.OnPreScanCompleted(queue);
-
-                ImportReportItems(queue.ReportItems);
+                await ScanForWbdkExports();
                 if (HasErrors)
                 {
                     await ReportAsync();
                     return;
                 }
 
-                // Scan for DKX files to be compiled.
-                queue = new CompileQueue(_app, "DKX Compilation Queue");
-                var tableHashProvider = new TableHashProvider(_app);
-                await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
-                    app: _app,
-                    compileQueue: queue,
-                    compileFileJobFactory: new CompileFileJobFactory(_app, queue, _targetSourceDir, project),
-                    tableHashProvider: tableHashProvider,
-                    project: project));
+                await DoCompilePhase(CompilePhase.ClassScan, project, tableHashProvider, cancel);
+                if (HasErrors)
+                {
+                    await ReportAsync();
+                    return;
+                }
 
-                await queue.ProcessQueueToCompletionAsync(cancel);
+                await DoCompilePhase(CompilePhase.MemberScan, project, tableHashProvider, cancel);
+                if (HasErrors)
+                {
+                    await ReportAsync();
+                    return;
+                }
 
-                ImportReportItems(queue.ReportItems);
+                await DoCompilePhase(CompilePhase.ConstantResolution, project, tableHashProvider, cancel);
+                if (HasErrors)
+                {
+                    await ReportAsync();
+                    return;
+                }
+
+                await DoCompilePhase(CompilePhase.FullCompilation, project, tableHashProvider, cancel);
                 if (HasErrors)
                 {
                     await ReportAsync();
@@ -132,6 +114,49 @@ namespace DKX.Compilation
             }
         }
 
+        private Task ScanForWbdkExports()
+        {
+            // Scan legacy files for exports
+
+            //await _app.Log.InfoAsync("Checking WBDK exports");
+            //var queue = new CompileQueue(_app, "WBDK Exports Scan Queue");
+            //var tableHashProvider = new TableHashProvider(_app);
+            //await queue.EnqueueCompileJobAsync(new ScanWbdkExportsJob(_app, queue, _objectDir,
+            //    new WbdkExportsFileReaderFactory(_app),
+            //    tableHashProvider));
+
+            //await queue.ProcessQueueToCompletionAsync(cancel);
+
+            //ImportReportItems(queue.ReportItems);
+
+            return Task.CompletedTask;
+        }
+
+        private async Task DoCompilePhase(CompilePhase phase, IProject project, ITableHashProvider tableHashProvider, CancellationToken cancel)
+        {
+            var queue = new CompileQueue(_app, $"DKX Compile Queue ({phase})");
+            var compileFileJobFactory = new CompileFileJobFactory(_app, queue, _targetSourceDir, project, phase);
+
+            project.OnCompilePhaseStarted(phase);
+
+            await queue.EnqueueCompileJobAsync(new ScanForCompileJob(
+                app: _app,
+                compileQueue: queue,
+                compileFileJobFactory: compileFileJobFactory,
+                tableHashProvider: tableHashProvider,
+                project: project,
+                phase: phase));
+
+            await queue.ProcessQueueToCompletionAsync(cancel);
+
+            if (!queue.HasErrors)
+            {
+                await project.OnCompilePhaseCompleted(phase, queue);
+            }
+
+            ImportReportItems(queue.ReportItems);
+        }
+
         private void ImportReportItems(IEnumerable<ReportItem> reportItems)
         {
             foreach (var item in reportItems)
@@ -166,7 +191,18 @@ namespace DKX.Compilation
         public static string GetWbdkClassName(string fullClassName) => string.Concat(DkxConst.ClassHashPrefix, ComputeHash(fullClassName));
     }
 
-    class InvalidAppSettingsException : Exception
+    public enum CompilePhase
+    {
+        WbdkExports,
+        ClassScan,
+        MemberScan,
+        ConstantResolution,
+        FullCompilation
+    }
+
+    class InvalidCompilePhaseException : CompilerException { }
+
+    class InvalidAppSettingsException : CompilerException
     {
         public InvalidAppSettingsException(string message) : base(message) { }
     }

@@ -19,6 +19,7 @@ namespace DKX.Compilation.Variables
         private FileContext _fileContext;
         private ArgumentPassType? _passType;
         private Chain _initializer;
+        private FieldAccessMethod _accessMethod;
         private bool _static;
         private bool _local;
         private Privacy _privacy;
@@ -46,6 +47,7 @@ namespace DKX.Compilation.Variables
             DataType dataType,
             FileContext fileContext,
             ArgumentPassType? passType,
+            FieldAccessMethod accessMethod,
             bool static_,
             bool local,
             Privacy privacy,
@@ -61,6 +63,7 @@ namespace DKX.Compilation.Variables
             _dataType = dataType;
             _fileContext = fileContext;
             _passType = passType;
+            _accessMethod = accessMethod;
             _static = static_;
             _local = local;
             _privacy = privacy;
@@ -68,7 +71,22 @@ namespace DKX.Compilation.Variables
             _span = span;
         }
 
-        public FieldAccessMethod AccessMethod => _static || _local ? FieldAccessMethod.Variable : FieldAccessMethod.Object;
+        internal Variable(IField field)
+        {
+            _class = field.Class;
+            _name = field.Name;
+            _wbdkName = field.Name;
+            _dataType = field.DataType;
+            _fileContext = field.FileContext;
+            _accessMethod = field.AccessMethod;
+            _static = field.Static;
+            _local = field.AccessMethod == FieldAccessMethod.Variable;
+            _privacy = field.ReadPrivacy;
+            _offset = field.Offset;
+            _span = field.DefinitionSpan;
+        }
+
+        public FieldAccessMethod AccessMethod => _accessMethod;
         public ArgumentPassType? ArgumentType => _passType;
         public IClass Class => _class;
         public ConstTerm ConstantExpression => null;

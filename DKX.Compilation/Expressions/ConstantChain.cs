@@ -40,7 +40,7 @@ namespace DKX.Compilation.Expressions
         {
             var value = _constant.ConstantValue;
             if (value != null) return new ConstValueTerm(value, Span);
-            return null;
+            else return new ConstFieldTerm(_constant.Class.FullClassName, _constant.Name, _constant.DataType, Span);
         }
     }
 }

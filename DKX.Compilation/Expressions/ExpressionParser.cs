@@ -11,21 +11,21 @@ namespace DKX.Compilation.Expressions
 {
     static class ExpressionParser
     {
-        public static Chain TryReadExpression(Scope scope, DkxTokenStream stream, IResolver resolver)
+        public static Chain TryReadExpression(Scope scope, DkxTokenStream stream)
         {
-            var chain = TryReadValue(scope, stream, 0, resolver);
+            var chain = TryReadValue(scope, stream, 0);
             if (chain == null) return null;
             return chain;
         }
 
-        private static Chain TryReadValue(Scope scope, DkxTokenStream stream, OpPrec leftPrec, IResolver resolver)
+        private static Chain TryReadValue(Scope scope, DkxTokenStream stream, OpPrec leftPrec)
         {
             var startPos = stream.Position;
 
-            if (TryReadDataType(scope, stream, resolver, out var dataType, out var dataTypeSpan))
+            if (TryReadDataType(scope, stream, out var dataType, out var dataTypeSpan))
             {
                 var chain = new DataTypeChain(dataType, dataTypeSpan);
-                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
 
             var token = stream.Read();
@@ -37,16 +37,16 @@ namespace DKX.Compilation.Expressions
                 {
                     case DkxConst.Keywords.True:
                         chain = new BooleanLiteralChain(true, token.Span);
-                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
                     case DkxConst.Keywords.False:
                         chain = new BooleanLiteralChain(false, token.Span);
-                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
 
                     case DkxConst.Keywords.New:
-                        if (TryReadDataType(scope, stream, resolver, out dataType, out dataTypeSpan))
+                        if (TryReadDataType(scope, stream, out dataType, out dataTypeSpan))
                         {
                             chain = ConstructorChain.Parse(scope, dataType, token.Span, dataTypeSpan,
-                                stream.Peek().IsBrackets ? stream.Read().Tokens : null, resolver);
+                                stream.Peek().IsBrackets ? stream.Read().Tokens : null);
                             return chain;
                         }
                         scope.Report(token.Span, ErrorCode.ExpectedDataType);
@@ -79,14 +79,14 @@ namespace DKX.Compilation.Expressions
                     }
 
                     chain = new VariableChain(variable, token.Span, thisChain);
-                    return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                    return TryReadAfterValue(scope, stream, chain, leftPrec);
                 }
 
                 var constantStore = scope.GetScope<IConstantScope>()?.ConstantStore;
                 if (constantStore != null && constantStore.TryGetConstant(token.Text, out var constant))
                 {
                     chain = new ConstantChain(constant, token.Span);
-                    return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                    return TryReadAfterValue(scope, stream, chain, leftPrec);
                 }
 
                 scope.Report(token.Span, ErrorCode.UnknownIdentifier, token.Text);
@@ -96,29 +96,29 @@ namespace DKX.Compilation.Expressions
             {
                 if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidStringLiteral);
                 var chain = new StringLiteralChain(token.Text, token.Span);
-                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
             else if (token.IsChar)
             {
                 if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidCharLiteral);
                 var chain = new CharLiteralChain(token.Char, token.Span);
-                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
             else if (token.IsNumber)
             {
                 var chain = new NumericLiteralChain(token.Number, token.DataType, token.Span);
-                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
             else if (token.IsBrackets)
             {
                 var subStream = new DkxTokenStream(token.Tokens);
-                var chain = TryReadValue(scope, subStream, 0, resolver);
+                var chain = TryReadValue(scope, subStream, 0);
                 if (chain == null)
                 {
                     scope.Report(token.Span, ErrorCode.ExpectedExpression);
                     return new ErrorChain(null, token.Span);
                 }
-                return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
             else
             {
@@ -127,7 +127,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        private static Chain TryReadAfterValue(Scope scope, DkxTokenStream stream, Chain chain, OpPrec leftPrec, IResolver resolver)
+        private static Chain TryReadAfterValue(Scope scope, DkxTokenStream stream, Chain chain, OpPrec leftPrec)
         {
             var startPos = stream.Position;
             var token = stream.Read();
@@ -135,7 +135,7 @@ namespace DKX.Compilation.Expressions
             {
                 var op = token.Operator;
 
-                if (op == Operator.Dot) return ReadDotSequence(scope, stream, chain, leftPrec, resolver);
+                if (op == Operator.Dot) return ReadDotSequence(scope, stream, chain, leftPrec);
 
                 var opPrec = op.GetPrecedence();
                 if ((leftPrec > opPrec) || (leftPrec == opPrec && op.IsLeftToRight()))
@@ -149,11 +149,11 @@ namespace DKX.Compilation.Expressions
                 if (op.IsUnaryPost())
                 {
                     var newChain = new OperatorChain(op, chain, right: null);
-                    return TryReadAfterValue(scope, stream, newChain, leftPrec, resolver);
+                    return TryReadAfterValue(scope, stream, newChain, leftPrec);
                 }
                 else
                 {
-                    var right = TryReadValue(scope, stream, opPrec, resolver);
+                    var right = TryReadValue(scope, stream, opPrec);
                     if (right == null)
                     {
                         // Was unable to read a value to the right of the operator, so stop the expression before this operator.
@@ -164,7 +164,7 @@ namespace DKX.Compilation.Expressions
                     else
                     {
                         var newChain = new OperatorChain(op, chain, right);
-                        return TryReadAfterValue(scope, stream, newChain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, newChain, leftPrec);
                     }
                 }
             }
@@ -175,7 +175,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        private static Chain ReadDotSequence(Scope scope, DkxTokenStream stream, Chain leftChain, OpPrec leftPrec, IResolver resolver)
+        private static Chain ReadDotSequence(Scope scope, DkxTokenStream stream, Chain leftChain, OpPrec leftPrec)
         {
             // This method assumes the dot has just been read and the current token is the next token after the dot.
 
@@ -186,21 +186,21 @@ namespace DKX.Compilation.Expressions
                 {
                     // Method call
                     var argsToken = stream.Read();
-                    var args = SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span, resolver);
+                    var args = SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span);
 
-                    var methods = resolver.GetMethods(leftChain.DataType, nameToken.Text).ToList();
+                    var methods = scope.Resolver.GetMethods(leftChain.DataType, nameToken.Text).ToList();
                     var method = FindBestMethodForArguments(scope, methods, args, nameToken.Span);
                     if (method != null)
                     {
                         var chain = new MethodCallChain(leftChain, nameToken, args, argsToken.Span, method);
-                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
                     }
                     else return leftChain;
                 }
                 else
                 {
                     // Property, field, or const
-                    var fields = resolver.GetFields(leftChain.DataType, nameToken.Text).ToList();
+                    var fields = scope.Resolver.GetFields(leftChain.DataType, nameToken.Text).ToList();
                     if (fields.Count == 0)
                     {
                         scope.Report(nameToken.Span, ErrorCode.FieldNotFound, nameToken.Text);
@@ -214,7 +214,7 @@ namespace DKX.Compilation.Expressions
                     else
                     {
                         var chain = new FieldChain(leftChain, nameToken, fields[0]);
-                        return TryReadAfterValue(scope, stream, chain, leftPrec, resolver);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
                     }
                 }
             }
@@ -225,39 +225,67 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public static bool TryReadDataType(Scope scope, DkxTokenStream stream, IResolver resolver, out DataType dataTypeOut, out Span spanOut)
+        /// <summary>
+        /// Attempts to read a data type token from the stream.
+        /// If the token contains an error (invalid data type), it will be reported.
+        /// </summary>
+        /// <param name="scope">The scope we are currently under. Used to report errors.</param>
+        /// <param name="stream">The stream to be read from.</param>
+        /// <param name="dataTypeOut">(out) Resulting data type, if successful.</param>
+        /// <param name="spanOut">(out) Span of the data type, if successful.</param>
+        /// <returns>True if a data type could be read; otherwise false.</returns>
+        public static bool TryReadDataType(Scope scope, DkxTokenStream stream, out DataType dataTypeOut, out Span spanOut)
         {
-            var startPos = stream.Position;
             var token = stream.Peek();
-            if (token.Type == DkxTokenType.DataType)
+
+            if (TokenIsDataType(token, scope.Resolver, out dataTypeOut, out var isInvalid))
             {
                 stream.Position++;
-                if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidDataType);
-                dataTypeOut = token.DataType;
+                if (isInvalid && scope.Phase == CompilePhase.FullCompilation) scope.Report(token.Span, ErrorCode.InvalidDataType);
                 spanOut = token.Span;
                 return true;
             }
 
-            if (token.Type == DkxTokenType.Identifier)
-            {
-                stream.Position++;
-                var name = token.Text;
-                var class_ = resolver.ResolveClass(name);
-                if (class_ != null)
-                {
-                    dataTypeOut = new DataType(class_);
-                    spanOut = token.Span;
-                    return true;
-                }
-            }
-
-            stream.Position = startPos;
             dataTypeOut = default;
             spanOut = default;
             return false;
         }
 
-        public static Chain[] SplitArgumentExpressions(Scope scope, DkxTokenCollection argBracketsTokens, Span errorSpan, IResolver resolver)
+        /// <summary>
+        /// Checks if the token is actually a data type, including class names.
+        /// </summary>
+        /// <param name="token">The token to be checked.</param>
+        /// <param name="resolver">Resolver that will be used to attempt to find class references.</param>
+        /// <param name="dataTypeOut">(out) If successful, the resulting data type.</param>
+        /// <param name="isInvalidDataTypeOut">(out) If successful, and set to true, the caller should report ErrorCode.InvalidDataType.</param>
+        /// <returns>True if the token is a data type; otherwise false.</returns>
+        public static bool TokenIsDataType(DkxToken token, IResolver resolver, out DataType dataTypeOut, out bool isInvalidDataTypeOut)
+        {
+            if (token.Type == DkxTokenType.DataType)
+            {
+                dataTypeOut = token.DataType;
+                isInvalidDataTypeOut = token.HasError;
+                return true;
+            }
+
+            if (token.Type == DkxTokenType.Identifier)
+            {
+                var name = token.Text;
+                var class_ = resolver.ResolveClass(name);
+                if (class_ != null)
+                {
+                    dataTypeOut = new DataType(class_);
+                    isInvalidDataTypeOut = false;
+                    return true;
+                }
+            }
+
+            dataTypeOut = default;
+            isInvalidDataTypeOut = true;
+            return false;
+        }
+
+        public static Chain[] SplitArgumentExpressions(Scope scope, DkxTokenCollection argBracketsTokens, Span errorSpan)
         {
             if (argBracketsTokens.Count == 0) return Chain.EmptyArray;
 
@@ -275,7 +303,7 @@ namespace DKX.Compilation.Expressions
                 }
 
                 var argStream = new DkxTokenStream(argTokens);
-                var expression = TryReadExpression(scope, argStream, resolver);
+                var expression = TryReadExpression(scope, argStream);
                 if (expression == null)
                 {
                     scope.Report(argTokens.Span, ErrorCode.ExpectedExpression);

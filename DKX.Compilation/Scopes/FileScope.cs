@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
@@ -18,25 +17,23 @@ namespace DKX.Compilation.Scopes
         private DkxCodeParser _cp;
         private List<ReportItem> _reportItems = new List<ReportItem>();
         private List<NamespaceScope> _namespaces = new List<NamespaceScope>();
-        private ProcessingDepth _depth;
 
-        public FileScope(string sourcePathName, DkxCodeParser codeParser, ProcessingDepth depth)
-            : base(parent: null)
+        public FileScope(string sourcePathName, DkxCodeParser codeParser, CompilePhase phase, GlobalResolver resolver, IProject project)
+            : base(parent: null, phase, resolver, project)
         {
             _sourcePathName = sourcePathName ?? throw new ArgumentNullException(nameof(sourcePathName));
             _cp = codeParser ?? throw new ArgumentNullException(nameof(codeParser));
-            _depth = depth;
         }
 
         public string DkxPathName => _sourcePathName;
         public IEnumerable<NamespaceScope> Namespaces => _namespaces;
         public IEnumerable<ReportItem> ReportItems => _reportItems;
 
-        public void ProcessFile(IProject project)
+        public void ProcessFile()
         {
             var fileTokens = _cp.ReadAll().Tokens;
             var stream = new DkxTokenStream(fileTokens);
-            var resolver = new GlobalResolver(project, DkxConst.EmptyStringArray);
+            var resolver = new GlobalResolver(Project, DkxConst.EmptyStringArray);
 
             while (!stream.EndOfStream)
             {
@@ -87,7 +84,7 @@ namespace DKX.Compilation.Scopes
                                 resolver.AddUsingNamespace(namespaceName);
                             }
 
-                            namespace_.ProcessTokens(namespaceName, bodyToken.Tokens, _depth, resolver);
+                            namespace_.ProcessTokens(namespaceName, bodyToken.Tokens, Phase, Resolver, Project);
                         }
                     }
                     else
@@ -101,7 +98,6 @@ namespace DKX.Compilation.Scopes
 
         public override void OnReport(ReportItem reportItem)
         {
-            if (_depth == ProcessingDepth.ExportsOnly) return;
             _reportItems.Add(reportItem);
         }
 
@@ -128,12 +124,6 @@ namespace DKX.Compilation.Scopes
         public void ClearReportItems() => _reportItems.Clear();
 
         public NamespaceScope GetNamespaceOrNull(string name) => _namespaces.Where(x => x.Name == name).FirstOrDefault();
-    }
-
-    public enum ProcessingDepth
-    {
-        ExportsOnly,
-        Full
     }
 
     public struct GeneratedCodeResult

@@ -9,7 +9,6 @@ using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
@@ -27,12 +26,11 @@ namespace DKX.Compilation.Scopes
 
         private PropertyScope(
             ClassScope class_,
-            string className,
             string name,
             Span nameSpan,
             DataType dataType,
             Modifiers modifiers)
-            : base(class_)
+            : base(class_, class_.Phase, class_.Resolver, class_.Project)
         {
             _class = class_;
             _name = name ?? throw new ArgumentNullException(nameof(name));
@@ -52,6 +50,7 @@ namespace DKX.Compilation.Scopes
         public ConstValue ConstantValue => null;
         public DataType DataType => _dataType;
         public Span DefinitionSpan => _nameSpan;
+        public FileContext FileContext => _fileContext;
         public bool IsConstant => false;
         public string Name => _name;
         public uint Offset => default;
@@ -64,23 +63,22 @@ namespace DKX.Compilation.Scopes
 
         public static PropertyScope Parse(
             ClassScope class_,
-            string className,
             string name,
             Span nameSpan,
             DataType dataType,
             Modifiers modifiers,
             DkxTokenCollection bodyTokens,
-            ProcessingDepth depth,
+            CompilePhase phase,
             IResolver resolver)
         {
-            var propertyScope = new PropertyScope(class_, className, name, nameSpan, dataType, modifiers);
+            var propertyScope = new PropertyScope(class_, name, nameSpan, dataType, modifiers);
 
-            ParseAccessors(propertyScope, bodyTokens, depth, resolver, nameSpan);
+            ParseAccessors(propertyScope, bodyTokens, phase, resolver, nameSpan);
 
             return propertyScope;
         }
 
-        private static void ParseAccessors(PropertyScope propertyScope, DkxTokenCollection tokens, ProcessingDepth depth, IResolver resolver, Span nameSpan)
+        private static void ParseAccessors(PropertyScope propertyScope, DkxTokenCollection tokens, CompilePhase phase, IResolver resolver, Span nameSpan)
         {
             if (!tokens.Any()) propertyScope.Report(nameSpan, ErrorCode.PropertyHasNoGetterOrSetter);
 
@@ -106,8 +104,7 @@ namespace DKX.Compilation.Scopes
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Getter,
                             privacy: modifiers.Privacy ?? Privacy.Private,
-                            bodyTokens: depth == ProcessingDepth.Full ? bodyToken.Tokens : null,
-                            resolver: resolver);
+                            bodyTokens: phase == CompilePhase.FullCompilation ? bodyToken.Tokens : null);
                     }
                     else
                     {
@@ -116,8 +113,7 @@ namespace DKX.Compilation.Scopes
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Setter,
                             privacy: modifiers.Privacy ?? Privacy.Private,
-                            bodyTokens: depth == ProcessingDepth.Full ? bodyToken.Tokens : null,
-                            resolver: resolver);
+                            bodyTokens: phase == CompilePhase.FullCompilation ? bodyToken.Tokens : null);
                     }
                 }
             }
@@ -141,8 +137,8 @@ namespace DKX.Compilation.Scopes
             private Statement[] _statements;
             private VariableStore _variableStore;
 
-            private PropertyAccessorScope(PropertyScope property, PropertyAccessorType accessorType, Privacy privacy, DkxTokenCollection bodyTokens, IResolver resolver)
-                : base(property)
+            private PropertyAccessorScope(PropertyScope property, PropertyAccessorType accessorType, Privacy privacy)
+                : base(property, property.Phase, property.Resolver, property.Project)
             {
                 _property = property ?? throw new ArgumentNullException(nameof(property));
                 _accessorType = accessorType;
@@ -159,6 +155,7 @@ namespace DKX.Compilation.Scopes
                         dataType: _property.DataType,
                         fileContext: FileContext.NeutralClass,
                         passType: ArgumentPassType.ByValue,
+                        accessMethod: FieldAccessMethod.Variable,
                         static_: false,
                         local: true,
                         privacy: Privacy.Public,
@@ -175,14 +172,13 @@ namespace DKX.Compilation.Scopes
                 PropertyScope property,
                 PropertyAccessorType accessorType,
                 Privacy privacy,
-                DkxTokenCollection bodyTokens,
-                IResolver resolver)
+                DkxTokenCollection bodyTokens)
             {
-                var accessorScope = new PropertyAccessorScope(property, accessorType, privacy, bodyTokens, resolver);
+                var accessorScope = new PropertyAccessorScope(property, accessorType, privacy);
 
                 if (bodyTokens != null)
                 {
-                    accessorScope._statements = StatementParser.SplitTokensIntoStatements(accessorScope, bodyTokens, resolver);
+                    accessorScope._statements = StatementParser.SplitTokensIntoStatements(accessorScope, bodyTokens);
                 }
 
                 return accessorScope;

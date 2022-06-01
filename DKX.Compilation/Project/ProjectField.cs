@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.DataTypes;
+﻿using DK.Code;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Project.Bson;
 using DKX.Compilation.Resolving;
@@ -8,7 +9,6 @@ using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace DKX.Compilation.Project
@@ -23,6 +23,7 @@ namespace DKX.Compilation.Project
         private Privacy _writePrivacy;
         private bool _static;
         private FieldAccessMethod _accessMethod;
+        private FileContext _fileContext;
         private uint _offset;
         private ConstTerm _constExp;
         private ConstValue _constValue;
@@ -38,6 +39,7 @@ namespace DKX.Compilation.Project
             _writePrivacy = fileField.WritePrivacy;
             _static = fileField.Static;
             _accessMethod = fileField.AccessMethod;
+            _fileContext = fileField.FileContext;
             _offset = fileField.Offset;
             _constExp = fileField.ConstantExpression;
             _constValue = fileField.ConstantValue;
@@ -45,7 +47,7 @@ namespace DKX.Compilation.Project
         }
 
         private ProjectField(ProjectClass class_, string name, DataType dataType, bool readOnly, Privacy readPrivacy, Privacy writePrivacy,
-            bool static_, FieldAccessMethod accessMethod, uint offset, ConstTerm constExp, ConstValue constValue, Span span)
+            bool static_, FieldAccessMethod accessMethod, FileContext fileContext, uint offset, ConstTerm constExp, ConstValue constValue, Span span)
         {
             _class = class_;
             _name = name;
@@ -55,6 +57,7 @@ namespace DKX.Compilation.Project
             _writePrivacy = writePrivacy;
             _static = static_;
             _accessMethod = accessMethod;
+            _fileContext = fileContext;
             _offset = offset;
             _constExp = constExp;
             _constValue = constValue;
@@ -68,6 +71,7 @@ namespace DKX.Compilation.Project
         public ConstValue ConstantValue => _constValue;
         public DataType DataType => _dataType;
         public Span DefinitionSpan => _span;
+        public FileContext FileContext => _fileContext;
         public string Name => _name;
         public uint Offset => _offset;
         public bool ReadOnly => _readOnly;
@@ -86,6 +90,7 @@ namespace DKX.Compilation.Project
             obj.SetEnum("WritePrivacy", _writePrivacy);
             obj.SetBoolean("Static", _static);
             obj.SetEnum("AccessMethod", _accessMethod);
+            obj.SetEnum("FileContext", _fileContext);
             obj.SetUInt32("Offset", _offset);
             if (_constExp != null) obj["ConstantExpression"] = _constExp.ToBson(bson);
             if (_constValue != null) obj["ConstantValue"] = _constValue.ToBson(bson);
@@ -105,6 +110,7 @@ namespace DKX.Compilation.Project
             var writePrivacy = obj.GetEnum<Privacy>("WritePrivacy");
             var static_ = obj.GetBoolean("Static");
             var accessMethod = obj.GetEnum<FieldAccessMethod>("AccessMethod");
+            var fileContext = obj.GetEnum<FileContext>("FileContext");
             var offset = obj.GetUInt32("Offset");
             node = obj.GetProperty("ConstantExpression", throwIfMissing: false);
             var constExp = node != null ? ConstTerm.FromBson(node) : null;
@@ -112,7 +118,7 @@ namespace DKX.Compilation.Project
             var constValue = node != null ? ConstValue.FromBson(node) : null;
             var span = obj.GetSpan("DefinitionSpan");
 
-            return new ProjectField(class_, name, dataType, readOnly, readPrivacy, writePrivacy, static_, accessMethod, offset, constExp, constValue, span);
+            return new ProjectField(class_, name, dataType, readOnly, readPrivacy, writePrivacy, static_, accessMethod, fileContext, offset, constExp, constValue, span);
         }
 
         public void ClearConstant()
@@ -124,6 +130,8 @@ namespace DKX.Compilation.Project
         {
             var myId = $"{_class.FullClassName}.{_name}";
             if (circularDependencyCheckList.Contains(myId)) throw new CircularConstantDependencyException(this);
+
+            if (_constExp == null) throw new InvalidOperationException("Constant has no expression.");
 
             var value = _constExp.ResolveConstantOrNull(context, circularDependencyCheckList.Concat(new string[] { myId }).ToList());
             if (value != null) _constValue = value;

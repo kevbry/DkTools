@@ -1,4 +1,5 @@
 ﻿using DK;
+using DK.Code;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
@@ -10,14 +11,17 @@ namespace DKX.Compilation.Variables
 {
     class Constant : IField
     {
-        private ClassScope _class;
+        public static readonly Constant[] EmptyArray = new Constant[0];
+
+        private IClass _class;
         private string _name;
         private DataType _dataType;
         private Privacy _privacy;
         private ConstTerm _constTerm;
+        private ConstValue _constValue;
         private Span _span;
 
-        public Constant(ClassScope class_, string name, DataType dataType, ConstTerm constTerm, Privacy privacy, Span span)
+        public Constant(IClass class_, string name, DataType dataType, ConstTerm constTerm, ConstValue constValueOrNull, Privacy privacy, Span span)
         {
             _class = class_ ?? throw new ArgumentNullException(nameof(class_));
 
@@ -27,16 +31,28 @@ namespace DKX.Compilation.Variables
             _dataType = dataType;
             _privacy = privacy;
             _constTerm = constTerm;
+            _constValue = constValueOrNull;
             _span = span;
         }
 
+        public Constant(IField field)
+        {
+            _class = field.Class;
+            _name = field.Name;
+            _dataType = field.DataType;
+            _privacy = field.ReadPrivacy;
+            _constValue = field.ConstantValue;
+            _span = field.DefinitionSpan;
+        }
+
         public FieldAccessMethod AccessMethod => FieldAccessMethod.Constant;
-        public ClassScope Class => _class;
+        public IClass Class => _class;
         IClass IField.Class => _class;
         public ConstTerm ConstantExpression => _constTerm;
-        public ConstValue ConstantValue => null;
+        public ConstValue ConstantValue => _constValue;
         public DataType DataType => _dataType;
         public Span DefinitionSpan => _span;
+        public FileContext FileContext => FileContext.NeutralClass;
         public bool IsConstant => true;
         public string Name => _name;
         public uint Offset => default;

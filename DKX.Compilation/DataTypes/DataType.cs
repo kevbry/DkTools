@@ -629,9 +629,9 @@ namespace DKX.Compilation.DataTypes
                     case BaseType.Enum:
                         return 0;
                     case BaseType.Short:
-                        return short.MaxValue;
+                        return short.MinValue;
                     case BaseType.Int:
-                        return int.MaxValue;
+                        return int.MinValue;
                     case BaseType.Numeric:
                         return -(decimal)Math.Pow(10, _width);
                     default:

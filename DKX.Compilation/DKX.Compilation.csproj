@@ -77,8 +77,6 @@
     <Compile Include="Expressions\ThisChain.cs" />
     <Compile Include="Project\IProject.cs" />
     <Compile Include="Objects\ObjectAccess.cs" />
-    <Compile Include="PreScanning\PreScanFileJob.cs" />
-    <Compile Include="PreScanning\PreScanJob.cs" />
     <Compile Include="Project\ProjectArgument.cs" />
     <Compile Include="Project\ProjectClass.cs" />
     <Compile Include="Project\ProjectField.cs" />
@@ -157,6 +155,7 @@
     <Compile Include="Tokens\TokenUseTracker.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
+    <Compile Include="Variables\ConstantStore.cs" />
     <Compile Include="Variables\ConstantValues\BoolConstValue.cs" />
     <Compile Include="Variables\ConstantValues\CharConstValue.cs" />
     <Compile Include="Variables\ConstantValues\ConstValue.cs" />

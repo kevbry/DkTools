@@ -20,19 +20,22 @@ namespace DKX.Compilation.Files
         private ITableHashProvider _tableHashProvider;
         private IProject _project;
         private Dictionary<string, DateTime> _dateCache = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private CompilePhase _phase;
 
         public ScanForCompileJob(
             DkAppContext app,
             ICompileJobQueue compileQueue,
             ICompileFileJobFactory compileFileJobFactory,
             ITableHashProvider tableHashProvider,
-            IProject project)
+            IProject project,
+            CompilePhase phase)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _compileQueue = compileQueue ?? throw new ArgumentNullException(nameof(compileQueue));
             _compileFileJobFactory = compileFileJobFactory ?? throw new ArgumentNullException(nameof(compileFileJobFactory));
             _tableHashProvider = tableHashProvider ?? throw new ArgumentNullException(nameof(tableHashProvider));
             _project = project ?? throw new ArgumentNullException(nameof(project));
+            _phase = phase;
         }
 
         public string Description => "Scan DKX Compiles";
@@ -72,7 +75,7 @@ namespace DKX.Compilation.Files
 
         private async Task<bool> ShouldCompileFileAsync(string dkxPathName)
         {
-            var projectTimeStamp = _project.GetCompileTimeStamp(dkxPathName);
+            var projectTimeStamp = _project.GetCompileTimeStamp(_phase, dkxPathName);
             var fileTimeStamp = GetFileDate(dkxPathName);
 
             if (fileTimeStamp > projectTimeStamp)
