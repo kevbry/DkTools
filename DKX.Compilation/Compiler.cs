@@ -1,7 +1,7 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
 using DKX.Compilation.Exceptions;
-using DKX.Compilation.Files;
+using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Schema;
@@ -188,7 +188,7 @@ namespace DKX.Compilation
 
         public static uint ComputeHash(string data) => Crc32Algorithm.Compute(Encoding.UTF8.GetBytes(data));
 
-        public static string GetWbdkClassName(string fullClassName) => string.Concat(DkxConst.ClassHashPrefix, ComputeHash(fullClassName));
+        public static string GetWbdkClassName(string fullClassName) => string.Concat(DkxConst.ClassHashPrefix, ComputeHash(fullClassName).ToString("X8"));
     }
 
     public enum CompilePhase

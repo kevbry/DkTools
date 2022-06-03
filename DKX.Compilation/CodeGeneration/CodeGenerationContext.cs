@@ -1,25 +1,27 @@
-﻿using DKX.Compilation.Project;
+﻿using DKX.Compilation.Jobs;
+using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Schema;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace DKX.Compilation.CodeGeneration
 {
     class CodeGenerationContext
     {
+        private FileTarget _fileTarget;
         private IReportItemCollector _report;
         private IProject _project;
         private HashSet<string> _fileDeps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private HashSet<string> _tableDeps = new HashSet<string>();
 
-        public CodeGenerationContext(IReportItemCollector report, IProject project)
+        public CodeGenerationContext(FileTarget fileTarget, IReportItemCollector report, IProject project)
         {
+            _fileTarget = fileTarget;
             _report = report ?? throw new ArgumentNullException(nameof(report));
             _project = project ?? throw new ArgumentNullException(nameof(project));
         }
 
+        public FileTarget FileTarget => _fileTarget;
         public IEnumerable<string> FileDependencies => _fileDeps;
         public IProject Project => _project;
         public IReportItemCollector Report => _report;
@@ -27,12 +29,14 @@ namespace DKX.Compilation.CodeGeneration
 
         public void DependsOnFile(string pathName)
         {
+            if (string.IsNullOrEmpty(pathName)) return;
             if (!_fileDeps.Contains(pathName)) _fileDeps.Add(pathName);
         }
 
         public void DependsOnFile(Span span)
         {
             var pathName = span.PathName;
+            if (string.IsNullOrEmpty(pathName)) return;
             if (pathName != null) DependsOnFile(pathName);
         }
 

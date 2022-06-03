@@ -20,7 +20,7 @@ namespace DKX.Compilation.Variables
         private ArgumentPassType? _passType;
         private Chain _initializer;
         private FieldAccessMethod _accessMethod;
-        private bool _static;
+        private ModifierFlags _flags;
         private bool _local;
         private Privacy _privacy;
         private uint _offset;
@@ -48,7 +48,7 @@ namespace DKX.Compilation.Variables
             FileContext fileContext,
             ArgumentPassType? passType,
             FieldAccessMethod accessMethod,
-            bool static_,
+            ModifierFlags flags,
             bool local,
             Privacy privacy,
             Chain initializer,
@@ -64,7 +64,7 @@ namespace DKX.Compilation.Variables
             _fileContext = fileContext;
             _passType = passType;
             _accessMethod = accessMethod;
-            _static = static_;
+            _flags = flags;
             _local = local;
             _privacy = privacy;
             _initializer = initializer;
@@ -79,7 +79,7 @@ namespace DKX.Compilation.Variables
             _dataType = field.DataType;
             _fileContext = field.FileContext;
             _accessMethod = field.AccessMethod;
-            _static = field.Static;
+            _flags = field.Flags;
             _local = field.AccessMethod == FieldAccessMethod.Variable;
             _privacy = field.ReadPrivacy;
             _offset = field.Offset;
@@ -95,6 +95,7 @@ namespace DKX.Compilation.Variables
         public Span DefinitionSpan => _span;
         internal Chain Initializer { get => _initializer; set => _initializer = value ?? throw new ArgumentNullException(); }
         public FileContext FileContext => _fileContext;
+        public ModifierFlags Flags => _flags;
         public bool IsArgument => _passType != null;
         public bool IsConstant => false;
         public bool Local => _local;
@@ -104,37 +105,7 @@ namespace DKX.Compilation.Variables
         public Privacy Privacy => _privacy;
         public bool ReadOnly => false;
         public Privacy ReadPrivacy => _privacy;
-        public bool Static => _static;
         public string WbdkName => _wbdkName;
         public Privacy WritePrivacy => _privacy;
-
-        // TODO: remove
-        //public Task<CodeFragment> ToWbdkCode_ReadAsync(CodeFragment parentFragment, CodeSpan fieldSpan, ISourceCodeReporter report)
-        //{
-        //    if (_static || _passType != null)
-        //    {
-        //        // Stored as a WBDK variable.
-        //        return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
-        //    }
-        //    else
-        //    {
-        //        // Member variable which needs to use DKX accessor functions.
-        //        return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableGetter(parentFragment, _offset, _dataType, fieldSpan));
-        //    }
-        //}
-
-        //public Task<CodeFragment> ToWbdkCode_WriteAsync(CodeFragment parentFragment, CodeSpan fieldSpan, CodeFragment valueFragment, ISourceCodeReporter report)
-        //{
-        //    if (_static || _passType != null)
-        //    {
-        //        // Stored as a WBDK variable.
-        //        return Task.FromResult(new CodeFragment(_wbdkName, _dataType, OpPrec.None, fieldSpan, readOnly: false));
-        //    }
-        //    else
-        //    {
-        //        // Member variable which needs to use DKX accessor functions.
-        //        return Task.FromResult(Objects.ObjectAccess.GenerateMemberVariableSetter(parentFragment, _offset, _dataType, fieldSpan, valueFragment));
-        //    }
-        //}
     }
 }

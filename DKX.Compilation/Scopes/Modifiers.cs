@@ -1,12 +1,20 @@
 ﻿using DK.Code;
+using DKX.Compilation.DataTypes;
+using DKX.Compilation.Expressions;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Resolving;
+using DKX.Compilation.SystemClasses;
 using DKX.Compilation.Tokens;
+using DKX.Compilation.Variables;
+using DKX.Compilation.Variables.ConstTerms;
+using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
-    public struct Modifiers
+    class Modifiers
     {
         public Privacy? Privacy { get; private set; }
         public Span PrivacySpan { get; private set; }
@@ -14,14 +22,15 @@ namespace DKX.Compilation.Scopes
         public Span FileContextSpan { get; private set; }
         public bool Const { get; private set; }
         public Span ConstSpan { get; private set; }
-        public bool Static { get; private set; }
-        public Span StaticSpan { get; private set; }
+        public ModifierFlags Flags { get; private set; }
+        public AttributeModifier[] Attributes { get; private set; }
 
         public Modifiers(
             Privacy? privacy, Span privacySpan,
             FileContext? fileContext, Span fileContextSpan,
             bool const_, Span constSpan,
-            bool static_, Span staticSpan)
+            ModifierFlags flags,
+            AttributeModifier[] attributes)
         {
             Privacy = privacy;
             PrivacySpan = privacySpan;
@@ -29,13 +38,13 @@ namespace DKX.Compilation.Scopes
             FileContextSpan = fileContextSpan;
             Const = const_;
             ConstSpan = constSpan;
-            Static = static_;
-            StaticSpan = staticSpan;
+            Flags = flags;
+            Attributes = attributes;
         }
 
         public bool IsEmpty => Privacy == null && FileContext == null && Const == false;
 
-        public static Modifiers ReadModifiers(DkxTokenCollection tokens, int beforeIndex, TokenUseTracker used, IReportItemCollector report)
+        public static Modifiers ReadModifiers(Scope scope, DkxTokenCollection tokens, int beforeIndex, TokenUseTracker used)
         {
             var privacy = null as Privacy?;
             var privacySpan = Span.Empty;
@@ -43,10 +52,10 @@ namespace DKX.Compilation.Scopes
             var fileContextSpan = Span.Empty;
             var const_ = false;
             var constSpan = Span.Empty;
-            var static_ = false;
-            var staticSpan = Span.Empty;
+            ModifierFlags flags = default;
 
-            for (var pos = beforeIndex - 1; pos >= 0; pos--)
+            var pos = beforeIndex - 1;
+            for (var done = false; pos >= 0 && !done; pos--)
             {
                 var token = tokens[pos];
                 if (token.Type != DkxTokenType.Keyword) break;
@@ -54,67 +63,151 @@ namespace DKX.Compilation.Scopes
                 switch (token.Text)
                 {
                     case DkxConst.Keywords.Public:
-                        if (privacy != null) report.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
+                        if (privacy != null) scope.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
                         privacy = Scopes.Privacy.Public;
                         privacySpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Protected:
-                        if (privacy != null) report.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
+                        if (privacy != null) scope.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
                         privacy = Scopes.Privacy.Protected;
                         privacySpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Private:
-                        if (privacy != null) report.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
+                        if (privacy != null) scope.Report(token.Span, ErrorCode.DuplicatePrivacyModifier);
                         privacy = Scopes.Privacy.Private;
                         privacySpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Neutral:
-                        if (fileContext != null) report.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
+                        if (fileContext != null) scope.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
                         fileContext = DK.Code.FileContext.NeutralClass;
                         fileContextSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Client:
-                        if (fileContext != null) report.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
+                        if (fileContext != null) scope.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
                         fileContext = DK.Code.FileContext.ClientClass;
                         fileContextSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Server:
-                        if (fileContext != null) report.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
+                        if (fileContext != null) scope.Report(token.Span, ErrorCode.DuplicateFileContextModifier);
                         fileContext = DK.Code.FileContext.ServerClass;
                         fileContextSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Const:
-                        if (const_) report.Report(token.Span, ErrorCode.DuplicateConstModifier);
+                        if (const_) scope.Report(token.Span, ErrorCode.DuplicateConstModifier);
                         const_ = true;
                         constSpan = token.Span;
                         used.Use(token);
                         break;
                     case DkxConst.Keywords.Static:
-                        if (static_) report.Report(token.Span, ErrorCode.DuplicateStaticModifier);
-                        static_ = true;
-                        staticSpan = token.Span;
+                        if (flags.HasFlag(ModifierFlags.Static)) scope.Report(token.Span, ErrorCode.DuplicateStaticModifier);
+                        flags |= ModifierFlags.Static;
                         used.Use(token);
                         break;
                     default:
-                        pos = 0;
+                        done = true;
+                        pos++;
                         break;
                 }
             }
 
-            return new Modifiers(privacy, privacySpan, fileContext, fileContextSpan, const_, constSpan, static_, staticSpan);
+            var attributes = new List<AttributeModifier>();
+
+            while (pos >= 0 && tokens[pos].IsArray)
+            {
+                var arrToken = tokens[pos--];
+                used.Use(arrToken);
+
+                var stream = new DkxTokenStream(arrToken.Tokens);
+                while (true)
+                {
+                    var token = stream.Peek();
+                    if (!token.IsIdentifier)
+                    {
+                        scope.Report(token.Span, ErrorCode.SyntaxError);
+                        break;
+                    }
+
+                    var attribToken = token;
+                    stream.Position++;
+                    if (stream.Peek().IsBrackets)
+                    {
+                        var attribArgsToken = stream.Read();
+                        var attrib = ProcessAttribute(scope, attribToken, attribArgsToken);
+                        if (attrib != null) attributes.Add(attrib);
+                    }
+                    else
+                    {
+                        attributes.Add(new AttributeModifier(attribToken.Text, ConstTerm.EmptyArray, attribToken.Span));
+                    }
+
+                    if (stream.EndOfStream) break;
+                    if (stream.Peek().IsDelimiter)
+                    {
+                        stream.Position++;
+                        continue;
+                    }
+
+                    scope.Report(token.Span, ErrorCode.SyntaxError);
+                    break;
+                }
+            }
+
+            return new Modifiers(privacy, privacySpan, fileContext, fileContextSpan, const_, constSpan, flags, attributes.ToArray());
+        }
+
+        private static AttributeModifier ProcessAttribute(Scope scope, DkxToken attribToken, DkxToken attribArgsToken)
+        {
+            if (attribArgsToken.Tokens.Count == 0) return new AttributeModifier(attribToken.Text, ConstTerm.EmptyArray, attribToken.Span);
+            if (scope.Phase != CompilePhase.FullCompilation) return new AttributeModifier(attribToken.Text, ConstTerm.EmptyArray, attribToken.Span);
+
+            var argsTokens = attribArgsToken.Tokens.SplitByType(DkxTokenType.Delimiter);
+            var args = new List<ConstTerm>();
+
+            foreach (var argTokens in argsTokens)
+            {
+                if (argTokens.Count == 0)
+                {
+                    scope.Report(attribToken.Span, ErrorCode.MethodContainsEmptyArguments);
+                    return null;
+                }
+
+                var argStream = new DkxTokenStream(argTokens);
+                var exp = ExpressionParser.ReadExpressionOrNull(scope, argStream);
+                if (exp == null)
+                {
+                    scope.Report((argStream.Position > 0 ? argStream.Peek(-1) : attribToken).Span, ErrorCode.MethodContainsEmptyArguments);
+                    return null;
+                }
+
+                var constTerm = exp.ToConstTermOrNull(scope);
+                if (constTerm == null)
+                {
+                    scope.Report(exp.Span, ErrorCode.ExpressionNotConstant);
+                    return null;
+                }
+
+                args.Add(constTerm);
+            }
+
+            return new AttributeModifier(attribToken.Text, args.ToArray(), attribToken.Span + attribArgsToken.Span);
         }
 
         public void CheckForClass(IReportItemCollector report, Span classKeywordSpan) { }
 
-        public void CheckForMethod(IReportItemCollector report)
+        public void CheckForMethod(IReportItemCollector report, MethodScope method, CompilePhase phase)
         {
             if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
+
+            foreach (var attribute in Attributes)
+            {
+                SystemAttributes.CheckAttributeForMethod(attribute, this, method, phase);
+            }
         }
 
         public void CheckForProperty(IReportItemCollector report)
@@ -172,7 +265,7 @@ namespace DKX.Compilation.Scopes
                 }
             }
 
-            if (Static)
+            if (Flags.HasFlag(ModifierFlags.Static))
             {
                 if (sb.Length > 0) sb.Append(' ');
                 sb.Append(DkxConst.Keywords.Static);
@@ -194,5 +287,42 @@ namespace DKX.Compilation.Scopes
 
             return sb.ToString();
         }
+
+        public class AttributeModifier
+        {
+            public string Name { get; private set; }
+            public ConstTerm[] Arguments { get; private set; }
+            public Span Span { get; private set; }
+
+            public AttributeModifier(string name, ConstTerm[] arguments, Span span)
+            {
+                Name = name ?? throw new ArgumentNullException(nameof(name));
+                Arguments = arguments ?? throw new ArgumentNullException(nameof(arguments));
+                Span = span;
+            }
+        }
+    }
+
+    public enum ModifierFlags
+    {
+        /// <summary>
+        /// Static member which does not require an object pointer.
+        /// </summary>
+        Static = 0x01,
+
+        /// <summary>
+        /// A method that is used for a specific purpose and cannot be called directly.
+        /// </summary>
+        NotCallable = 0x02,
+
+        /// <summary>
+        /// This is the entry point (main) for a server/gateway program.
+        /// </summary>
+        ProgramEntryPoint = 0x04,
+    }
+
+    public static class ModifierFlagsHelper
+    {
+        public static bool IsStatic(this ModifierFlags flags) => flags.HasFlag(ModifierFlags.Static);
     }
 }

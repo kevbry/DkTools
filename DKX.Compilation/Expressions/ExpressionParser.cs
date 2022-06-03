@@ -1,5 +1,6 @@
 ﻿using DKX.Compilation.Conversions;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
@@ -12,7 +13,7 @@ namespace DKX.Compilation.Expressions
 {
     static class ExpressionParser
     {
-        public static Chain TryReadExpression(Scope scope, DkxTokenStream stream)
+        public static Chain ReadExpressionOrNull(Scope scope, DkxTokenStream stream)
         {
             var chain = TryReadValue(scope, stream, 0);
             if (chain == null) return null;
@@ -60,43 +61,87 @@ namespace DKX.Compilation.Expressions
             }
             else if (token.IsIdentifier)
             {
-                Chain chain;
-
-                var variableStore = scope.GetScope<IVariableScope>()?.VariableStore;
-                if (variableStore != null && variableStore.TryGetVariable(token.Text, includeParents: true, out var variable))
+                if (stream.Peek().IsBrackets)
                 {
-                    // A variable defined with no context.
+                    // This is a method call
+
+                    var methodNameToken = token;
+                    var argsToken = stream.Read();
+                    var args = SplitArgumentExpressions(scope, argsToken.Tokens, methodNameToken.Span);
+
+                    var objRefScope = scope.GetScope<IObjectReferenceScope>();
+                    var methods = scope.Resolver.GetMethods(objRefScope.ScopeDataType, token.Text).ToList();
+                    var method = FindBestMethodForArguments(methods, args, token.Span);
+
+                    var thisChain = method.Flags.HasFlag(ModifierFlags.Static) ? (ThisChain)null : new ThisChain(objRefScope.ScopeDataType, methodNameToken.Span + argsToken.Span);
+                    var chain = new MethodCallChain(thisChain, methodNameToken, args, argsToken.Span, method);
+                    return TryReadAfterValue(scope, stream, chain, leftPrec);
+                }
+                else
+                {
+                    // This is a field
+
+                    Chain chain;
                     Chain thisChain;
-                    if (variable.Local || variable.Static)
+                    IObjectReferenceScope objRefScope = null;
+
+                    var variableStore = scope.GetScope<IVariableScope>()?.VariableStore;
+                    if (variableStore != null && variableStore.TryGetVariable(token.Text, includeParents: true, out var variable))
                     {
-                        thisChain = null;
+                        // A variable used with no context.
+                        switch (variable.AccessMethod)
+                        {
+                            case Variables.FieldAccessMethod.Property:
+                            case Variables.FieldAccessMethod.Object:
+                            case Variables.FieldAccessMethod.Constant:
+                                if (objRefScope == null) objRefScope = scope.GetScope<IObjectReferenceScope>();
+                                if (objRefScope.ScopeStatic && !variable.Flags.IsStatic()) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
+                                thisChain = variable.Flags.IsStatic() ? (Chain)new DataTypeChain(objRefScope.ScopeDataType, token.Span) : new ThisChain(objRefScope.ScopeDataType, token.Span);
+                                chain = new FieldChain(thisChain, token, variable);
+                                break;
+
+                            default:
+                                if (variable.Local || variable.Flags.HasFlag(ModifierFlags.Static))
+                                {
+                                    thisChain = null;
+                                }
+                                else
+                                {
+                                    if (objRefScope == null) objRefScope = scope.GetScope<IObjectReferenceScope>();
+                                    if (objRefScope.ScopeStatic) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
+                                    thisChain = new ThisChain(objRefScope.ScopeDataType, token.Span);
+                                }
+                                chain = new VariableChain(variable, token.Span, thisChain);
+                                break;
+                        }
+                        
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
                     }
-                    else
+
+                    if (objRefScope == null) objRefScope = scope.GetScope<IObjectReferenceScope>();
+                    var fields = scope.Resolver.GetFields(objRefScope.ScopeDataType, token.Text).ToList();
+                    if (fields.Count != 0)
                     {
-                        var objRefScope = scope.GetScope<IObjectReferenceScope>();
-                        if (objRefScope == null) throw new InvalidOperationException("No object reference scope is available.");
-                        if (objRefScope.ScopeStatic) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
-                        thisChain = new ThisChain(objRefScope.ScopeDataType, token.Span);
+                        if (fields.Count > 1) throw new CodeException(token.Span, ErrorCode.AmbiguousField, token.Text);
+                        thisChain = fields[0].Flags.HasFlag(ModifierFlags.Static) ? null : new ThisChain(objRefScope.ScopeDataType, token.Span);
+                        chain = new FieldChain(thisChain, token, fields[0]);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
                     }
 
-                    chain = new VariableChain(variable, token.Span, thisChain);
-                    return TryReadAfterValue(scope, stream, chain, leftPrec);
-                }
+                    var constantStore = scope.GetScope<IConstantScope>()?.ConstantStore;
+                    if (constantStore != null && constantStore.TryGetConstant(token.Text, out var constant))
+                    {
+                        chain = new ConstantChain(constant, token.Span);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
+                    }
 
-                var constantStore = scope.GetScope<IConstantScope>()?.ConstantStore;
-                if (constantStore != null && constantStore.TryGetConstant(token.Text, out var constant))
-                {
-                    chain = new ConstantChain(constant, token.Span);
-                    return TryReadAfterValue(scope, stream, chain, leftPrec);
-                }
+                    if (scope.Project.IsNamespaceStart(token.Text))
+                    {
+                        return ReadNamespaceStart(scope, stream, token, leftPrec);
+                    }
 
-                if (scope.Project.IsNamespaceStart(token.Text))
-                {
-                    return ReadNamespaceStart(scope, stream, token, leftPrec);
+                    throw new CodeException(token.Span, ErrorCode.UnknownIdentifier, token.Text);
                 }
-
-                scope.Report(token.Span, ErrorCode.UnknownIdentifier, token.Text);
-                return new ErrorChain(innerChainOrNull: null, token.Span);
             }
             else if (token.IsString)
             {
@@ -181,6 +226,17 @@ namespace DKX.Compilation.Expressions
             }
         }
 
+        /// <summary>
+        /// Reads an expression where a dot '.' is used to access a method/field of a value.
+        /// </summary>
+        /// <param name="scope">The scope the code lives in.</param>
+        /// <param name="stream">The token stream being read from.</param>
+        /// <param name="leftChain">A data type chain which kicked off this sequence.</param>
+        /// <param name="leftPrec">Precedence of the operator on the left.</param>
+        /// <returns>
+        /// A chain for the method or field use.
+        /// Always returns a value; throws on bad code.
+        /// </returns>
         private static Chain ReadDotSequence(Scope scope, DkxTokenStream stream, Chain leftChain, OpPrec leftPrec)
         {
             // This method assumes the dot has just been read and the current token is the next token after the dot.
@@ -195,40 +251,30 @@ namespace DKX.Compilation.Expressions
                     var args = SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span);
 
                     var methods = scope.Resolver.GetMethods(leftChain.DataType, nameToken.Text).ToList();
-                    var method = FindBestMethodForArguments(scope, methods, args, nameToken.Span);
-                    if (method != null)
-                    {
-                        var chain = new MethodCallChain(leftChain, nameToken, args, argsToken.Span, method);
-                        return TryReadAfterValue(scope, stream, chain, leftPrec);
-                    }
-                    else return leftChain;
+                    var method = FindBestMethodForArguments(methods, args, nameToken.Span);
+
+                    if (method.Flags.IsStatic() && !leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.StaticMemberCannotHaveObjectReference, nameToken.Text);
+                    if (!method.Flags.IsStatic() && leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.MemberRequiresAnObjectReference, nameToken.Text);
+                    var chain = new MethodCallChain(method.Flags.IsStatic() ? null : leftChain, nameToken, args, argsToken.Span, method);
+                    return TryReadAfterValue(scope, stream, chain, leftPrec);
                 }
                 else
                 {
                     // Property, field, or const
                     var fields = scope.Resolver.GetFields(leftChain.DataType, nameToken.Text).ToList();
-                    if (fields.Count == 0)
-                    {
-                        scope.Report(nameToken.Span, ErrorCode.FieldNotFound, nameToken.Text);
-                        return leftChain;
-                    }
-                    else if (fields.Count != 1)
-                    {
-                        scope.Report(nameToken.Span, ErrorCode.AmbiguousField, nameToken.Text);
-                        return leftChain;
-                    }
+                    if (fields.Count == 0) throw new CodeException(nameToken.Span, ErrorCode.FieldNotFound, nameToken.Text);
+                    else if (fields.Count != 1) throw new CodeException(nameToken.Span, ErrorCode.AmbiguousField, nameToken.Text);
                     else
                     {
-                        var chain = new FieldChain(leftChain, nameToken, fields[0]);
+                        if (fields[0].Flags.IsStatic() && !leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.StaticMemberCannotHaveObjectReference, nameToken.Text);
+                        if (!fields[0].Flags.IsStatic() && leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.MemberRequiresAnObjectReference, nameToken.Text);
+                        var chain = new FieldChain(fields[0].Flags.IsStatic() ? null : leftChain, nameToken, fields[0]);
                         return TryReadAfterValue(scope, stream, chain, leftPrec);
                     }
                 }
             }
-            else
-            {
-                scope.Report(nameToken.Span, ErrorCode.ExpectedMemberName);
-                return leftChain;
-            }
+
+            throw new CodeException(nameToken.Span, ErrorCode.ExpectedMemberName);
         }
 
         private static Chain ReadNamespaceStart(Scope scope, DkxTokenStream stream, DkxToken nsStartToken, OpPrec leftPrec)
@@ -302,14 +348,58 @@ namespace DKX.Compilation.Expressions
         /// <returns>True if a data type could be read; otherwise false.</returns>
         public static bool TryReadDataType(Scope scope, DkxTokenStream stream, out DataType dataTypeOut, out Span spanOut)
         {
+            var resetPos = stream.Position;
             var token = stream.Peek();
 
-            if (TokenIsDataType(token, scope.Resolver, out dataTypeOut, out var isInvalid))
+            if (token.Type == DkxTokenType.DataType)
             {
                 stream.Position++;
-                if (isInvalid && scope.Phase == CompilePhase.FullCompilation) scope.Report(token.Span, ErrorCode.InvalidDataType);
+                dataTypeOut = token.DataType;
+                if (token.HasError && scope.Phase == CompilePhase.FullCompilation) scope.Report(token.Span, ErrorCode.InvalidDataType);
                 spanOut = token.Span;
                 return true;
+            }
+
+            if (token.IsIdentifier)
+            {
+                var name = token.Text;
+                var class_ = scope.Resolver.ResolveClass(name);
+                if (class_ != null)
+                {
+                    stream.Position++;
+                    dataTypeOut = new DataType(class_);
+                    spanOut = token.Span;
+                    return true;
+                }
+
+                if (scope.Project.IsNamespaceStart(name))
+                {
+                    stream.Position++;
+                    var sb = new StringBuilder();
+                    sb.Append(name);
+
+                    while (true)
+                    {
+                        if (!stream.Read().IsOperator(Operator.Dot)) break;
+                        token = stream.Read();
+                        if (!token.IsIdentifier) break;
+                        name = token.Text;
+
+                        var ns = scope.Project.GetNamespaceOrNull(sb.ToString());
+                        var cls = ns?.GetClass(name);
+                        if (cls != null)
+                        {
+                            dataTypeOut = new DataType(cls);
+                            spanOut = stream[resetPos].Span + token.Span;
+                            return true;
+                        }
+
+                        sb.Append(DkxConst.Operators.Dot);
+                        sb.Append(name);
+                    }
+
+                    stream.Position = resetPos;
+                }
             }
 
             dataTypeOut = default;
@@ -369,7 +459,7 @@ namespace DKX.Compilation.Expressions
                 }
 
                 var argStream = new DkxTokenStream(argTokens);
-                var expression = TryReadExpression(scope, argStream);
+                var expression = ReadExpressionOrNull(scope, argStream);
                 if (expression == null)
                 {
                     scope.Report(argTokens.Span, ErrorCode.ExpectedExpression);
@@ -385,14 +475,22 @@ namespace DKX.Compilation.Expressions
             return args.ToArray();
         }
 
-        public static IMethod FindBestMethodForArguments(Scope scope, IEnumerable<IMethod> methods, Chain[] args, Span errorSpan)
+        /// <summary>
+        /// Picks the best method given a set of arguments.
+        /// </summary>
+        /// <param name="methods">A list of methods to choose from.</param>
+        /// <param name="args">The arguments used to call the method.</param>
+        /// <param name="methodNameSpan">Span of the method name (for error reporting)</param>
+        /// <returns>
+        /// The method with the best match.
+        /// Throws an error if no good match could be found, or was ambiguous.
+        /// </returns>
+        public static IMethod FindBestMethodForArguments(IEnumerable<IMethod> methods, Chain[] args, Span methodNameSpan)
         {
+            if (!methods.Any()) throw new CodeException(methodNameSpan, ErrorCode.MethodNotFound);
+
             var methodsWithSameNumberOfArguments = methods.Where(m => m.Arguments.Length == args.Length).ToArray();
-            if (methodsWithSameNumberOfArguments.Length == 0)
-            {
-                scope.Report(errorSpan, ErrorCode.NoMethodWithSameNumberOfArguments);
-                return null;
-            }
+            if (methodsWithSameNumberOfArguments.Length == 0) throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithSameNumberOfArguments);
 
             if (methodsWithSameNumberOfArguments.Length == 1) return methodsWithSameNumberOfArguments[0];
 
@@ -425,29 +523,35 @@ namespace DKX.Compilation.Expressions
                 else methodsAllGood.Add(method);
             }
 
-            if (methodsAllGood.Count == 1)
-            {
-                return methodsAllGood[0];
-            }
-            else if (methodsAllGood.Count > 1)
-            {
-                scope.Report(errorSpan, ErrorCode.MethodAmbiguous);
-                return methodsAllGood[0];
-            }
-            else if (methodsWithWarnings.Count == 1)
-            {
-                return methodsAllGood[0];
-            }
-            else if (methodsWithWarnings.Count > 1)
-            {
-                scope.Report(errorSpan, ErrorCode.MethodAmbiguous);
-                return methodsWithWarnings[0];
-            }
-            else
-            {
-                scope.Report(errorSpan, ErrorCode.NoMethodWithCompatibleArguments);
-                return null;
-            }
+            if (methodsAllGood.Count == 1) return methodsAllGood[0];
+            if (methodsAllGood.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous);
+            if (methodsWithWarnings.Count == 1) return methodsAllGood[0];
+            if (methodsWithWarnings.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous);
+            throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithCompatibleArguments);
+        }
+
+        /// <summary>
+        /// Converts a set of tokens into an expression.
+        /// The expression is expected to consume the entire token collection.
+        /// </summary>
+        /// <param name="scope">The scope where the expression lives.</param>
+        /// <param name="tokens">Tokens containing the expression.</param>
+        /// <param name="errorSpan">A span preceding the expression, which can be used to report errors.</param>
+        /// <returns>
+        /// The resulting expression.
+        /// Always returns a value; if bad code is detected, throws a CodeException.
+        /// </returns>
+        public static Chain TokensToExpressionStatement(Scope scope, DkxTokenCollection tokens, Span errorSpan)
+        {
+            if (tokens.Count == 0) throw new CodeException(errorSpan, ErrorCode.ExpectedExpression);
+
+            var stream = new DkxTokenStream(tokens);
+            var exp = ReadExpressionOrNull(scope, stream);
+            if (exp == null) throw new CodeException(errorSpan, ErrorCode.ExpectedExpression);
+
+            if (!stream.EndOfStream) throw new CodeException(stream.Read().Span, ErrorCode.SyntaxError);
+
+            return exp;
         }
     }
 }

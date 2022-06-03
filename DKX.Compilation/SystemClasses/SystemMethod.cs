@@ -33,10 +33,10 @@ namespace DKX.Compilation.SystemClasses
         public IClass Class => _class;
         public Span DefinitionSpan => Span.Empty;
         public FileContext FileContext => FileContext.NeutralClass;
+        public ModifierFlags Flags => ModifierFlags.Static;
         public string Name => _name;
         public Privacy Privacy => Privacy.Public;
         public DataType ReturnDataType => _returnDataType;
-        public bool Static => true;
         public WbdkCodeGeneratorCallback WbdkCodeGenerator => _wbdkCodeGenerator;
         public string WbdkName => _name;
     }

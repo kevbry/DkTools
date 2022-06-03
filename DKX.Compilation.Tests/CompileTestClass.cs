@@ -196,7 +196,7 @@ namespace DKX.Compilation.Tests
 
         protected async Task ValidateOutputAsync(DkAppContext app, string wbdkPathName, string wbdkCode)
         {
-            Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), "WBDK file was not created.");
+            Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), $"WBDK file '{wbdkPathName}' was not created.");
 
             var actualWbdkCode = await app.FileSystem.ReadFileTextAsync(wbdkPathName);
             TestContext.Out.WriteLine($"WBDK Code Generated: {wbdkPathName}\n{actualWbdkCode}");

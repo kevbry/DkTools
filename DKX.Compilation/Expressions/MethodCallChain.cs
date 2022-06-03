@@ -3,6 +3,7 @@ using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.SystemClasses;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables.ConstTerms;
@@ -21,7 +22,16 @@ namespace DKX.Compilation.Expressions
         public MethodCallChain(Chain thisChain, DkxToken nameToken, Chain[] args, Span argsSpan, IMethod method)
             : base(nameToken.Span.Envelope(argsSpan))
         {
-            _thisChain = thisChain ?? throw new ArgumentNullException(nameof(thisChain));
+            if (method.Flags.HasFlag(ModifierFlags.Static))
+            {
+                if (thisChain != null) throw new ArgumentException($"{nameof(thisChain)} must be null for static methods.");
+            }
+            else
+            {
+                if (thisChain == null) throw new ArgumentNullException(nameof(thisChain));
+            }
+
+            _thisChain = thisChain;
             _args = args ?? throw new ArgumentNullException(nameof(args));
             _method = method ?? throw new ArgumentNullException(nameof(method));
         }
@@ -33,6 +43,8 @@ namespace DKX.Compilation.Expressions
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
             context.DependsOnFile(_method.Class.DkxPathName);
+
+            if (_method.Flags.HasFlag(ModifierFlags.NotCallable)) throw new CodeException(Span, ErrorCode.MethodNotCallable);
 
             if (_method.AccessType == MethodAccessType.System)
             {
@@ -53,7 +65,7 @@ namespace DKX.Compilation.Expressions
                 sb.Append(_method.WbdkName);
                 sb.Append('(');
                 var firstArg = true;
-                if (!_method.Static)
+                if (!_method.Flags.HasFlag(ModifierFlags.Static))
                 {
                     sb.Append(_thisChain.ToWbdkCode_Read(context));
                     firstArg = false;

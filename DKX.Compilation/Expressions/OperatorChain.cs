@@ -47,6 +47,7 @@ namespace DKX.Compilation.Expressions
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
             CodeFragment leftFrag, rightFrag;
+            ConstTerm leftConst, rightConst;
             OpPrec prec;
 
             switch (_op)
@@ -64,10 +65,10 @@ namespace DKX.Compilation.Expressions
                 case Operator.Divide:
                 case Operator.Modulus:
                     // Try to optimize away constants first
-                    var leftConst = _left.ToConstTermOrNull(reportOrNull: null);
+                    leftConst = _left.ToConstTermOrNull(reportOrNull: null);
                     if (leftConst != null)
                     {
-                        var rightConst = _right.ToConstTermOrNull(reportOrNull: null);
+                        rightConst = _right.ToConstTermOrNull(reportOrNull: null);
                         if (rightConst != null)
                         {
                             var term = new ConstMathTerm(_op, leftConst, rightConst, Span);
@@ -104,6 +105,33 @@ namespace DKX.Compilation.Expressions
                     ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
                     return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
+
+                case Operator.Equal:
+                case Operator.NotEqual:
+                case Operator.LessThan:
+                case Operator.LessEqual:
+                case Operator.GreaterThan:
+                case Operator.GreaterEqual:
+                    // Try to optimize away constants first
+                    leftConst = _left.ToConstTermOrNull(reportOrNull: null);
+                    if (leftConst != null)
+                    {
+                        rightConst = _right.ToConstTermOrNull(reportOrNull: null);
+                        if (rightConst != null)
+                        {
+                            var term = new ConstComparisonTerm(_op, leftConst, rightConst, Span);
+                            var report = new ReportItemCollector();
+                            var constContext = new ConstResolutionContext(report, context.Project);
+                            var constant = term.ResolveConstantOrNull(constContext, DkxConst.EmptyStringArray);
+                            if (constant != null) return constant.ToWbdkCode();
+                        }
+                    }
+
+                    leftFrag = _left.ToWbdkCode_Read(context);
+                    rightFrag = _right.ToWbdkCode_Read(context);
+                    ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
+                    prec = _op.GetPrecedence();
+                    return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", DataType.Bool, prec, Span, readOnly: true);
 
                 default:
                     throw new NotImplementedException();

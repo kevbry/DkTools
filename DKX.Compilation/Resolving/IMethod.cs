@@ -2,6 +2,7 @@
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables;
+using System;
 
 namespace DKX.Compilation.Resolving
 {
@@ -17,11 +18,11 @@ namespace DKX.Compilation.Resolving
 
         IArgument[] Arguments { get; }
 
+        ModifierFlags Flags { get; }
+
         Privacy Privacy { get; }
 
         MethodAccessType AccessType { get; }
-
-        bool Static { get; }
 
         FileContext FileContext { get; }
 

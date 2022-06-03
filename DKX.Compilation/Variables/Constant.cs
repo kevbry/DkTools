@@ -53,12 +53,12 @@ namespace DKX.Compilation.Variables
         public DataType DataType => _dataType;
         public Span DefinitionSpan => _span;
         public FileContext FileContext => FileContext.NeutralClass;
+        public ModifierFlags Flags => ModifierFlags.Static;
         public bool IsConstant => true;
         public string Name => _name;
         public uint Offset => default;
         public bool ReadOnly => true;
         public Privacy ReadPrivacy => _privacy;
-        public bool Static => true;
         public Privacy WritePrivacy => _privacy;
     }
 }

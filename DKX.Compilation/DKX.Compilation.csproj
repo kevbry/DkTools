@@ -53,6 +53,7 @@
     <Compile Include="Conversions\ConversionValidator.cs" />
     <Compile Include="DkDate.cs" />
     <Compile Include="DkTime.cs" />
+    <Compile Include="Jobs\FileTarget.cs" />
     <Compile Include="Project\Bson\BsonArray.cs" />
     <Compile Include="Project\Bson\BsonBoolean.cs" />
     <Compile Include="Project\Bson\BsonDataType.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="Scopes\Statements\StatementParser.cs" />
     <Compile Include="Scopes\Statements\VariableDeclarationStatement.cs" />
     <Compile Include="SystemClasses\Console\SystemConsoleClass.cs" />
+    <Compile Include="SystemClasses\SystemAttributes.cs" />
     <Compile Include="SystemClasses\SystemClass.cs" />
     <Compile Include="SystemClasses\SystemMethod.cs" />
     <Compile Include="Tokens\DkxCodeParser.cs" />
@@ -138,10 +140,10 @@
     <Compile Include="Expressions\OperatorChain.cs" />
     <Compile Include="Expressions\StringLiteralChain.cs" />
     <Compile Include="Expressions\VariableChain.cs" />
-    <Compile Include="Files\CompileFileJob.cs" />
-    <Compile Include="Files\CompileFileJobFactory.cs" />
-    <Compile Include="Files\DkxFileHelper.cs" />
-    <Compile Include="Files\ICompileFileJobFactory.cs" />
+    <Compile Include="Jobs\CompileFileJob.cs" />
+    <Compile Include="Jobs\CompileFileJobFactory.cs" />
+    <Compile Include="Jobs\DkxFileHelper.cs" />
+    <Compile Include="Jobs\ICompileFileJobFactory.cs" />
     <Compile Include="Scopes\Privacy.cs" />
     <Compile Include="Jobs\ICompileJobQueue.cs" />
     <Compile Include="Scopes\NamespaceScope.cs" />
@@ -151,7 +153,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Schema\ITableHashProvider.cs" />
     <Compile Include="Schema\TableHashProvider.cs" />
-    <Compile Include="Files\ScanForCompileJob.cs" />
+    <Compile Include="Jobs\ScanForCompileJob.cs" />
     <Compile Include="TestApproachAttribute.cs" />
     <Compile Include="Tokens\DkxTokenStream.cs" />
     <Compile Include="Span.cs" />

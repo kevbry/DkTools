@@ -1,5 +1,4 @@
-﻿using DKX.Compilation.Files;
-using System;
+﻿using System;
 
 namespace DKX.Compilation.Variables
 {

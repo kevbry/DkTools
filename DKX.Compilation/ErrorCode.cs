@@ -120,6 +120,18 @@ namespace DKX.Compilation
 
         [Description("Namespace '{0}' is not valid here.")]
         NamespaceNotValidHere = 1118,
+
+        /// <summary>
+        /// {0} = member name
+        /// </summary>
+        [Description("'{0}' is static and cannot be accessed with an object reference.")]
+        StaticMemberCannotHaveObjectReference = 1119,
+
+        /// <summary>
+        /// {0} = member name
+        /// </summary>
+        [Description("'{0}' requires an object reference.")]
+        MemberRequiresAnObjectReference = 1120,
         #endregion
 
         #region Methods (1200-1299)
@@ -134,6 +146,12 @@ namespace DKX.Compilation
 
         [Description("More than one method with compatible arguments was found.")]
         MethodAmbiguous = 1203,
+
+        [Description("This method cannot be called directly.")]
+        MethodNotCallable = 1204,
+
+        [Description("Method not found.")]
+        MethodNotFound = 1205,
         #endregion
 
         #region Properties (1300-1399)
@@ -202,7 +220,7 @@ namespace DKX.Compilation
         /// <summary>
         /// {0} = variable name
         /// </summary>
-        [Description("Use of variable '{0}' requires a non-static object reference.")]
+        [Description("Use of '{0}' requires a non-static object reference.")]
         VariableRequiresThisPointer = 1411,
 
         [Description("'this' cannot be modified.")]
@@ -295,6 +313,38 @@ namespace DKX.Compilation
 
         [Description("Constant could not be resolved.")]
         ConstantNotResolved = 1518,
+        #endregion
+
+        #region Attributes (1600-1699)
+        /// <summary>
+        /// {0} = attribute name
+        /// </summary>
+        [Description("Attribute '{0}' is not valid here.")]
+        AttributeNotValidHere = 1600,
+
+        /// <summary>
+        /// {0} = attribute name
+        /// </summary>
+        [Description("Attribute '{0}' may only be used on members with a '{1}' context.")]
+        AttributeMustHaveContext = 1601,
+
+        /// <summary>
+        /// {0} = attribute name
+        /// </summary>
+        [Description("Attribute '{0}' may only be used on static members.")]
+        AttributeMustBeStatic = 1602,
+
+        /// <summary>
+        /// {0} = attribute name
+        /// </summary>
+        [Description("Attribute '{0}' requires a single argument.")]
+        AttributeRequiresSingleArgument = 1603,
+
+        /// <summary>
+        /// {0} = attribute name
+        /// </summary>
+        [Description("Attribute '{0}' requires a program name.")]
+        AttributeExpectedProgramPathName = 1604,
         #endregion
     }
 

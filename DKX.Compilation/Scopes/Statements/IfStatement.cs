@@ -1,8 +1,8 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Conversions;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
-using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
 using System;
@@ -18,44 +18,53 @@ namespace DKX.Compilation.Scopes.Statements
 
         public override bool IsEmpty => false;
 
-        public static IfStatement Parse(Scope parent, Span keywordSpan, DkxTokenStream stream)
+        public static IfStatement Parse(Scope parent, DkxTokenCollection tokens)
         {
-            var ifStatement = new IfStatement(parent, keywordSpan);
+            if (tokens.Count == 0 || !tokens[0].IsKeyword(DkxConst.Keywords.If)) throw new InvalidOperationException("Expected the first token to be the 'if' keyword.");
+            var keywordToken = tokens[0];
 
-            var first = true;
-            while (true)
+            var ifStatement = new IfStatement(parent, keywordToken.Span);
+            var stream = new DkxTokenStream(tokens, 1);
+
+            try
             {
-                var conditionToken = stream.Peek();
-                if (!conditionToken.IsBrackets)
+                var first = true;
+                while (true)
                 {
-                    ifStatement.Report(conditionToken.Span, ErrorCode.ExpectedCondition);
-                    return ifStatement;
-                }
-                var condition = ExpressionParser.TryReadExpression(ifStatement, conditionToken.Tokens.ToStream());
-                if (condition == null) ifStatement.Report(conditionToken.Span, ErrorCode.ExpectedCondition);
-                stream.Position++;
+                    var conditionToken = stream.Read();
+                    if (!conditionToken.IsBrackets) throw new CodeException(conditionToken.Span, ErrorCode.ExpectedCondition);
+                    var condition = ExpressionParser.TokensToExpressionStatement(ifStatement, conditionToken.Tokens, keywordToken.Span);
 
-                var ifCase = new IfCase(ifStatement, condition?.Span ?? keywordSpan, condition, first);
-                first = false;
-                ifCase.Statements = StatementParser.ReadBodyOrExpression(ifCase, stream, conditionToken.Span);
-                ifStatement._cases.Add(ifCase);
+                    var ifCase = new IfCase(ifStatement, condition?.Span ?? keywordToken.Span, condition, first);
+                    first = false;
+                    ifCase.Statements = StatementParser.ReadBodyOrStatement(ifCase, stream, conditionToken.Span);
+                    ifStatement._cases.Add(ifCase);
 
-                if (stream.Test(t => t.IsKeyword(DkxConst.Keywords.Else)))
-                {
-                    var elseToken = stream.Read();
-                    if (stream.Test(t => t.IsKeyword(DkxConst.Keywords.If)))
+                    if (stream.Test(t => t.IsKeyword(DkxConst.Keywords.Else)))
                     {
-                        keywordSpan = stream.Read().Span;
-                        continue;
+                        var elseToken = stream.Read();
+                        if (stream.Test(t => t.IsKeyword(DkxConst.Keywords.If)))
+                        {
+                            keywordToken = stream.Read();
+                            continue;
+                        }
+                        else
+                        {
+                            var elseCase = new IfCase(ifStatement, elseToken.Span, null, first: false);
+                            elseCase.Statements = StatementParser.ReadBodyOrStatement(elseCase, stream, elseToken.Span);
+                            ifStatement._cases.Add(elseCase);
+                            break;
+                        }
                     }
-                    else
-                    {
-                        var elseCase = new IfCase(ifStatement, elseToken.Span, null, first: false);
-                        elseCase.Statements = StatementParser.ReadBodyOrExpression(elseCase, stream, elseToken.Span);
-                        ifStatement._cases.Add(elseCase);
-                    }
+                    else break;
                 }
             }
+            catch (CodeException ex)
+            {
+                ifStatement.AddReportItem(ex.ToReportItem());
+            }
+
+            return ifStatement;
         }
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
@@ -77,7 +86,7 @@ namespace DKX.Compilation.Scopes.Statements
                 : base(parent, span)
             {
                 _condition = condition;
-                _first = true;
+                _first = first;
                 _variableStore = new VariableStore(parent?.GetScope<IVariableScope>());
             }
 
@@ -96,12 +105,12 @@ namespace DKX.Compilation.Scopes.Statements
                 {
                     if (!_first) cw.Write(' ');
                     cw.Write(DkxConst.Keywords.If);
-                    cw.Write(" (");
+                    cw.Write(' ');
                     var conditionFrag = _condition.ToWbdkCode_Read(context);
                     cw.Write(conditionFrag);
                     ConversionValidator.CheckConversion(DataType.Bool, conditionFrag, this);
-                    cw.Write(')');
                 }
+                cw.WriteLine();
                 using (cw.Indent())
                 {
                     foreach (var stmt in _statements ?? Statement.EmptyArray)

@@ -18,6 +18,7 @@ namespace DKX.Compilation.Expressions
         public override DataType DataType => _dataType;
         public override DataType InferredDataType => _dataType;
         public override bool IsEmptyCode => false;
+        public override bool IsStatic => true;
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {

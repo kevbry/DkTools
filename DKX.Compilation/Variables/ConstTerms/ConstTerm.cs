@@ -12,6 +12,8 @@ namespace DKX.Compilation.Variables.ConstTerms
     /// </summary>
     public abstract class ConstTerm
     {
+        public static readonly ConstTerm[] EmptyArray = new ConstTerm[0];
+
         public abstract DataType DataType { get; }
         internal abstract ConstValue ResolveConstantOrNull(ConstResolutionContext context, IEnumerable<string> circularDependencyCheckList);
         protected abstract void SaveInner(BsonObject obj);

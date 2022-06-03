@@ -3,6 +3,7 @@ using DKX.Compilation.DataTypes;
 using DKX.Compilation.Objects;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
 using DKX.Compilation.Variables.ConstTerms;
@@ -19,7 +20,12 @@ namespace DKX.Compilation.Expressions
         public FieldChain(Chain thisChain, DkxToken nameToken, IField field)
             : base(nameToken.Span)
         {
-            _thisChain = thisChain ?? throw new ArgumentNullException(nameof(thisChain));
+            if (!field.Flags.IsStatic())
+            {
+                if (thisChain == null) throw new ArgumentNullException(nameof(thisChain));
+            }
+
+            _thisChain = thisChain;
             _memberName = nameToken.Text;
             _field = field ?? throw new ArgumentNullException(nameof(field));
         }
@@ -43,6 +49,7 @@ namespace DKX.Compilation.Expressions
                     return ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span);
                 case FieldAccessMethod.Property:
                     thisFrag = _thisChain.ToWbdkCode_Read(context);
+                    if (_field.Flags.IsStatic()) return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span, readOnly: true);
                     return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span, readOnly: true);
                 case FieldAccessMethod.Constant:
                     var value = _field.ConstantValue;

@@ -5,7 +5,7 @@ using DKX.Compilation.ReportItems;
 using DKX.Compilation.Schema;
 using System;
 
-namespace DKX.Compilation.Files
+namespace DKX.Compilation.Jobs
 {
     class CompileFileJobFactory : ICompileFileJobFactory
     {

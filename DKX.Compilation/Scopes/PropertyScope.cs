@@ -1,6 +1,7 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Jobs;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes.Statements;
 using DKX.Compilation.Tokens;
@@ -18,11 +19,12 @@ namespace DKX.Compilation.Scopes
         private string _name;
         private Span _nameSpan;
         private DataType _dataType;
-        private bool _static;
+        private ModifierFlags _flags;
         private Privacy _privacy;
         private FileContext _fileContext;
         private PropertyAccessorScope _getter;
         private PropertyAccessorScope _setter;
+        private FileTarget _fileTarget;
 
         private PropertyScope(
             ClassScope class_,
@@ -37,9 +39,10 @@ namespace DKX.Compilation.Scopes
             _nameSpan = nameSpan;
             _dataType = dataType;
 
-            _static = modifiers.Static;
+            _flags = modifiers.Flags;
             _privacy = modifiers.Privacy ?? Privacy.Public;
             _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
+            _fileTarget = new FileTarget(_fileContext, _class.WbdkClassName + FileContextHelper.GetExtension(_fileContext));
         }
 
         public FieldAccessMethod AccessMethod => FieldAccessMethod.Property;
@@ -51,14 +54,15 @@ namespace DKX.Compilation.Scopes
         public DataType DataType => _dataType;
         public Span DefinitionSpan => _nameSpan;
         public FileContext FileContext => _fileContext;
+        public FileTarget FileTarget => _fileTarget;
+        public ModifierFlags Flags => _flags;
         public bool IsConstant => false;
         public string Name => _name;
         public uint Offset => default;
         public bool ReadOnly => _setter == null;
         public Privacy ReadPrivacy => _getter?.Privacy ?? Privacy.Private;
         public DataType ScopeDataType => Parent.GetScope<IObjectReferenceScope>().ScopeDataType;
-        public bool ScopeStatic => _static;
-        public bool Static => _static;
+        public bool ScopeStatic => _flags.HasFlag(ModifierFlags.Static);
         public Privacy WritePrivacy => _setter?.Privacy ?? Privacy.Private;
 
         public static PropertyScope Parse(
@@ -94,7 +98,7 @@ namespace DKX.Compilation.Scopes
                     var bodyToken = tokens[index + 1];
                     used.Use(bodyToken);
 
-                    var modifiers = Modifiers.ReadModifiers(tokens, index, used, propertyScope);
+                    var modifiers = Modifiers.ReadModifiers(propertyScope, tokens, index, used);
                     modifiers.CheckForPropertyAccessor(propertyScope, modifiers);
 
                     if (keywordToken.IsKeyword(DkxConst.Keywords.Get))
@@ -123,6 +127,7 @@ namespace DKX.Compilation.Scopes
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
+            if (_fileTarget != context.FileTarget) return;
             if (_getter == null) throw new InvalidOperationException("Property has no getter.");
 
             _getter.GenerateWbdkCode(context, cw);
@@ -156,7 +161,7 @@ namespace DKX.Compilation.Scopes
                         fileContext: FileContext.NeutralClass,
                         passType: ArgumentPassType.ByValue,
                         accessMethod: FieldAccessMethod.Variable,
-                        static_: false,
+                        flags: default,
                         local: true,
                         privacy: Privacy.Public,
                         initializer: null,
@@ -193,7 +198,7 @@ namespace DKX.Compilation.Scopes
                     cw.Write(DkxConst.Properties.GetterPrefix);
                     cw.Write(_property.Name);
                     cw.Write('(');
-                    if (!_property.Static) cw.Write("unsigned int this");
+                    if (!_property.Flags.HasFlag(ModifierFlags.Static)) cw.Write("unsigned int this");
                     cw.Write(')');
                 }
                 else
@@ -203,7 +208,7 @@ namespace DKX.Compilation.Scopes
                     cw.Write(DkxConst.Properties.SetterPrefix);
                     cw.Write(_property.Name);
                     cw.Write('(');
-                    if (!_property.Static) cw.Write("unsigned int this, ");
+                    if (!_property.Flags.HasFlag(ModifierFlags.Static)) cw.Write("unsigned int this, ");
                     cw.Write(_property.DataType.ToWbdkCode());
                     cw.Write(' ');
                     cw.Write(DkxConst.Properties.SetterArgumentName);

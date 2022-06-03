@@ -143,5 +143,13 @@ namespace DKX.Compilation
             public const string dkx_new = "dkx_new";
         }
         #endregion
+
+        #region Attributes
+        public static class Attributes
+        {
+            public const string ServerProgram = "ServerProgram";
+            public const string GatewayProgram = "GatewayProgram";
+        }
+        #endregion
     }
 }

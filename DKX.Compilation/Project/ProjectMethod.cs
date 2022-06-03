@@ -15,8 +15,8 @@ namespace DKX.Compilation.Project
         private string _wbdkName;
         private DataType _returnDataType;
         private ProjectArgument[] _arguments;
+        private ModifierFlags _flags;
         private Privacy _privacy;
-        private bool _static;
         private FileContext _fileContext;
         private Span _span;
         private MethodAccessType _accessType;
@@ -28,22 +28,22 @@ namespace DKX.Compilation.Project
             _wbdkName = fileMethod.WbdkName;
             _returnDataType = fileMethod.ReturnDataType;
             _arguments = fileMethod.Arguments.Select(x => new ProjectArgument(x)).ToArray();
+            _flags = fileMethod.Flags;
             _privacy = fileMethod.Privacy;
-            _static = fileMethod.Static;
             _fileContext = fileMethod.FileContext;
             _span = fileMethod.DefinitionSpan;
             _accessType = fileMethod.AccessType;
         }
 
-        private ProjectMethod(ProjectClass class_, string name, string wbdkName, DataType returnDataType, Privacy privacy,
-            bool static_, FileContext fileContext, Span span, MethodAccessType accessType, ProjectArgument[] args)
+        private ProjectMethod(ProjectClass class_, string name, string wbdkName, DataType returnDataType, ModifierFlags flags,
+            Privacy privacy, FileContext fileContext, Span span, MethodAccessType accessType, ProjectArgument[] args)
         {
             _class = class_;
             _name = name;
             _wbdkName = wbdkName;
             _returnDataType = returnDataType;
+            _flags = flags;
             _privacy = privacy;
-            _static = static_;
             _fileContext = fileContext;
             _span = span;
             _accessType = accessType;
@@ -56,10 +56,10 @@ namespace DKX.Compilation.Project
         IClass IMethod.Class => _class;
         public Span DefinitionSpan => _span;
         public FileContext FileContext => _fileContext;
+        public ModifierFlags Flags => _flags;
         public string Name => _name;
         public Privacy Privacy => _privacy;
         public DataType ReturnDataType => _returnDataType;
-        public bool Static => _static;
         public string WbdkName => _wbdkName;
 
         public BsonObject ToBson(BsonFile bson)
@@ -69,8 +69,8 @@ namespace DKX.Compilation.Project
             obj.SetString("Name", _name);
             obj.SetString("WbdkName", _wbdkName);
             obj.SetDataType("ReturnDataType", _returnDataType);
+            obj.SetUInt32("Flags", (uint)_flags);
             obj.SetEnum("Privacy", _privacy);
-            obj.SetBoolean("Static", _static);
             obj.SetEnum("FileContext", _fileContext);
             obj.SetSpan("DefinitionSpan", _span);
             obj.SetEnum("AccessType", _accessType);
@@ -86,14 +86,14 @@ namespace DKX.Compilation.Project
             var name = obj.GetString("Name");
             var wbdkName = obj.GetString("WbdkName");
             var returnDataType = obj.GetDataType("ReturnDataType");
+            var flags = (ModifierFlags)obj.GetUInt32("Flags");
             var privacy = obj.GetEnum<Privacy>("Privacy");
-            var static_ = obj.GetBoolean("Static");
             var fileContext = obj.GetEnum<FileContext>("FileContext");
             var span = obj.GetSpan("DefinitionSpan");
             var accessType = obj.GetEnum<MethodAccessType>("AccessType");
             var args = obj.GetArray("Arguments").Select(x => ProjectArgument.FromBson(x)).ToArray();
 
-            return new ProjectMethod(class_, name, wbdkName, returnDataType, privacy, static_, fileContext, span, accessType, args);
+            return new ProjectMethod(class_, name, wbdkName, returnDataType, flags, privacy, fileContext, span, accessType, args);
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using DKX.Compilation.Jobs;
-
-namespace DKX.Compilation.Files
+﻿namespace DKX.Compilation.Jobs
 {
     public interface ICompileFileJobFactory
     {

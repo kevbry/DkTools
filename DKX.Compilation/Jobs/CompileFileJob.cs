@@ -1,6 +1,5 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
-using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
@@ -12,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DKX.Compilation.Files
+namespace DKX.Compilation.Jobs
 {
     public class CompileFileJob : ICompileJob
     {
@@ -82,7 +81,7 @@ namespace DKX.Compilation.Files
                 _project.OnCompileCompleted(
                     dkxPathName: _dkxPathName,
                     fileDependencies: genResult.FileDependencies,
-                    tableDependencies: genResult.TableDependencies.Select(x => new TableHash(x, _tableHashProvider.GetTableHash(x))));
+                    tableDependencies: genResult.TableDependencies.Select(x => new TableHash(x, _tableHashProvider.GetTableHash(x))).ToList());
             }
         }
     }

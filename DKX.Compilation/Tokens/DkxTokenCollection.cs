@@ -21,22 +21,24 @@ namespace DKX.Compilation.Tokens
 
         public void AddRange(IEnumerable<DkxToken> tokens) => _tokens.AddRange(tokens);
 
-        public int FindIndex(Func<DkxToken,bool> callback, int startIndex = 0)
+        public int FindIndex(Func<DkxToken, bool> callback, int startIndex = 0)
         {
             var index = startIndex;
-            foreach (var token in _tokens)
+            while (index < _tokens.Count)
             {
-                if (callback(token)) return index;
+                if (callback(_tokens[index])) return index;
+                index++;
             }
             return -1;
         }
 
-        public int FindIndex(Func<DkxToken,int,bool> callback, int startIndex = 0)
+        public int FindIndex(Func<DkxToken, int, bool> callback, int startIndex = 0)
         {
             var index = startIndex;
-            foreach (var token in _tokens)
+            while (index < _tokens.Count)
             {
-                if (callback(token, index)) return index;
+                if (callback(_tokens[index], index)) return index;
+                index++;
             }
             return -1;
         }
@@ -44,9 +46,9 @@ namespace DKX.Compilation.Tokens
         public IEnumerable<int> FindIndices(Func<DkxToken,bool> callback, int startIndex = 0)
         {
             var index = startIndex;
-            foreach (var token in _tokens)
+            while (index < _tokens.Count)
             {
-                if (callback(token)) yield return index;
+                if (callback(_tokens[index])) yield return index;
                 index++;
             }
         }
@@ -54,17 +56,18 @@ namespace DKX.Compilation.Tokens
         public IEnumerable<int> FindIndices(Func<DkxToken,int,bool> callback, int startIndex = 0)
         {
             var index = startIndex;
-            foreach (var token in _tokens)
+            while (index < _tokens.Count)
             {
-                if (callback(token, index)) yield return index;
+                if (callback(_tokens[index], index)) yield return index;
                 index++;
             }
         }
 
-        public DkxTokenCollection GetRange(int start, int count)
+        public DkxTokenCollection GetRange(int start, int count = -1)
         {
             var ret = new DkxTokenCollection();
-            for (int i = start, ii = start + count; i < ii; i++)
+            var end = count < 0 ? _tokens.Count : start + count;
+            for (var i = start; i < end; i++)
             {
                 if (i >= 0 && i < _tokens.Count) ret.Add(_tokens[i]);
             }

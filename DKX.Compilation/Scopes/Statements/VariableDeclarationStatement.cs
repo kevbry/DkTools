@@ -23,7 +23,7 @@ namespace DKX.Compilation.Scopes.Statements
 
         public override bool IsEmpty => _initializers == null;
 
-        public static VariableDeclarationStatement Parse(Scope parent, DataType dataType, Span dataTypeSpan, DkxTokenStream stream, IResolver resolver)
+        public static VariableDeclarationStatement Parse(Scope parent, DataType dataType, Span dataTypeSpan, DkxTokenStream stream)
         {
             var varDeclStmt = new VariableDeclarationStatement(parent, dataType, dataTypeSpan);
 
@@ -39,7 +39,7 @@ namespace DKX.Compilation.Scopes.Statements
                 if (stream.Peek().IsOperator(Operator.Assign))
                 {
                     var assignToken = stream.Read();
-                    var initializerExp = ExpressionParser.TryReadExpression(varDeclStmt, stream);
+                    var initializerExp = ExpressionParser.ReadExpressionOrNull(varDeclStmt, stream);
                     if (initializerExp == null)
                     {
                         varDeclStmt.Report(assignToken.Span, ErrorCode.ExpectedExpression);
@@ -54,7 +54,7 @@ namespace DKX.Compilation.Scopes.Statements
                             fileContext: FileContext.NeutralClass,
                             passType: null,
                             accessMethod: FieldAccessMethod.Variable,
-                            static_: false,
+                            flags: default,
                             local: true,
                             privacy: Privacy.Public,
                             initializer: null,
@@ -76,7 +76,7 @@ namespace DKX.Compilation.Scopes.Statements
                         fileContext: FileContext.NeutralClass,
                         passType: null,
                         accessMethod: FieldAccessMethod.Variable,
-                        static_: false,
+                        flags: default,
                         local: true,
                         privacy: Privacy.Public,
                         initializer: null,
@@ -86,12 +86,22 @@ namespace DKX.Compilation.Scopes.Statements
                 }
 
                 var nextToken = stream.Peek();
-                if (nextToken.IsStatementEnd) break;
-                if (nextToken.IsDelimiter) continue;
+                if (nextToken.IsStatementEnd)
+                {
+                    stream.Position++;
+                    break;
+                }
+                if (nextToken.IsDelimiter)
+                {
+                    stream.Position++;
+                    continue;
+                }
 
                 stream.Position++;
                 varDeclStmt.Report(nextToken.Span, ErrorCode.ExpectedToken, ';');
             }
+
+            if (!stream.EndOfStream) varDeclStmt.Report(stream.Read().Span, ErrorCode.SyntaxError);
 
             return varDeclStmt;
         }

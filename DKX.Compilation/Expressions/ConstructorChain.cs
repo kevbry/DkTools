@@ -52,7 +52,7 @@ namespace DKX.Compilation.Expressions
                 foreach (var argTokens in argumentTokens.SplitByType(DkxTokenType.Delimiter))
                 {
                     var argStream = argTokens.ToStream();
-                    var expression = ExpressionParser.TryReadExpression(scope, argStream);
+                    var expression = ExpressionParser.ReadExpressionOrNull(scope, argStream);
                     if (expression == null)
                     {
                         scope.Report(dataTypeSpan, ErrorCode.ConstructorContainsEmptyArguments);

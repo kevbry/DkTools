@@ -1,10 +1,8 @@
 ﻿using DK.AppEnvironment;
-using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
-using DKX.Compilation.Schema;
 using DKX.Compilation.Tokens;
 using System;
 using System.Collections.Generic;
@@ -46,7 +44,7 @@ namespace DKX.Compilation.Scopes
 
                 var className = classNameToken.Text;
 
-                var modifiers = Modifiers.ReadModifiers(tokens, classIndex, used, this);
+                var modifiers = Modifiers.ReadModifiers(this, tokens, classIndex, used);
                 if (phase == CompilePhase.FullCompilation) modifiers.CheckForClass(this, classNameToken.Span);
 
                 var class_ = new ClassScope(this, namespaceName, classNameToken.Text, GetScope<FileScope>().DkxPathName, modifiers);
@@ -66,37 +64,34 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        public IEnumerable<FileContext> GetFileContexts()
-        {
-            var fileContexts = new List<FileContext>();
-            foreach (var cls in _classes.Values)
-            {
-                foreach (var fc in cls.GetFileContexts())
-                {
-                    if (!fileContexts.Contains(fc)) fileContexts.Add(fc);
-                }
-            }
-            return fileContexts;
-        }
-
         public GeneratedCodeResult GenerateWbdkCode(string targetPath)
         {
             var results = new List<GeneratedCodeFile>();
-            var context = new CodeGenerationContext(this, Project);
+            var fileDeps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tableDeps = new HashSet<string>();
 
             foreach (var cls in _classes.Values)
             {
-                foreach (var fileContext in cls.GetFileContexts())
+                foreach (var fileTarget in cls.GetFileTargets())
                 {
                     try
                     {
+                        var context = new CodeGenerationContext(fileTarget, this, Project);
                         var cw = new CodeWriter();
                         cls.GenerateWbdkCode(context, cw);
 
-                        var wbdkFileName = cls.WbdkClassName + fileContext.GetExtension();
-                        var wbdkPathName = PathUtil.CombinePath(targetPath, wbdkFileName);
+                        var wbdkPathName = PathUtil.CombinePath(targetPath, fileTarget.RelativePathName);
 
                         results.Add(new GeneratedCodeFile(wbdkPathName, cw.Code, cls.FullClassName, cls.NamespaceName));
+
+                        foreach (var fileDep in context.FileDependencies)
+                        {
+                            if (!fileDeps.Contains(fileDep)) fileDeps.Add(fileDep);
+                        }
+                        foreach (var tableDep in context.TableDependencies)
+                        {
+                            if (!tableDeps.Contains(tableDep)) tableDeps.Add(tableDep);
+                        }
                     }
                     catch (CodeException ex)
                     {
@@ -105,7 +100,7 @@ namespace DKX.Compilation.Scopes
                 }
             }
 
-            return new GeneratedCodeResult(results.ToArray(), context.FileDependencies.ToArray(), context.TableDependencies.ToArray());
+            return new GeneratedCodeResult(results.ToArray(), fileDeps.ToArray(), tableDeps.ToArray());
         }
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)

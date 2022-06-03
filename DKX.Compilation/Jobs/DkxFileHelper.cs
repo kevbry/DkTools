@@ -1,7 +1,7 @@
 ﻿using DK.AppEnvironment;
 using DK.Code;
 
-namespace DKX.Compilation.Files
+namespace DKX.Compilation.Jobs
 {
     static class DkxFileHelper
     {

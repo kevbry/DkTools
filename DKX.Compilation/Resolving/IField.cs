@@ -18,13 +18,14 @@ namespace DKX.Compilation.Resolving
 
         DataType DataType { get; }
 
+
         bool ReadOnly { get; }
 
         Privacy ReadPrivacy { get; }
 
         Privacy WritePrivacy { get; }
 
-        bool Static { get; }
+        ModifierFlags Flags { get; }
 
         FieldAccessMethod AccessMethod { get; }
 

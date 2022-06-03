@@ -1,5 +1,4 @@
-﻿using DKX.Compilation.Files;
-using DKX.Compilation.Jobs;
+﻿using DKX.Compilation.Jobs;
 
 namespace DKX.Compilation.Tests.Files
 {

@@ -1,7 +1,9 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes.Statements;
@@ -25,9 +27,10 @@ namespace DKX.Compilation.Scopes
         private VariableStore _variableStore;
         private FileContext _fileContext;
         private Privacy _privacy;
-        private bool _static;
+        private ModifierFlags _flags;
         private string _signature;  // Initially null; lazy generated
         private Statement[] _statements;
+        private FileTarget _fileTarget;
 
         private MethodScope(
             Scope parent,
@@ -50,7 +53,10 @@ namespace DKX.Compilation.Scopes
 
             _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
             _privacy = modifiers.Privacy ?? Privacy.Public;
-            _static = modifiers.Static;
+            _flags = modifiers.Flags;
+
+            var fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
+            _fileTarget = new FileTarget(fileContext, parent.GetScope<ClassScope>().WbdkClassName + FileContextHelper.GetExtension(fileContext));
 
             Resolver = new MethodResolver(this, resolver);
         }
@@ -61,16 +67,17 @@ namespace DKX.Compilation.Scopes
         ClassScope Class => GetScope<ClassScope>();
         IClass IMethod.Class => GetScope<IClass>();
         public Span DefinitionSpan => _nameSpan;
-        public FileContext FileContext => _fileContext;
+        public FileContext FileContext { get => _fileContext; set => _fileContext = value; }
+        public FileTarget FileTarget { get => _fileTarget; set => _fileTarget = value; }
+        public ModifierFlags Flags { get => _flags; set => _flags = value; }
         public string Name => _name;
         public Privacy Privacy => _privacy;
         public DataType ReturnDataType => _returnDataType;
         public DataType ScopeDataType => Parent.GetScope<IObjectReferenceScope>().ScopeDataType;
-        public bool ScopeStatic => _static;
+        public bool ScopeStatic => _flags.HasFlag(ModifierFlags.Static);
         public Statement[] Statements { get => _statements ?? Statement.EmptyArray; private set => _statements = value; }
-        public bool Static => _static;
         public IVariableStore VariableStore => _variableStore;
-        public string WbdkName => _wbdkName;
+        public string WbdkName { get => _wbdkName; set => _wbdkName = value ?? throw new ArgumentNullException(); }
 
         public static MethodScope Parse(
             Scope parent,
@@ -95,6 +102,8 @@ namespace DKX.Compilation.Scopes
             {
                 methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens).ToArray();
             }
+
+            if (phase >= CompilePhase.MemberScan) modifiers.CheckForMethod(methodScope, methodScope, phase);
 
             return methodScope;
         }
@@ -163,7 +172,7 @@ namespace DKX.Compilation.Scopes
                             fileContext: FileContext.NeutralClass,
                             passType: passType,
                             accessMethod: FieldAccessMethod.Variable,
-                            static_: false,
+                            flags: default,
                             local: true,
                             privacy: Privacy.Public,
                             initializer: null,
@@ -194,7 +203,7 @@ namespace DKX.Compilation.Scopes
                         sb.Append(DkxConst.Keywords.Server);
                         sb.Append(' ');
                     }
-                    if (_static)
+                    if (_flags.HasFlag(ModifierFlags.Static))
                     {
                         sb.Append(DkxConst.Keywords.Static);
                         sb.Append(' ');
@@ -228,12 +237,14 @@ namespace DKX.Compilation.Scopes
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
+            if (_fileTarget != context.FileTarget) return;
+
             cw.Write(_returnDataType.ToWbdkCode());
             cw.Write(' ');
             cw.Write(_wbdkName);
             cw.Write('(');
             var firstArg = true;
-            if (!_static)
+            if (!_flags.HasFlag(ModifierFlags.Static))
             {
                 cw.Write("unsigned int this");
                 firstArg = false;
@@ -290,6 +301,8 @@ namespace DKX.Compilation.Scopes
     {
         public static Task<CodeFragment> ToWbdkCode_MethodCallAsync(this IMethod method, CodeFragment parentFragment, IEnumerable<CodeFragment> arguments, Span span)
         {
+            if (method.Flags.HasFlag(ModifierFlags.NotCallable)) throw new CodeException(span, ErrorCode.MethodNotCallable);
+
             var sb = new StringBuilder();
 
             var cls = method.Class;
@@ -299,7 +312,7 @@ namespace DKX.Compilation.Scopes
             sb.Append('(');
 
             var firstArg = true;
-            if (!method.Static)
+            if (!method.Flags.HasFlag(ModifierFlags.Static))
             {
                 // First argument is the 'this' pointer.
                 sb.Append(parentFragment);

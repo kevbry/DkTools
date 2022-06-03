@@ -1,7 +1,6 @@
 ﻿using DK;
 using DK.AppEnvironment;
 using DK.Diagnostics;
-using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
 using DKX.Compilation.Schema;
 using System;
@@ -10,7 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DKX.Compilation.Files
+namespace DKX.Compilation.Jobs
 {
     public class ScanForCompileJob : ICompileJob
     {

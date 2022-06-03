@@ -23,6 +23,7 @@ namespace DKX.Compilation.Expressions
             _span = span;
         }
 
+        public virtual bool IsStatic => false;
         public Span Span => _span;
     }
 }

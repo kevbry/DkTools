@@ -15,12 +15,22 @@ namespace DKX.Compilation.Expressions
         public VariableChain(Variable variable, Span span, Chain thisExpressionOrNull)
             : base(span)
         {
+            switch (variable.AccessMethod)
+            {
+                case FieldAccessMethod.Object:
+                case FieldAccessMethod.Constant:
+                case FieldAccessMethod.Property:
+                    throw new InvalidOperationException("A VariableChain cannot be used for properties, constants, or non-stack member variables.");
+                    // Use FieldChain for these types.
+            }
+
             _variable = variable ?? throw new ArgumentNullException(nameof(variable));
 
-            if (!_variable.Local && !_variable.Static)
+            if (!_variable.Local && !_variable.Flags.HasFlag(Scopes.ModifierFlags.Static))
             {
                 if (thisExpressionOrNull == null) throw new ArgumentNullException(nameof(thisExpressionOrNull));
             }
+
             _thisExpressionOrNull = thisExpressionOrNull;
         }
 
@@ -32,7 +42,9 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
         {
-            if (_variable.Static || _variable.Local)
+            context.DependsOnFile(_variable.DefinitionSpan.PathName);
+
+            if (_variable.Flags.HasFlag(Scopes.ModifierFlags.Static) || _variable.Local)
             {
                 return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, readOnly: false);
             }
@@ -52,7 +64,7 @@ namespace DKX.Compilation.Expressions
         {
             Conversions.ConversionValidator.CheckConversion(_variable.DataType, valueFragment, context.Report);
 
-            if (_variable.Static || _variable.Local)
+            if (_variable.Flags.HasFlag(Scopes.ModifierFlags.Static) || _variable.Local)
             {
                 return new CodeFragment($"{_variable.WbdkName} = {valueFragment}", _variable.DataType, OpPrec.None, Span, readOnly: false);
             }

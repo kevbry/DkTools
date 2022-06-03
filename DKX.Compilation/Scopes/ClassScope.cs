@@ -2,6 +2,7 @@
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
@@ -22,7 +23,7 @@ namespace DKX.Compilation.Scopes
         private string _wbdkClassName;
         private string _dkxPathName;
         private Privacy _privacy;
-        private bool _static;
+        private ModifierFlags _flags;
         private List<MethodScope> _methods = new List<MethodScope>();
         private List<PropertyScope> _properties = new List<PropertyScope>();
         private VariableStore _variableStore;
@@ -39,7 +40,7 @@ namespace DKX.Compilation.Scopes
             _variableStore = new VariableStore(parent?.GetScope<IVariableScope>());
             _constantStore = new ConstantStore(parent?.GetScope<IConstantScope>());
             _privacy = modifiers.Privacy ?? Privacy.Public;
-            _static = modifiers.Static;
+            _flags = modifiers.Flags;
 
             _fullName = string.Concat(_namespaceName, DkxConst.Operators.Dot, _name);
             _wbdkClassName = Compiler.GetWbdkClassName(_fullName);
@@ -64,6 +65,7 @@ namespace DKX.Compilation.Scopes
         public string ClassName => _name;
         public IConstantStore ConstantStore => _constantStore;
         public string DkxPathName => _dkxPathName;
+        public ModifierFlags Flags => _flags;
         public string FullClassName => _fullName;
         public IEnumerable<MethodScope> Methods => _methods;
         IEnumerable<IMethod> IClass.Methods => _methods;
@@ -71,8 +73,8 @@ namespace DKX.Compilation.Scopes
         public string NamespaceName => _namespaceName;
         public Privacy Privacy => _privacy;
         public DataType ScopeDataType => _dataType;
-        public bool ScopeStatic => true;
-        public bool Static => _static;
+        public bool ScopeStatic => _flags.HasFlag(ModifierFlags.Static);
+        public bool Static => _flags.HasFlag(ModifierFlags.Static);
         public IVariableStore VariableStore => _variableStore;
         public string WbdkClassName => _wbdkClassName;
 
@@ -83,6 +85,8 @@ namespace DKX.Compilation.Scopes
             var pos = 0;
             while (pos < tokens.Count)
             {
+                // TODO: A data type could span multiple tokens (e.g. System.Console)
+                // Use ExpressionParser.TryReadDataType() instead
                 if (!ExpressionParser.TokenIsDataType(tokens[pos], Resolver, out var dataType, out var dataTypeInvalid))
                 {
                     pos++;
@@ -152,8 +156,7 @@ namespace DKX.Compilation.Scopes
 
             used.Use(dataTypeToken, nameToken, argsToken, scopeToken);
 
-            var modifiers = Modifiers.ReadModifiers(tokens, dataTypeIndex, used, this);
-            if (Phase == CompilePhase.FullCompilation) modifiers.CheckForMethod(this);
+            var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
 
             var method = MethodScope.Parse(
                 parent: this,
@@ -182,7 +185,7 @@ namespace DKX.Compilation.Scopes
                     return;
             }
 
-            var modifiers = Modifiers.ReadModifiers(tokens, dataTypeIndex, used, this);
+            var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
             if (Phase == CompilePhase.FullCompilation) modifiers.CheckForProperty(this);
 
             used.Use(dataTypeToken, nameToken, scopeToken);
@@ -206,7 +209,7 @@ namespace DKX.Compilation.Scopes
             TokenUseTracker used)
         {
             used.Use(dataTypeToken, nameToken);
-            var modifiers = Modifiers.ReadModifiers(tokens, pos, used, this);
+            var modifiers = Modifiers.ReadModifiers(this, tokens, pos, used);
 
             if (tokens[nameIndex + 1].IsOperator(Operator.Assign))
             {
@@ -225,7 +228,7 @@ namespace DKX.Compilation.Scopes
                     if (Phase >= CompilePhase.ConstantResolution)
                     {
                         var initializerStream = initializerTokens.ToStream();
-                        initializerChain = ExpressionParser.TryReadExpression(this, initializerStream);
+                        initializerChain = ExpressionParser.ReadExpressionOrNull(this, initializerStream);
                         if (initializerChain == null) Report(initializerTokens.Span, ErrorCode.ExpectedExpression);
                         else if (!initializerStream.EndOfStream) Report(initializerStream.Read().Span, ErrorCode.SyntaxError);
                     }
@@ -269,8 +272,8 @@ namespace DKX.Compilation.Scopes
                                 dataType: dataTypeToken.DataType,
                                 fileContext: FileContext.NeutralClass,
                                 passType: null,
-                                accessMethod: modifiers.Static ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
-                                static_: modifiers.Static,
+                                accessMethod: modifiers.Flags.HasFlag(ModifierFlags.Static) ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
+                                flags: modifiers.Flags,
                                 local: false,
                                 privacy: modifiers.Privacy ?? Privacy.Private,
                                 initializer: initializerChain,
@@ -313,8 +316,8 @@ namespace DKX.Compilation.Scopes
                                 dataType: dataTypeToken.DataType,
                                 fileContext: FileContext.NeutralClass,
                                 passType: null,
-                                accessMethod: modifiers.Static ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
-                                static_: modifiers.Static,
+                                accessMethod: modifiers.Flags.HasFlag(ModifierFlags.Static) ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
+                                flags: modifiers.Flags,
                                 local: false,
                                 privacy: modifiers.Privacy ?? Privacy.Private,
                                 initializer: null,
@@ -333,18 +336,23 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        public IEnumerable<FileContext> GetFileContexts()
+        public IEnumerable<FileTarget> GetFileTargets()
         {
-            var fileContexts = new List<FileContext>();
+            var fileTargets = new List<FileTarget>();
+
             foreach (var method in _methods)
             {
-                var fc = method.FileContext;
-                if (!fileContexts.Contains(fc)) fileContexts.Add(fc);
+                var ft = method.FileTarget;
+                if (!fileTargets.Contains(ft)) fileTargets.Add(ft);
             }
 
-            // TODO: include properties
+            foreach (var prop in _properties)
+            {
+                var ft = prop.FileTarget;
+                if (!fileTargets.Contains(ft)) fileTargets.Add(ft);
+            }
 
-            return fileContexts;
+            return fileTargets;
         }
 
         internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
@@ -357,7 +365,7 @@ namespace DKX.Compilation.Scopes
             var gotMemberVariable = false;
             foreach (var memberVariable in _variableStore.GetVariables(includeParents: false))
             {
-                if (!memberVariable.Static) continue;
+                if (!memberVariable.Flags.HasFlag(ModifierFlags.Static)) continue;
                 if (memberVariable.AccessMethod == FieldAccessMethod.Property) continue;
 
                 gotMemberVariable = true;
