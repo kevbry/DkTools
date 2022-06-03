@@ -171,7 +171,13 @@ namespace DKX.Compilation.Tests
             return app;
         }
 
-        protected async Task<DkAppContext> RunCompileAsync(DkAppContext app, ReportItem? expectedError = null)
+        protected async Task SetCompileFileAsync(DkAppContext app, string dkxPathName, string dkxCode)
+        {
+            await app.FileSystem.WriteFileTextAsync(dkxPathName, dkxCode);
+            TestContext.Out.WriteLine($"DKX Code: {dkxPathName}\n{dkxCode}");
+        }
+
+        protected async Task<DkAppContext> RunCompileAsync(DkAppContext app, ReportItem? expectedError = null, ErrorCode? expectedErrorCode = null)
         {
             var compiler = new Compiler(app);
             await compiler.CompileAsync(cancel: default);
@@ -184,6 +190,12 @@ namespace DKX.Compilation.Tests
 
                 var errorText = expectedError.Value.ToString();
                 Assert.IsTrue(compiler.ReportItems.Any(x => x.ToString().EqualsI(errorText)), "Compiler returned errors, but not the expected one.");
+                return app;
+            }
+            else if (expectedErrorCode.HasValue)
+            {
+                Assert.IsTrue(compiler.HasErrors, "Compiler did not return any errors.");
+                Assert.IsTrue(compiler.ReportItems.Any(x => x.Code == expectedErrorCode.Value), "Compiler returned errors, but not the expected one.");
                 return app;
             }
             else

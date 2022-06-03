@@ -69,8 +69,8 @@ namespace DKX.Compilation
         {
             public static readonly HashSet<string> AllKeywords = new HashSet<string>(new string[]
             {
-                And, Break, Bool, Char, Class, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
-                Namespace, New, Numeric, Or, Private, Protected, Public, Return, Set, Short, Static, Switch, String,
+                And, Break, Bool, Char, Class, Client, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
+                Namespace, Neutral, New, Numeric, Or, Private, Protected, Public, Return, Server, Set, Short, Static, Switch, String,
                 Table, Time, True, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
             });
 

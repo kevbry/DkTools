@@ -28,9 +28,9 @@ namespace DKX.Compilation.SystemClasses
 
                                 var constContext = new ConstResolutionContext(method, method.Project);
                                 var constValue = attribute.Arguments[0].ResolveConstantOrNull(constContext, DkxConst.EmptyStringArray);
-                                if (constValue == null || !constValue.IsString) throw new CodeException(attribute.Span, ErrorCode.AttributeExpectedProgramPathName);
+                                if (constValue == null || !constValue.IsString) throw new CodeException(attribute.Span, ErrorCode.AttributeExpectedProgramPathName, attribute.Name);
                                 relPathName = constValue.String;
-                                if (string.IsNullOrWhiteSpace(relPathName) || relPathName.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0) throw new CodeException(attribute.Span, ErrorCode.AttributeExpectedProgramPathName);
+                                if (string.IsNullOrWhiteSpace(relPathName) || relPathName.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0) throw new CodeException(attribute.Span, ErrorCode.AttributeExpectedProgramPathName, attribute.Name);
 
                                 // Add the '.sp'/'.gp' extension if the developer didn't include it.
                                 var ext = FileContextHelper.GetExtension(fileContext);
@@ -43,11 +43,11 @@ namespace DKX.Compilation.SystemClasses
 
                             if (fileContext == FileContext.ServerProgram)
                             {
-                                if (method.FileContext.IsServerSide()) throw new CodeException(attribute.Span, ErrorCode.AttributeMustHaveContext, attribute.Name, DkxConst.Keywords.Server);
+                                if (!method.FileContext.IsServerSide()) throw new CodeException(attribute.Span, ErrorCode.AttributeMustHaveContext, attribute.Name, DkxConst.Keywords.Server);
                             }
                             else
                             {
-                                if (method.FileContext.IsClientSide()) throw new CodeException(attribute.Span, ErrorCode.AttributeMustHaveContext, attribute.Name, DkxConst.Keywords.Client);
+                                if (!method.FileContext.IsClientSide()) throw new CodeException(attribute.Span, ErrorCode.AttributeMustHaveContext, attribute.Name, DkxConst.Keywords.Client);
                             }
 
                             if (!method.Flags.HasFlag(ModifierFlags.Static)) throw new CodeException(attribute.Span, ErrorCode.AttributeMustBeStatic, attribute.Name);
