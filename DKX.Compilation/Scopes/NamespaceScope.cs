@@ -103,12 +103,6 @@ namespace DKX.Compilation.Scopes
             return new GeneratedCodeResult(results.ToArray(), fileDeps.ToArray(), tableDeps.ToArray());
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
-        {
-            // This will never be called for namespaces.
-            throw new NotImplementedException();
-        }
-
         IEnumerable<IClass> INamespace.Classes => _classes.Values;
 
         public ClassScope GetClass(string name)

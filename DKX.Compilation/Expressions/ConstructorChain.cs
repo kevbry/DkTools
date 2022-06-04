@@ -76,12 +76,12 @@ namespace DKX.Compilation.Expressions
         public override DataType InferredDataType => _dataType;
         public override bool IsEmptyCode => false;
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             context.DependsOnFile(_class.DkxPathName);
 

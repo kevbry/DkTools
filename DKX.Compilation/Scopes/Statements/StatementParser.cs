@@ -43,59 +43,68 @@ namespace DKX.Compilation.Scopes.Statements
 
             if (allowControlStatements)
             {
-                #region if
-                if (token.IsKeyword(DkxConst.Keywords.If))
+                if (token.Type == DkxTokenType.Keyword)
                 {
-                    pos++;
-                    if (tokens[pos].IsBrackets)
+                    #region if
+                    if (token.IsKeyword(DkxConst.Keywords.If))
                     {
                         pos++;
-                        if (tokens[pos].IsScope) pos++;
-                        else
+                        if (tokens[pos].IsBrackets)
                         {
-                            pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
-                            if (pos < 0) return -1;
-                        }
-
-                        while (true)
-                        {
-                            if (tokens[pos].IsKeyword(DkxConst.Keywords.Else))
+                            pos++;
+                            if (tokens[pos].IsScope) pos++;
+                            else
                             {
-                                pos++;
-                                if (tokens[pos].IsKeyword(DkxConst.Keywords.If))
+                                pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
+                                if (pos < 0) return -1;
+                            }
+
+                            while (true)
+                            {
+                                if (tokens[pos].IsKeyword(DkxConst.Keywords.Else))
                                 {
                                     pos++;
-                                    if (tokens[pos].IsBrackets)
+                                    if (tokens[pos].IsKeyword(DkxConst.Keywords.If))
                                     {
                                         pos++;
-                                        if (tokens[pos].IsScope) pos++;
-                                        else
+                                        if (tokens[pos].IsBrackets)
                                         {
-                                            pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
-                                            if (pos < 0) return -1;
+                                            pos++;
+                                            if (tokens[pos].IsScope) pos++;
+                                            else
+                                            {
+                                                pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
+                                                if (pos < 0) return -1;
+                                            }
                                         }
+                                        else return pos;    // No condition
                                     }
-                                    else return pos;    // No condition
+                                    else if (tokens[pos].IsScope) pos++;
+                                    else
+                                    {
+                                        pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
+                                        if (pos < 0) return -1;
+                                    }
                                 }
-                                else if (tokens[pos].IsScope) pos++;
-                                else
-                                {
-                                    pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
-                                    if (pos < 0) return -1;
-                                }
+                                else return pos;    // No else
                             }
-                            else return pos;    // No else
                         }
+                        else return pos;    // No condition
                     }
-                    else return pos;    // No condition
+                    #endregion
+                    #region return
+                    if (token.IsKeyword(DkxConst.Keywords.Return))
+                    {
+                        return FindStatementEnd(tokens, pos + 1, allowControlStatements: false);
+                    }
+                    #endregion
+                    #region var
+                    if (token.IsKeyword(DkxConst.Keywords.Var))
+                    {
+                        return FindStatementEnd(tokens, pos + 1, allowControlStatements: false);
+                    }
+                    #endregion
                 }
-                #endregion
-                #region return
-                if (token.IsKeyword(DkxConst.Keywords.Return))
-                {
-                    return FindStatementEnd(tokens, pos + 1, allowControlStatements: false);
-                }
-                #endregion
             }
 
             var endPos = tokens.FindIndex(t => t.IsStatementEnd || (t.Type == DkxTokenType.Keyword && DkxConst.Keywords.ControlStatementStartKeyword.Contains(t.Text)), startPos);
@@ -117,8 +126,10 @@ namespace DKX.Compilation.Scopes.Statements
                         return IfStatement.Parse(scope, tokens);
                     case DkxConst.Keywords.Return:
                         return ReturnStatement.Parse(scope, tokens);
+                    case DkxConst.Keywords.Var:
+                        return VarStatement.Parse(scope, tokens);
                     default:
-                        throw new NotImplementedException();
+                        throw new CodeException(token.Span, ErrorCode.KeywordNotValidHere, token.Text);
                 }
             }
 

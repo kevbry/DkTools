@@ -100,6 +100,7 @@ namespace DKX.Compilation.DataTypes
         public short Width => _width;
         public short Scale => _scale;
         public string[] Options => OptionsToStringList(_options ?? string.Empty);
+        public bool IsClass => _baseType == BaseType.Class;
         public bool IsUnsupported => _baseType == BaseType.Unsupported;
         public bool IsSigned => _baseType.IsSigned();
         public bool IsValue => _baseType != BaseType.Void && _baseType != BaseType.Unsupported;

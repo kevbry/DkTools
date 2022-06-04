@@ -34,6 +34,7 @@ namespace DKX.Compilation
         public static class Variables
         {
             public const string UnnamedArgumentFormat = "unnamed{0}";
+            public const string SystemVariablePrefix = "__";
         }
 
         public static class Numeric
@@ -71,7 +72,7 @@ namespace DKX.Compilation
             {
                 And, Break, Bool, Char, Class, Client, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
                 Namespace, Neutral, New, Numeric, Or, Private, Protected, Public, Return, Server, Set, Short, Static, Switch, String,
-                Table, Time, True, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
+                Table, This, Time, True, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
             });
 
             public static readonly HashSet<string> DataTypeKeyword = new HashSet<string>(new string[]
@@ -124,6 +125,7 @@ namespace DKX.Compilation
             public const string String = "string";
             public const string Switch = "switch";
             public const string Table = "table";
+            public const string This = "this";
             public const string Time = "time";
             public const string True = "true";
             public const string UInt = "uint";

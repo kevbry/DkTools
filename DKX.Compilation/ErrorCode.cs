@@ -43,6 +43,12 @@ namespace DKX.Compilation
 
         [Description("Invalid type.")]
         InvalidDataType = 1006,
+
+        [Description("Expected ';'.")]
+        ExpectedStatementEndToken = 1007,
+
+        [Description("Expected '{' body.")]
+        ExpectedScope = 1008,
         #endregion
 
         #region Classes (1100-1199)
@@ -231,6 +237,12 @@ namespace DKX.Compilation
 
         [Description("Invalid number of arguments.")]
         InvalidNumberOfArguments = 1414,
+
+        /// <summary>
+        /// {0} = variable name
+        /// </summary>
+        [Description("Used of uninitialized variable '{0}'.")]
+        UseOfUninitializedVariable = 1415,
         #endregion
 
         #region Expressions (1500-1599)
@@ -313,6 +325,12 @@ namespace DKX.Compilation
 
         [Description("Constant could not be resolved.")]
         ConstantNotResolved = 1518,
+
+        /// <summary>
+        /// {0} = keyword text
+        /// </summary>
+        [Description("Keyword '{0}' is not valid here.")]
+        KeywordNotValidHere = 1519,
         #endregion
 
         #region Attributes (1600-1699)

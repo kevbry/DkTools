@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
-    class MethodScope : Scope, IReturnScope, IVariableScope, IMethod, IObjectReferenceScope
+    class MethodScope : Scope, IReturnScope, IVariableScope, IVariableWbdkScope, IMethod, IObjectReferenceScope
     {
         private string _className;
         private string _name;
@@ -25,6 +25,7 @@ namespace DKX.Compilation.Scopes
         private string _wbdkName;
         private DataType _returnDataType;
         private VariableStore _variableStore;
+        private List<Variable> _wbdkVariables = new List<Variable>();
         private FileContext _fileContext;
         private Privacy _privacy;
         private ModifierFlags _flags;
@@ -38,7 +39,6 @@ namespace DKX.Compilation.Scopes
             string name,
             Span nameSpan,
             DataType returnDataType,
-            VariableStore variableStore,
             Modifiers modifiers,
             CompilePhase phase,
             IResolver resolver,
@@ -49,8 +49,8 @@ namespace DKX.Compilation.Scopes
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _nameSpan = nameSpan;
             _returnDataType = returnDataType;
-            _variableStore = variableStore ?? throw new ArgumentNullException(nameof(variableStore));
 
+            _variableStore = new VariableStore(parent.GetScope<IVariableScope>());
             _fileContext = modifiers.FileContext ?? FileContext.NeutralClass;
             _privacy = modifiers.Privacy ?? Privacy.Public;
             _flags = modifiers.Flags;
@@ -62,8 +62,8 @@ namespace DKX.Compilation.Scopes
         }
 
         public MethodAccessType AccessType => MethodAccessType.Normal;
-        public IEnumerable<Variable> Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue);
-        IArgument[] IMethod.Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType.HasValue).Cast<IArgument>().ToArray();
+        public IEnumerable<Variable> Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.PassType.HasValue);
+        IArgument[] IMethod.Arguments => _variableStore.GetVariables(includeParents: false).Where(v => v.PassType.HasValue).Cast<IArgument>().ToArray();
         ClassScope Class => GetScope<ClassScope>();
         IClass IMethod.Class => GetScope<IClass>();
         public Span DefinitionSpan => _nameSpan;
@@ -92,11 +92,11 @@ namespace DKX.Compilation.Scopes
             IResolver resolver,
             IProject project)
         {
-            var variableStore = new VariableStore(parent.GetScope<IVariableScope>());
-            var methodScope = new MethodScope(parent, className, name, nameSpan, returnDataType, variableStore, modifiers, phase, resolver, project);
+            var methodScope = new MethodScope(parent, className, name, nameSpan, returnDataType, modifiers, phase, resolver, project);
 
-            variableStore.AddVariables(methodScope.ProcessArguments(argumentTokens));
-            methodScope._wbdkName = string.Concat(methodScope._name, "_", methodScope.CalculateDecoration());
+            var args = methodScope.ProcessArguments(argumentTokens).ToList();
+            methodScope._variableStore.AddVariables(args);
+            methodScope._wbdkName = string.Concat(methodScope._name, "_", Compiler.GetMethodDecoration(returnDataType, args.Select(x => x.DataType)));
 
             if (bodyTokens != null)
             {
@@ -214,12 +214,12 @@ namespace DKX.Compilation.Scopes
                     sb.Append('(');
                     foreach (var arg in Arguments)
                     {
-                        if (arg.ArgumentType == ArgumentPassType.ByReference)
+                        if (arg.PassType == ArgumentPassType.ByReference)
                         {
                             sb.Append(DkxConst.Keywords.Ref);
                             sb.Append(' ');
                         }
-                        else if (arg.ArgumentType == ArgumentPassType.Out)
+                        else if (arg.PassType == ArgumentPassType.Out)
                         {
                             sb.Append(DkxConst.Keywords.Out);
                             sb.Append(' ');
@@ -235,7 +235,7 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        internal void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             if (_fileTarget != context.FileTarget) return;
 
@@ -255,15 +255,17 @@ namespace DKX.Compilation.Scopes
                 else cw.Write(", ");
                 cw.Write(arg.DataType.ToWbdkCode());
                 cw.Write(' ');
-                if (arg.ArgumentType == ArgumentPassType.ByReference || arg.ArgumentType == ArgumentPassType.Out) cw.Write('&');
+                if (arg.PassType == ArgumentPassType.ByReference || arg.PassType == ArgumentPassType.Out) cw.Write('&');
                 cw.Write(arg.WbdkName);
             }
             cw.Write(')');
             cw.WriteLine();
             using (cw.Indent())
             {
+                var flow = new FlowTrace();
+
                 // Variables
-                foreach (var variable in _variableStore.GetVariables(includeParents: false).Where(v => v.ArgumentType == null))
+                foreach (var variable in _wbdkVariables)
                 {
                     cw.Write(variable.DataType.ToWbdkCode());
                     cw.Write(' ');
@@ -272,29 +274,43 @@ namespace DKX.Compilation.Scopes
                     cw.WriteLine();
                 }
 
+                // Set arguments as initialized
+                foreach (var arg in _variableStore.GetVariables(includeParents: false).Where(v => v.Local && v.PassType != null))
+                {
+                    switch (arg.PassType.Value)
+                    {
+                        case ArgumentPassType.ByValue:
+                        case ArgumentPassType.ByReference:
+                            flow.OnVariableAssigned(arg.WbdkName);
+                            break;
+                    }
+                }
+
                 // Statements
                 foreach (var statement in _statements ?? Statement.EmptyArray)
                 {
-                    statement.GenerateWbdkCode(context, cw);
+                    statement.GenerateWbdkCode(context, cw, flow);
                 }
 
-                this.GenerateScopeEndingWbdkCode(cw);
+                GenerateScopeEnding(context, cw, flow, methodEnding: true, _nameSpan);
             }
         }
 
-        private string CalculateDecoration()
+        public void AddWbdkVariable(Variable variable)
         {
-            var sb = new StringBuilder();
-
-            sb.Append(_returnDataType.ToString());
-            foreach (var arg in Arguments)
-            {
-                sb.Append(", ");
-                sb.Append(arg.DataType.ToString());
-            }
-
-            return Compiler.ComputeHash(sb.ToString()).ToString("X");
+            _wbdkVariables.Add(variable ?? throw new ArgumentNullException(nameof(variable)));
         }
+
+        public bool HasWbdkVariable(string wbdkName)
+        {
+            foreach (var variable in _wbdkVariables)
+            {
+                if (variable.WbdkName == wbdkName) return true;
+            }
+            return false;
+        }
+
+        public IEnumerable<Variable> GetWbdkVariables() => _wbdkVariables;
     }
 
     static class MethodScopeHelper

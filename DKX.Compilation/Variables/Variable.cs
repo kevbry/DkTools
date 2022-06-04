@@ -80,14 +80,14 @@ namespace DKX.Compilation.Variables
             _fileContext = field.FileContext;
             _accessMethod = field.AccessMethod;
             _flags = field.Flags;
-            _local = field.AccessMethod == FieldAccessMethod.Variable;
+            _local = false;
             _privacy = field.ReadPrivacy;
             _offset = field.Offset;
             _span = field.DefinitionSpan;
         }
 
         public FieldAccessMethod AccessMethod => _accessMethod;
-        public ArgumentPassType? ArgumentType => _passType;
+        public ArgumentPassType? PassType => _passType;
         public IClass Class => _class;
         public ConstTerm ConstantExpression => null;
         public ConstValue ConstantValue => null;
@@ -107,5 +107,11 @@ namespace DKX.Compilation.Variables
         public Privacy ReadPrivacy => _privacy;
         public string WbdkName => _wbdkName;
         public Privacy WritePrivacy => _privacy;
+
+        public override string ToString()
+        {
+            if (_name == _wbdkName) return $"{_dataType} {_name}";
+            return $"{_dataType} {_name} ({_wbdkName})";
+        }
     }
 }

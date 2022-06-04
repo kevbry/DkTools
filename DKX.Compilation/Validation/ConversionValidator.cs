@@ -6,7 +6,7 @@ using DKX.Compilation.Variables.ConstantValues;
 using System;
 using System.Linq;
 
-namespace DKX.Compilation.Conversions
+namespace DKX.Compilation.Validation
 {
     static class ConversionValidator
     {

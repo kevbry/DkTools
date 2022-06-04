@@ -1,10 +1,14 @@
-﻿using System;
+﻿using DKX.Compilation.CodeGeneration;
+using System;
+using System.Collections.Generic;
 
 namespace DKX.Compilation.Scopes.Statements
 {
     abstract class Statement : Scope
     {
         public abstract bool IsEmpty { get; }
+
+        internal abstract void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw, FlowTrace flow);
 
         private Span _span;
 

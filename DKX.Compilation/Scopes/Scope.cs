@@ -1,4 +1,5 @@
 ﻿using DKX.Compilation.CodeGeneration;
+using DKX.Compilation.Objects;
 using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
@@ -8,10 +9,8 @@ using System.Collections.Generic;
 
 namespace DKX.Compilation.Scopes
 {
-    public abstract class Scope : IReportItemCollector
+    abstract class Scope : IReportItemCollector
     {
-        internal abstract void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw);
-
         private Scope _parent;
         private CompilePhase _phase;
         private IResolver _resolver;
@@ -50,6 +49,49 @@ namespace DKX.Compilation.Scopes
             foreach (var badToken in tokens.GetUnused(used))
             {
                 Report(badToken.Span, ErrorCode.SyntaxError);
+            }
+        }
+
+        /// <summary>
+        /// Generates code for leaving a scope.
+        /// </summary>
+        /// <param name="context">The current code generation context.</param>
+        /// <param name="cw">The code writer.</param>
+        /// <param name="flow">Flow trace for the current branch.</param>
+        /// <param name="methodEnding">
+        /// Set to true if the entire method is ending (e.g. return statement);
+        /// or false if just leaving a { } scope (e.g. if statement body)
+        /// </param>
+        protected void GenerateScopeEnding(CodeGenerationContext context, CodeWriter cw, FlowTrace flow, bool methodEnding, Span span)
+        {
+            if (flow.IsEnded) return;
+
+            if (methodEnding)
+            {
+                var variableWbdkScope = GetScope<IVariableWbdkScope>();
+                foreach (var variable in variableWbdkScope.GetWbdkVariables())
+                {
+                    if (variable.DataType.BaseType != DataTypes.BaseType.Class) continue;
+
+                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span, readOnly: false);
+                    cw.Write(ObjectAccess.GenerateLeaveScope(variableFragment));
+                    cw.Write(DkxConst.StatementEndToken);
+                    cw.WriteLine();
+                }
+            }
+            else
+            {
+                var variableScope = GetScope<IVariableScope>();
+                foreach (var variable in variableScope.VariableStore.GetVariables(includeParents: false))
+                {
+                    if (!variable.Local) continue;
+                    if (variable.DataType.BaseType != DataTypes.BaseType.Class) continue;
+
+                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span, readOnly: false);
+                    cw.Write(ObjectAccess.GenerateLeaveScope(variableFragment));
+                    cw.Write(DkxConst.StatementEndToken);
+                    cw.WriteLine();
+                }
             }
         }
     }

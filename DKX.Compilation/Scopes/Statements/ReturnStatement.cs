@@ -2,7 +2,6 @@
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
-using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
 
@@ -62,16 +61,20 @@ namespace DKX.Compilation.Scopes.Statements
             return ret;
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw, FlowTrace flow)
         {
+            GenerateScopeEnding(context, cw, flow, methodEnding: true, Span);
+
             cw.Write("return");
             if (_expression != null)
             {
                 cw.Write(' ');
-                cw.Write(_expression.ToWbdkCode_Read(context));
+                cw.Write(_expression.ToWbdkCode_Read(context, flow));
             }
             cw.Write(';');
             cw.WriteLine();
+
+            flow.OnBranchEnded();
         }
     }
 }

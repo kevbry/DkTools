@@ -36,7 +36,7 @@ namespace DKX.Compilation.Expressions
 
         public override string ToString() => $"{{FieldChain: {_field.Name}}}";
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             context.DependsOnFile(_field.Class.DkxPathName);
 
@@ -45,10 +45,10 @@ namespace DKX.Compilation.Expressions
                 case FieldAccessMethod.Variable:
                     return new CodeFragment(_field.Name, _field.DataType, OpPrec.None, Span, readOnly: _field.ReadOnly);
                 case FieldAccessMethod.Object:
-                    var thisFrag = _thisChain.ToWbdkCode_Read(context);
+                    var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span);
                 case FieldAccessMethod.Property:
-                    thisFrag = _thisChain.ToWbdkCode_Read(context);
+                    thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     if (_field.Flags.IsStatic()) return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span, readOnly: true);
                     return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span, readOnly: true);
                 case FieldAccessMethod.Constant:
@@ -64,7 +64,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             context.DependsOnFile(_field.Class.DkxPathName);
 
@@ -73,10 +73,10 @@ namespace DKX.Compilation.Expressions
                 case FieldAccessMethod.Variable:
                     return new CodeFragment($"{_field.Name} = {valueFragment.Protect(OpPrec.Assign)}", _field.DataType, OpPrec.Assign, Span, readOnly: false);
                 case FieldAccessMethod.Object:
-                    var thisFrag = _thisChain.ToWbdkCode_Read(context);
+                    var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return ObjectAccess.GenerateMemberVariableSetter(thisFrag, _field.Offset, _field.DataType, Span, valueFragment);
                 case FieldAccessMethod.Property:
-                    thisFrag = _thisChain.ToWbdkCode_Read(context);
+                    thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({thisFrag}, {valueFragment})", _field.DataType, OpPrec.None, Span, readOnly: true);
                 case FieldAccessMethod.Constant:
                     context.Report.Report(Span, ErrorCode.ExpressionCannotBeWrittenTo);

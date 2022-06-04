@@ -83,7 +83,7 @@ void DoTest_%0()
     int no;
     unsigned int mbr;
     char(255) name;
-    mbr = dkx_new(516);
+    mbr = dkx_addref(dkx_new(516));
     no = %M.GetNumber(mbr);
     %M.SetData_%1(mbr, 123, ""John"");
     name = %M.GetName(mbr);
@@ -198,7 +198,7 @@ int Update_%1(unsigned int this) { return 0; }
 void DoTest_%1()
 {
     unsigned int mbr;
-    mbr = dkx_new(516);
+    mbr = dkx_addref(dkx_new(516));
     %M.SetName(mbr, ""Bob"");
     %M.Update_%2(mbr);
     dkx_release(mbr);
@@ -219,5 +219,7 @@ void DoTest_%1()
         // TODO: Can't call static method using an object reference.
         // TODO: Can't call non-static members with a static class name.
         // TODO: A property that is named the same as its data type should still work fine.
+        // TODO: Disallow defining non-static members in a static class.
+        // TODO: Calling private members of another class.
     }
 }

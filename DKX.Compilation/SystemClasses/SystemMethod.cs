@@ -17,7 +17,7 @@ namespace DKX.Compilation.SystemClasses
         private SystemArgument[] _arguments;
         private WbdkCodeGeneratorCallback _wbdkCodeGenerator;
 
-        public delegate CodeFragment WbdkCodeGeneratorCallback(CodeGenerationContext context, Chain[] arguments, Span span);
+        public delegate CodeFragment WbdkCodeGeneratorCallback(CodeGenerationContext context, Chain[] arguments, Span span, FlowTrace flow);
 
         public SystemMethod(IClass class_, string name, DataType returnDataType, SystemArgument[] arguments, WbdkCodeGeneratorCallback wbdkCodeGenerator)
         {

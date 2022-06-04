@@ -1,6 +1,7 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 
@@ -20,12 +21,12 @@ namespace DKX.Compilation.Expressions
         public override DataType InferredDataType => _innerChain?.InferredDataType ?? DataType.Int;
         public override bool IsEmptyCode => _innerChain?.IsEmptyCode ?? true;
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             throw new InvalidOperationException("An error chain should never reach the point of generating code.");
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             throw new InvalidOperationException("An error chain should never reach the point of generating code.");
         }

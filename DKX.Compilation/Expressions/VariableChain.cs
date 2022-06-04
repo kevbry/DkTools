@@ -1,6 +1,9 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Objects;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Scopes;
+using DKX.Compilation.Validation;
 using DKX.Compilation.Variables;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
@@ -10,28 +13,12 @@ namespace DKX.Compilation.Expressions
     class VariableChain : Chain
     {
         private Variable _variable;
-        private Chain _thisExpressionOrNull;
 
-        public VariableChain(Variable variable, Span span, Chain thisExpressionOrNull)
+        public VariableChain(Variable variable, Span span)
             : base(span)
         {
-            switch (variable.AccessMethod)
-            {
-                case FieldAccessMethod.Object:
-                case FieldAccessMethod.Constant:
-                case FieldAccessMethod.Property:
-                    throw new InvalidOperationException("A VariableChain cannot be used for properties, constants, or non-stack member variables.");
-                    // Use FieldChain for these types.
-            }
-
             _variable = variable ?? throw new ArgumentNullException(nameof(variable));
-
-            if (!_variable.Local && !_variable.Flags.HasFlag(Scopes.ModifierFlags.Static))
-            {
-                if (thisExpressionOrNull == null) throw new ArgumentNullException(nameof(thisExpressionOrNull));
-            }
-
-            _thisExpressionOrNull = thisExpressionOrNull;
+            if (!variable.Local) throw new InvalidOperationException("VariableChain can only be used for local variables and arguments.");
         }
 
         public override bool IsEmptyCode => false;
@@ -40,45 +27,22 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => _variable.DataType;
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
-            context.DependsOnFile(_variable.DefinitionSpan.PathName);
-
-            if (_variable.Flags.HasFlag(Scopes.ModifierFlags.Static) || _variable.Local)
-            {
-                return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, readOnly: false);
-            }
-            else
-            {
-                if (_thisExpressionOrNull == null) throw new InvalidOperationException("No object reference expression exists for a non-static variable.");
-
-                return Objects.ObjectAccess.GenerateMemberVariableGetter(
-                    thisFragment: _thisExpressionOrNull.ToWbdkCode_Read(context),
-                    varOffset: _variable.Offset,
-                    varDataType: _variable.DataType,
-                    span: Span);
-            }
+            if (!flow.IsVariableInitialized(_variable.WbdkName)) context.Report.Report(Span, ErrorCode.UseOfUninitializedVariable, _variable.Name);
+            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, readOnly: false);
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
-            Conversions.ConversionValidator.CheckConversion(_variable.DataType, valueFragment, context.Report);
+            ConversionValidator.CheckConversion(_variable.DataType, valueFragment, context.Report);
+            flow.OnVariableAssigned(_variable.WbdkName);
 
-            if (_variable.Flags.HasFlag(Scopes.ModifierFlags.Static) || _variable.Local)
-            {
-                return new CodeFragment($"{_variable.WbdkName} = {valueFragment}", _variable.DataType, OpPrec.None, Span, readOnly: false);
-            }
-            else
-            {
-                if (_thisExpressionOrNull == null) throw new InvalidOperationException("No object reference expression exists for a non-static variable.");
+            if (_variable.DataType.IsClass) valueFragment = ObjectAccess.GenerateSwapReference(
+                oldFragment: ToWbdkCode_Read(context, flow),
+                newFragment: valueFragment);
 
-                return Objects.ObjectAccess.GenerateMemberVariableSetter(
-                    thisFragment: _thisExpressionOrNull.ToWbdkCode_Read(context),
-                    varOffset: _variable.Offset,
-                    varDataType: _variable.DataType,
-                    span: Span,
-                    valueFragment: valueFragment);
-            }
+            return new CodeFragment($"{_variable.WbdkName} = {valueFragment.Protect(OpPrec.Assign)}", _variable.DataType, OpPrec.Assign, Span, readOnly: false);
         }
 
         public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;

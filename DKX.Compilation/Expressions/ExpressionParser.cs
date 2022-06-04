@@ -1,9 +1,9 @@
-﻿using DKX.Compilation.Conversions;
-using DKX.Compilation.DataTypes;
+﻿using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Tokens;
+using DKX.Compilation.Validation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -86,33 +86,19 @@ namespace DKX.Compilation.Expressions
                     IObjectReferenceScope objRefScope = null;
 
                     var variableStore = scope.GetScope<IVariableScope>()?.VariableStore;
-                    if (variableStore != null && variableStore.TryGetVariable(token.Text, includeParents: true, out var variable))
+                    if (variableStore != null && variableStore.TryGetVariable(token.Text, includeParents: true, localOnly: false, out var variable))
                     {
                         // A variable used with no context.
-                        switch (variable.AccessMethod)
+                        if (variable.Local)
                         {
-                            case Variables.FieldAccessMethod.Property:
-                            case Variables.FieldAccessMethod.Object:
-                            case Variables.FieldAccessMethod.Constant:
-                                if (objRefScope == null) objRefScope = scope.GetScope<IObjectReferenceScope>();
-                                if (objRefScope.ScopeStatic && !variable.Flags.IsStatic()) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
-                                thisChain = variable.Flags.IsStatic() ? (Chain)new DataTypeChain(objRefScope.ScopeDataType, token.Span) : new ThisChain(objRefScope.ScopeDataType, token.Span);
-                                chain = new FieldChain(thisChain, token, variable);
-                                break;
-
-                            default:
-                                if (variable.Local || variable.Flags.HasFlag(ModifierFlags.Static))
-                                {
-                                    thisChain = null;
-                                }
-                                else
-                                {
-                                    if (objRefScope == null) objRefScope = scope.GetScope<IObjectReferenceScope>();
-                                    if (objRefScope.ScopeStatic) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
-                                    thisChain = new ThisChain(objRefScope.ScopeDataType, token.Span);
-                                }
-                                chain = new VariableChain(variable, token.Span, thisChain);
-                                break;
+                            chain = new VariableChain(variable, token.Span);
+                        }
+                        else
+                        {
+                            if (objRefScope == null) objRefScope = scope.GetScope<IObjectReferenceScope>();
+                            if (objRefScope.ScopeStatic && !variable.Flags.IsStatic()) scope.Report(token.Span, ErrorCode.VariableRequiresThisPointer, variable.Name);
+                            thisChain = variable.Flags.IsStatic() ? (Chain)new DataTypeChain(objRefScope.ScopeDataType, token.Span) : new ThisChain(objRefScope.ScopeDataType, token.Span);
+                            chain = new FieldChain(thisChain, token, variable);
                         }
                         
                         return TryReadAfterValue(scope, stream, chain, leftPrec);
@@ -160,6 +146,12 @@ namespace DKX.Compilation.Expressions
                 var chain = new NumericLiteralChain(token.Number, token.DataType, token.Span);
                 return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
+            else if (token.IsOperator(Operator.Subtract) && stream.Peek().IsNumber)
+            {
+                token = stream.Read();
+                var chain = new NumericLiteralChain(-token.Number, token.DataType, token.Span);
+                return TryReadAfterValue(scope, stream, chain, leftPrec);
+            }
             else if (token.IsBrackets)
             {
                 var subStream = new DkxTokenStream(token.Tokens);
@@ -169,6 +161,7 @@ namespace DKX.Compilation.Expressions
                     scope.Report(token.Span, ErrorCode.ExpectedExpression);
                     return new ErrorChain(null, token.Span);
                 }
+                if (!subStream.EndOfStream) scope.Report(subStream.Read().Span, ErrorCode.SyntaxError);
                 return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
             else

@@ -24,25 +24,58 @@ namespace DKX.Compilation.Variables
             foreach (var variable in variables) AddVariable(variable);
         }
 
-        public bool HasVariable(string name, bool includeParents)
+        public bool HasVariable(string name, bool includeParents, bool localOnly)
         {
-            if (_variables != null && _variables.ContainsKey(name)) return true;
+            if (_variables != null)
+            {
+                if (_variables.TryGetValue(name, out var variable))
+                {
+                    if (localOnly)
+                    {
+                        if (variable.Local) return true;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
 
             if (includeParents)
             {
-                return _parent?.VariableStore.HasVariable(name, includeParents) ?? false;
+                return _parent?.VariableStore.HasVariable(name, includeParents, localOnly) ?? false;
             }
 
             return false;
         }
 
-        public bool TryGetVariable(string name, bool includeParents, out Variable variableOut)
+        public bool TryGetVariable(string name, bool includeParents, bool localOnly, out Variable variableOut)
         {
+            if (_variables != null)
+            {
+                if (_variables.TryGetValue(name, out var variable))
+                {
+                    if (localOnly)
+                    {
+                        if (variable.Local)
+                        {
+                            variableOut = variable;
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        variableOut = variable;
+                        return true;
+                    }
+                }
+            }
+
             if (_variables != null && _variables.TryGetValue(name, out variableOut)) return true;
 
             if (includeParents)
             {
-                if (_parent != null && _parent.VariableStore.TryGetVariable(name, includeParents, out variableOut)) return true;
+                if (_parent != null && _parent.VariableStore.TryGetVariable(name, includeParents, localOnly, out variableOut)) return true;
             }
 
             variableOut = default;

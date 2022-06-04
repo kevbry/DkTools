@@ -1,5 +1,6 @@
 ﻿using DK.AppEnvironment;
 using DK.Diagnostics;
+using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.Project;
@@ -189,6 +190,20 @@ namespace DKX.Compilation
         public static uint ComputeHash(string data) => Crc32Algorithm.Compute(Encoding.UTF8.GetBytes(data));
 
         public static string GetWbdkClassName(string fullClassName) => string.Concat(DkxConst.ClassHashPrefix, ComputeHash(fullClassName).ToString("X8"));
+
+        public static string GetMethodDecoration(DataType returnDataType, IEnumerable<DataType> argumentDataTypes)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append(returnDataType.ToString());
+            foreach (var argDataType in argumentDataTypes)
+            {
+                sb.Append(", ");
+                sb.Append(argDataType.ToString());
+            }
+
+            return Compiler.ComputeHash(sb.ToString()).ToString("X");
+        }
     }
 
     public enum CompilePhase

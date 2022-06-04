@@ -23,7 +23,6 @@ namespace DKX.Compilation.Expressions
         And,
         Or,
 
-        Negative,
         Increment,
         Decrement,
 
@@ -52,7 +51,6 @@ namespace DKX.Compilation.Expressions
         AddSub,
         MulDiv,
         Not,
-        Negative,
         IncDec,
         Dot
         // Highest
@@ -69,8 +67,6 @@ namespace DKX.Compilation.Expressions
                 case Operator.Increment:
                 case Operator.Decrement:
                     return OpPrec.IncDec;
-                case Operator.Negative:
-                    return OpPrec.Negative;
                 case Operator.Not:
                     return OpPrec.Not;
                 case Operator.Multiply:
@@ -146,7 +142,6 @@ namespace DKX.Compilation.Expressions
                 case Operator.LessEqual: return "<=";
                 case Operator.GreaterThan: return ">";
                 case Operator.GreaterEqual: return ">=";
-                case Operator.Negative: return "-";
                 case Operator.Not: return "!";
                 case Operator.And: return "&&";
                 case Operator.Or: return "||";
@@ -166,7 +161,6 @@ namespace DKX.Compilation.Expressions
             switch (op)
             {
                 case Operator.Not:
-                case Operator.Negative:
                     return true;
 
                 default:

@@ -2,6 +2,7 @@
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
@@ -60,12 +61,12 @@ namespace DKX.Compilation.Expressions
             return decimal.Parse(text);
         }
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             return new CodeFragment(_value.ToString(), _dataType, OpPrec.None, Span, readOnly: true);
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }

@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Classes\ConstantsTests.cs" />
     <Compile Include="Files\ServerGatewayProgramTests.cs" />
+    <Compile Include="Syntax\VariableDeclarationTests.cs" />
     <Compile Include="SystemClasses\SystemConsoleTests.cs" />
     <Compile Include="WbdkCodeValidator.cs" />
     <Compile Include="CompileTestClass.cs" />

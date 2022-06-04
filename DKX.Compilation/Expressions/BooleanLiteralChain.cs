@@ -2,6 +2,7 @@
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 
@@ -23,12 +24,12 @@ namespace DKX.Compilation.Expressions
 
         public override DataType InferredDataType => DataType.Bool;
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             return new CodeFragment(_value ? "1" : "0", DataType.Bool, OpPrec.None, Span, readOnly: true);
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }

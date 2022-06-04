@@ -13,11 +13,11 @@ namespace DKX.Compilation.Scopes.Statements
             _expression = expression;
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw, FlowTrace flow)
         {
             if (_expression != null && !_expression.IsEmptyCode)
             {
-                var fragment = _expression.ToWbdkCode_Read(context);
+                var fragment = _expression.ToWbdkCode_Read(context, flow);
                 cw.Write(fragment);
                 cw.Write(DkxConst.StatementEndToken);
                 cw.WriteLine();

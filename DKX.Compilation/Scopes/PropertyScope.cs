@@ -9,6 +9,7 @@ using DKX.Compilation.Variables;
 using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace DKX.Compilation.Scopes
@@ -125,7 +126,7 @@ namespace DKX.Compilation.Scopes
             propertyScope.ReportUnusedTokens(tokens, used);
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        internal void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             if (_fileTarget != context.FileTarget) return;
             if (_getter == null) throw new InvalidOperationException("Property has no getter.");
@@ -134,13 +135,14 @@ namespace DKX.Compilation.Scopes
             _setter?.GenerateWbdkCode(context, cw);
         }
 
-        class PropertyAccessorScope : Scope, IReturnScope, IVariableScope
+        class PropertyAccessorScope : Scope, IReturnScope, IVariableScope, IVariableWbdkScope
         {
             private PropertyScope _property;
             private PropertyAccessorType _accessorType;
             private Privacy _privacy;
             private Statement[] _statements;
             private VariableStore _variableStore;
+            private List<Variable> _wbdkVariables = new List<Variable>();
 
             private PropertyAccessorScope(PropertyScope property, PropertyAccessorType accessorType, Privacy privacy)
                 : base(property, property.Phase, property.Resolver, property.Project)
@@ -189,7 +191,7 @@ namespace DKX.Compilation.Scopes
                 return accessorScope;
             }
 
-            internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+            internal void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
             {
                 if (_accessorType == PropertyAccessorType.Getter)
                 {
@@ -218,15 +220,52 @@ namespace DKX.Compilation.Scopes
                 cw.WriteLine();
                 using (cw.Indent())
                 {
+                    var flow = new FlowTrace();
+
+                    // Variables
+                    foreach (var variable in _wbdkVariables)
+                    {
+                        cw.Write(variable.DataType.ToWbdkCode());
+                        cw.Write(' ');
+                        cw.Write(variable.WbdkName);
+                        cw.Write(';');
+                        cw.WriteLine();
+                    }
+
+                    // For a setter, set the 'value' argument as initialized
+                    if (_accessorType == PropertyAccessorType.Setter)
+                    {
+                        flow.OnVariableAssigned(DkxConst.Properties.SetterArgumentName);
+                    }
+
+                    // Statements
                     if (_statements != null)
                     {
                         foreach (var statement in _statements)
                         {
-                            statement.GenerateWbdkCode(context, cw);
+                            statement.GenerateWbdkCode(context, cw, flow);
                         }
                     }
+
+                    GenerateScopeEnding(context, cw, flow, methodEnding: true, _property._nameSpan);
                 }
             }
+
+            public void AddWbdkVariable(Variable variable)
+            {
+                _wbdkVariables.Add(variable ?? throw new ArgumentNullException(nameof(variable)));
+            }
+
+            public bool HasWbdkVariable(string wbdkName)
+            {
+                foreach (var variable in _wbdkVariables)
+                {
+                    if (variable.WbdkName == wbdkName) return true;
+                }
+                return false;
+            }
+
+            public IEnumerable<Variable> GetWbdkVariables() => _wbdkVariables;
         }
 
         enum PropertyAccessorType

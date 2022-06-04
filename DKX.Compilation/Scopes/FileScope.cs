@@ -130,12 +130,6 @@ namespace DKX.Compilation.Scopes
             return new GeneratedCodeResult(files.ToArray(), fileDeps.ToArray(), tableDeps.ToArray());
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
-        {
-            // This will never be called for file scope.
-            throw new NotImplementedException();
-        }
-
         public void ClearReportItems() => _reportItems.Clear();
 
         public NamespaceScope GetNamespaceOrNull(string name) => _namespaces.Where(x => x.Name == name).FirstOrDefault();

@@ -40,7 +40,7 @@ namespace DKX.Compilation.Expressions
         public override DataType InferredDataType => _method.ReturnDataType;
         public override bool IsEmptyCode => false;
 
-        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context)
+        public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             context.DependsOnFile(_method.Class.DkxPathName);
 
@@ -54,7 +54,7 @@ namespace DKX.Compilation.Expressions
                 var method = cls.GetMethods(_method.Name).FirstOrDefault() as SystemMethod;
                 if (method == null) throw new InvalidOperationException($"System method '{_method.Class.FullClassName}.{_method.Name}' not found.");
 
-                return method.WbdkCodeGenerator(context, _args, Span);
+                return method.WbdkCodeGenerator(context, _args, Span, flow);
             }
             else
             {
@@ -67,14 +67,14 @@ namespace DKX.Compilation.Expressions
                 var firstArg = true;
                 if (!_method.Flags.HasFlag(ModifierFlags.Static))
                 {
-                    sb.Append(_thisChain.ToWbdkCode_Read(context));
+                    sb.Append(_thisChain.ToWbdkCode_Read(context, flow));
                     firstArg = false;
                 }
                 foreach (var arg in _args)
                 {
                     if (firstArg) firstArg = false;
                     else sb.Append(", ");
-                    sb.Append(arg.ToWbdkCode_Read(context));
+                    sb.Append(arg.ToWbdkCode_Read(context, flow));
                 }
                 sb.Append(')');
 
@@ -82,7 +82,7 @@ namespace DKX.Compilation.Expressions
             }
         }
 
-        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment)
+        public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             throw new CodeException(Span, ErrorCode.ExpressionCannotBeWrittenTo);
         }

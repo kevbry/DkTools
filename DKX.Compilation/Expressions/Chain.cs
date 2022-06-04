@@ -1,6 +1,7 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.ReportItems;
+using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables.ConstTerms;
 
 namespace DKX.Compilation.Expressions
@@ -9,8 +10,8 @@ namespace DKX.Compilation.Expressions
     {
         public abstract DataType DataType { get; }
         public abstract DataType InferredDataType { get; }
-        public abstract CodeFragment ToWbdkCode_Read(CodeGenerationContext context);
-        public abstract CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment);
+        public abstract CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow);
+        public abstract CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow);
         public abstract bool IsEmptyCode { get; }
         public abstract ConstTerm ToConstTermOrNull(IReportItemCollector reportOrNull);
 

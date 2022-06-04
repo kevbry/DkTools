@@ -77,9 +77,19 @@ namespace DKX.Compilation.Objects
             }
         }
 
-        public static CodeFragment GenerateLeaveScope(CodeFragment thisFragment)
+        public static CodeFragment GenerateLeaveScope(CodeFragment objFragment)
         {
-            return new CodeFragment($"dkx_release({thisFragment})", thisFragment.DataType, OpPrec.None, thisFragment.SourceSpan, readOnly: true);
+            return new CodeFragment($"dkx_release({objFragment})", objFragment.DataType, OpPrec.None, objFragment.SourceSpan, readOnly: true);
+        }
+
+        public static CodeFragment GenerateInitializeToReference(CodeFragment objFragment)
+        {
+            return new CodeFragment($"dkx_addref({objFragment})", objFragment.DataType, OpPrec.None, objFragment.SourceSpan, readOnly: true);
+        }
+
+        public static CodeFragment GenerateSwapReference(CodeFragment oldFragment, CodeFragment newFragment)
+        {
+            return new CodeFragment($"dkx_swap({oldFragment}, {newFragment})", newFragment.DataType, OpPrec.None, oldFragment.SourceSpan + newFragment.SourceSpan, readOnly: true);
         }
     }
 }

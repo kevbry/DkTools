@@ -50,7 +50,9 @@
     <Compile Include="CodeGeneration\CodeFragment.cs" />
     <Compile Include="CodeGeneration\CodeGenerationContext.cs" />
     <Compile Include="CodeGeneration\CodeWriter.cs" />
-    <Compile Include="Conversions\ConversionValidator.cs" />
+    <Compile Include="Expressions\TypedNullChain.cs" />
+    <Compile Include="Scopes\FlowTrace.cs" />
+    <Compile Include="Validation\ConversionValidator.cs" />
     <Compile Include="DkDate.cs" />
     <Compile Include="DkTime.cs" />
     <Compile Include="Jobs\FileTarget.cs" />
@@ -114,6 +116,7 @@
     <Compile Include="Scopes\Statements\Statement.cs" />
     <Compile Include="Scopes\Statements\StatementParser.cs" />
     <Compile Include="Scopes\Statements\VariableDeclarationStatement.cs" />
+    <Compile Include="Scopes\Statements\VarStatement.cs" />
     <Compile Include="SystemClasses\Console\SystemConsoleClass.cs" />
     <Compile Include="SystemClasses\SystemAttributes.cs" />
     <Compile Include="SystemClasses\SystemClass.cs" />
@@ -158,6 +161,7 @@
     <Compile Include="Tokens\DkxTokenStream.cs" />
     <Compile Include="Span.cs" />
     <Compile Include="Tokens\TokenUseTracker.cs" />
+    <Compile Include="Validation\VariableValidator.cs" />
     <Compile Include="Variables\ArgumentPassType.cs" />
     <Compile Include="Variables\Constant.cs" />
     <Compile Include="Variables\ConstantStore.cs" />

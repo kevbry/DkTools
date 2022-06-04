@@ -1,13 +1,12 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Jobs;
-using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using DKX.Compilation.Variables;
-using DKX.Compilation.Variables.ConstantValues;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Collections.Generic;
@@ -80,68 +79,68 @@ namespace DKX.Compilation.Scopes
 
         public void ProcessTokens(DkxTokenCollection tokens)
         {
-            var used = new TokenUseTracker();
-
-            var pos = 0;
-            while (pos < tokens.Count)
+            try
             {
-                // TODO: A data type could span multiple tokens (e.g. System.Console)
-                // Use ExpressionParser.TryReadDataType() instead
-                if (!ExpressionParser.TokenIsDataType(tokens[pos], Resolver, out var dataType, out var dataTypeInvalid))
-                {
-                    pos++;
-                    continue;
-                }
-                var dataTypeIndex = pos;
-                var dataTypeToken = tokens[pos];
-                if (dataTypeInvalid && Phase == CompilePhase.FullCompilation) Report(dataTypeToken.Span, ErrorCode.InvalidDataType);
+                var used = new TokenUseTracker();
 
-                var nameIndex = dataTypeIndex + 1;
-                var nameToken = tokens[nameIndex];
-
-                if (tokens[nameIndex + 1].IsBrackets)
+                var stream = new DkxTokenStream(tokens);
+                while (!stream.EndOfStream)
                 {
-                    // This is a method
-                    var argsIndex = nameIndex + 1;
-                    used.Use(dataTypeToken, nameToken);
-                    if (tokens[argsIndex + 1].IsScope)
+                    var dataTypePos = stream.Position;
+                    if (!ExpressionParser.TryReadDataType(this, stream, out var dataType, out var dataTypeSpan))
                     {
-                        var scopeIndex = argsIndex + 1;
-                        ProcessMethod(tokens, dataTypeIndex, dataTypeToken, nameToken, tokens[argsIndex], tokens[scopeIndex], used);
-                        pos = scopeIndex + 1;
+                        stream.Position++;
+                        continue;
+                    }
+
+                    var nameToken = stream.Read();
+                    if (!nameToken.IsIdentifier) continue;
+                    used.Use(stream.GetRange(dataTypePos, stream.Position - dataTypePos));
+
+                    if (stream.Peek().IsBrackets)
+                    {
+                        // This is a method
+                        var argsToken = stream.Read();
+                        used.Use(argsToken);
+                        if (stream.Peek().IsScope)
+                        {
+                            var scopeToken = stream.Read();
+                            used.Use(scopeToken);
+                            ProcessMethod(tokens, dataType, dataTypePos, nameToken, argsToken, scopeToken, used);
+                        }
+                        else throw new CodeException(argsToken.Span, ErrorCode.ExpectedScope);
+                    }
+                    else if (stream.Peek().IsScope)
+                    {
+                        // This is a property
+                        var scopeToken = stream.Read();
+                        used.Use(scopeToken);
+                        ProcessProperty(tokens, dataType, dataTypePos, nameToken, scopeToken, used);
                     }
                     else
                     {
-                        Report(tokens[argsIndex].Span, ErrorCode.ExpectedToken, '{');
-                        pos = argsIndex + 1;
+                        // This is a member variable or constant
+                        ProcessMemberVariableOrConstant(stream, dataType, dataTypePos, nameToken, used);
                     }
                 }
-                else if (tokens[nameIndex + 1].IsScope)
+
+                if (Phase >= CompilePhase.MemberScan)
                 {
-                    // This is a property
-                    var scopeIndex = nameIndex + 1;
-                    ProcessProperty(tokens, dataTypeIndex, dataTypeToken, nameToken, tokens[scopeIndex], used);
-                    pos = scopeIndex + 1;
+                    CalculateLayout();
                 }
-                else
+
+                if (Phase == CompilePhase.FullCompilation)
                 {
-                    // This is a constant or member variable
-                    ProcessMemberVariableOrConstant(tokens, ref pos, dataTypeIndex, dataTypeToken, nameIndex, nameToken, used);
+                    ReportUnusedTokens(tokens, used);
                 }
             }
-
-            if (Phase >= CompilePhase.MemberScan)
+            catch (CodeException ex)
             {
-                CalculateLayout();
-            }
-
-            if (Phase == CompilePhase.FullCompilation)
-            {
-                ReportUnusedTokens(tokens, used);
+                AddReportItem(ex.ToReportItem());
             }
         }
 
-        private void ProcessMethod(DkxTokenCollection tokens, int dataTypeIndex, DkxToken dataTypeToken,
+        private void ProcessMethod(DkxTokenCollection tokens, DataType dataType, int dataTypeIndex,
             DkxToken nameToken, DkxToken argsToken, DkxToken scopeToken, TokenUseTracker used)
         {
             switch (Phase)
@@ -154,8 +153,6 @@ namespace DKX.Compilation.Scopes
                     return;
             }
 
-            used.Use(dataTypeToken, nameToken, argsToken, scopeToken);
-
             var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
 
             var method = MethodScope.Parse(
@@ -163,7 +160,7 @@ namespace DKX.Compilation.Scopes
                 className: _name,
                 name: nameToken.Text,
                 nameSpan: nameToken.Span,
-                returnDataType: dataTypeToken.DataType,
+                returnDataType: dataType,
                 argumentTokens: argsToken.Tokens,
                 modifiers: modifiers,
                 bodyTokens: Phase == CompilePhase.FullCompilation ? scopeToken.Tokens : null,
@@ -174,7 +171,7 @@ namespace DKX.Compilation.Scopes
             _methods.Add(method);
         }
 
-        private void ProcessProperty(DkxTokenCollection tokens, int dataTypeIndex, DkxToken dataTypeToken, DkxToken nameToken, DkxToken scopeToken, TokenUseTracker used)
+        private void ProcessProperty(DkxTokenCollection tokens, DataType dataType, int dataTypeIndex, DkxToken nameToken, DkxToken scopeToken, TokenUseTracker used)
         {
             switch (Phase)
             {
@@ -188,13 +185,11 @@ namespace DKX.Compilation.Scopes
             var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
             if (Phase == CompilePhase.FullCompilation) modifiers.CheckForProperty(this);
 
-            used.Use(dataTypeToken, nameToken, scopeToken);
-
             var property = PropertyScope.Parse(
                 class_: this,
                 name: nameToken.Text,
                 nameSpan: nameToken.Span,
-                dataType: dataTypeToken.DataType,
+                dataType: dataType,
                 modifiers: modifiers,
                 bodyTokens: scopeToken.Tokens,
                 phase: Phase,
@@ -203,109 +198,94 @@ namespace DKX.Compilation.Scopes
             _properties.Add(property);
         }
 
-        private void ProcessMemberVariableOrConstant(DkxTokenCollection tokens, ref int pos,
-            int dataTypeIndex, DkxToken dataTypeToken,
-            int nameIndex, DkxToken nameToken,
-            TokenUseTracker used)
+        private void ProcessMemberVariableOrConstant(DkxTokenStream stream, DataType dataType, int dataTypeIndex, DkxToken nameToken, TokenUseTracker used)
         {
-            used.Use(dataTypeToken, nameToken);
-            var modifiers = Modifiers.ReadModifiers(this, tokens, pos, used);
+            var modifiers = Modifiers.ReadModifiers(this, stream.Tokens, dataTypeIndex, used);
 
-            if (tokens[nameIndex + 1].IsOperator(Operator.Assign))
+            if (stream.Peek().IsOperator(Operator.Assign))
             {
-                var assignIndex = nameIndex + 1;
-                var assignToken = tokens[assignIndex];
+                var assignToken = stream.Read();
                 used.Use(assignToken);
 
-                var end = tokens.FindStatementEnd(assignIndex + 1);
-                if (end > 0)
+                var end = stream.Tokens.FindStatementEnd(stream.Position);
+                if (end < 0) throw new CodeException(assignToken.Span, ErrorCode.ExpectedExpression);
+
+                var initializerTokens = stream.GetRange(stream.Position, end - stream.Position);
+                used.Use(initializerTokens);
+                used.Use(stream.Tokens[end]);
+                stream.Position = end + 1;
+
+                Chain initializerChain = null;
+                if (Phase >= CompilePhase.ConstantResolution)
                 {
-                    var initializerTokens = tokens.GetRange(assignIndex + 1, end - (assignIndex + 1));
-                    used.Use(initializerTokens);
-                    used.Use(tokens[end]);
+                    var initializerStream = initializerTokens.ToStream();
+                    initializerChain = ExpressionParser.ReadExpressionOrNull(this, initializerStream);
+                    if (initializerChain == null) Report(initializerTokens.Span, ErrorCode.ExpectedExpression);
+                    else if (!initializerStream.EndOfStream) Report(initializerStream.Read().Span, ErrorCode.SyntaxError);
+                }
 
-                    Chain initializerChain = null;
-                    if (Phase >= CompilePhase.ConstantResolution)
+                if (modifiers.Const)
+                {
+                    ConstTerm constTerm = null;
+                    if (Phase == CompilePhase.ConstantResolution)
                     {
-                        var initializerStream = initializerTokens.ToStream();
-                        initializerChain = ExpressionParser.ReadExpressionOrNull(this, initializerStream);
-                        if (initializerChain == null) Report(initializerTokens.Span, ErrorCode.ExpectedExpression);
-                        else if (!initializerStream.EndOfStream) Report(initializerStream.Read().Span, ErrorCode.SyntaxError);
-                    }
-
-                    if (modifiers.Const)
-                    {
-                        ConstTerm constTerm = null;
-                        if (Phase == CompilePhase.ConstantResolution)
+                        constTerm = initializerChain.ToConstTermOrNull(this);
+                        if (constTerm == null)
                         {
-                            constTerm = initializerChain.ToConstTermOrNull(this);
-                            if (constTerm == null)
-                            {
-                                Report(initializerChain.Span, ErrorCode.ExpressionNotConstant);
-                                constTerm = new ConstErrorTerm(initializerChain.Span);
-                            }
-                        }
-
-                        // Constants will be read from the project when in full compilation mode
-                        if (Phase == CompilePhase.MemberScan || Phase == CompilePhase.ConstantResolution)
-                        {
-                            var constant = new Constant(
-                                class_: this,
-                                name: nameToken.Text,
-                                dataType: dataTypeToken.DataType,
-                                constTerm: constTerm,
-                                constValueOrNull: null,
-                                privacy: modifiers.Privacy ?? Privacy.Private,
-                                span: nameToken.Span);
-
-                            _constantStore.Add(constant);
+                            Report(initializerChain.Span, ErrorCode.ExpressionNotConstant);
+                            constTerm = new ConstErrorTerm(initializerChain.Span);
                         }
                     }
-                    else
-                    {
-                        if (Phase < CompilePhase.ConstantResolution)
-                        {
-                            var variable = new Variable(
-                                class_: this,
-                                name: nameToken.Text,
-                                wbdkName: nameToken.Text,
-                                dataType: dataTypeToken.DataType,
-                                fileContext: FileContext.NeutralClass,
-                                passType: null,
-                                accessMethod: modifiers.Flags.HasFlag(ModifierFlags.Static) ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
-                                flags: modifiers.Flags,
-                                local: false,
-                                privacy: modifiers.Privacy ?? Privacy.Private,
-                                initializer: initializerChain,
-                                span: nameToken.Span);
 
-                            _variableStore.AddVariable(variable);
-                        }
+                    // Constants will be read from the project when in full compilation mode
+                    if (Phase == CompilePhase.MemberScan || Phase == CompilePhase.ConstantResolution)
+                    {
+                        var constant = new Constant(
+                            class_: this,
+                            name: nameToken.Text,
+                            dataType: dataType,
+                            constTerm: constTerm,
+                            constValueOrNull: null,
+                            privacy: modifiers.Privacy ?? Privacy.Private,
+                            span: nameToken.Span);
+
+                        _constantStore.Add(constant);
                     }
-                    pos = end + 1;
                 }
                 else
                 {
-                    Report(assignToken.Span, ErrorCode.ExpectedExpression);
-                    pos = assignIndex + 1;
+                    if (Phase < CompilePhase.ConstantResolution)
+                    {
+                        var variable = new Variable(
+                            class_: this,
+                            name: nameToken.Text,
+                            wbdkName: nameToken.Text,
+                            dataType: dataType,
+                            fileContext: FileContext.NeutralClass,
+                            passType: null,
+                            accessMethod: modifiers.Flags.HasFlag(ModifierFlags.Static) ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
+                            flags: modifiers.Flags,
+                            local: false,
+                            privacy: modifiers.Privacy ?? Privacy.Private,
+                            initializer: initializerChain,
+                            span: nameToken.Span);
+
+                        _variableStore.AddVariable(variable);
+                    }
                 }
             }
             else // No '=' after name
             {
                 if (modifiers.Const)
                 {
-                    if (Phase == CompilePhase.MemberScan)
-                    {
-                        Report(nameToken.Span, ErrorCode.ConstantsMustHaveInitializer);
-                        pos = nameIndex + 1;
-                    }
+                    throw new CodeException(nameToken.Span, ErrorCode.ConstantsMustHaveInitializer);
                 }
                 else
                 {
-                    if (tokens[nameIndex + 1].IsStatementEnd)
+                    if (stream.Peek().IsStatementEnd)
                     {
-                        var statementEndIndex = nameIndex + 1;
-                        used.Use(tokens[statementEndIndex]);
+                        var statementEndToken = stream.Read();
+                        used.Use(statementEndToken);
 
                         if (Phase < CompilePhase.ConstantResolution)
                         {
@@ -313,7 +293,7 @@ namespace DKX.Compilation.Scopes
                                 class_: this,
                                 name: nameToken.Text,
                                 wbdkName: nameToken.Text,
-                                dataType: dataTypeToken.DataType,
+                                dataType: dataType,
                                 fileContext: FileContext.NeutralClass,
                                 passType: null,
                                 accessMethod: modifiers.Flags.HasFlag(ModifierFlags.Static) ? FieldAccessMethod.Variable : FieldAccessMethod.Object,
@@ -325,13 +305,8 @@ namespace DKX.Compilation.Scopes
 
                             _variableStore.AddVariable(variable);
                         }
-                        pos = statementEndIndex + 1;
                     }
-                    else
-                    {
-                        Report(nameToken.Span, ErrorCode.ExpectedToken, ';');
-                        pos = nameIndex + 1;
-                    }
+                    else throw new CodeException(nameToken.Span, ErrorCode.ExpectedStatementEndToken);
                 }
             }
         }
@@ -355,7 +330,7 @@ namespace DKX.Compilation.Scopes
             return fileTargets;
         }
 
-        internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
+        internal void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw)
         {
             // Put the original class name at the top of the file, for troubleshooting if needed.
             cw.WriteLine($"// {_fullName}");
@@ -419,7 +394,7 @@ namespace DKX.Compilation.Scopes
         IEnumerable<IField> IClass.GetFields(string name)
         {
             return _variableStore.GetVariables(includeParents: false)
-                .Where(x => x.ArgumentType == null && x.Name == name)
+                .Where(x => x.PassType == null && x.Name == name)
                 .Cast<IField>()
                 .Concat(_constantStore.GetConstants(name).Cast<IField>())
                 .Concat(_properties.Where(x => x.Name == name).Cast<IField>());
@@ -430,7 +405,7 @@ namespace DKX.Compilation.Scopes
             get
             {
                 return _variableStore.GetVariables(includeParents: false)
-                    .Where(x => x.ArgumentType == null)
+                    .Where(x => x.PassType == null)
                     .Cast<IField>()
                     .Concat(_constantStore.Constants.Cast<IField>())
                     .Concat(_properties.Cast<IField>());
