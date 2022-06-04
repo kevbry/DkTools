@@ -118,7 +118,7 @@ namespace DKX.Compilation.Scopes.Statements
             if (tokens.Count == 0) throw new ArgumentException("Token collection is empty.");
 
             var token = tokens[0];
-            if (token.Type == DkxTokenType.Keyword)
+            if (token.Type == DkxTokenType.Keyword && DkxConst.Keywords.ControlStatementStartKeyword.Contains(token.Text))
             {
                 switch (token.Text)
                 {

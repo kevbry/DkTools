@@ -79,7 +79,7 @@ namespace DKX.Compilation.Project
                     }
                 }
             }
-            else if (phase == CompilePhase.MemberScan || phase == CompilePhase.ConstantResolution)
+            if (phase == CompilePhase.ClassScan || phase == CompilePhase.MemberScan || phase == CompilePhase.ConstantResolution)
             {
                 foreach (var fileNamespace in namespaces)
                 {

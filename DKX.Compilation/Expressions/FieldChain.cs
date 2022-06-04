@@ -1,5 +1,6 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Objects;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
@@ -40,6 +41,11 @@ namespace DKX.Compilation.Expressions
         {
             context.DependsOnFile(_field.Class.DkxPathName);
 
+            if (context.IsOutsideClass(_field.Class) && _field.ReadPrivacy != Privacy.Public)
+            {
+                throw new CodeException(Span, ErrorCode.CannotAccessMemberDueToPrivacy, _field.Name, _field.ReadPrivacy.ToString().ToLower());
+            }
+
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
@@ -48,9 +54,15 @@ namespace DKX.Compilation.Expressions
                     var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span);
                 case FieldAccessMethod.Property:
-                    thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
-                    if (_field.Flags.IsStatic()) return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span, readOnly: true);
-                    return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span, readOnly: true);
+                    if (_field.Flags.IsStatic())
+                    {
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span, readOnly: true);
+                    }
+                    else
+                    {
+                        thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span, readOnly: true);
+                    }
                 case FieldAccessMethod.Constant:
                     var value = _field.ConstantValue;
                     if (value == null)
@@ -67,6 +79,11 @@ namespace DKX.Compilation.Expressions
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             context.DependsOnFile(_field.Class.DkxPathName);
+
+            if (context.IsOutsideClass(_field.Class) && _field.WritePrivacy != Privacy.Public)
+            {
+                throw new CodeException(Span, ErrorCode.CannotAccessMemberDueToPrivacy, _field.Name, _field.WritePrivacy.ToString().ToLower());
+            }
 
             switch (_field.AccessMethod)
             {

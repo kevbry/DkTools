@@ -183,7 +183,7 @@ namespace DKX.Compilation.Scopes
             }
 
             var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
-            if (Phase == CompilePhase.FullCompilation) modifiers.CheckForProperty(this);
+            if (Phase == CompilePhase.FullCompilation) modifiers.CheckForProperty(this, GetScope<ClassScope>(), nameToken.Span);
 
             var property = PropertyScope.Parse(
                 class_: this,
@@ -251,6 +251,11 @@ namespace DKX.Compilation.Scopes
 
                         _constantStore.Add(constant);
                     }
+
+                    if (Phase == CompilePhase.FullCompilation)
+                    {
+                        modifiers.CheckForConstant(this, nameToken.Span);
+                    }
                 }
                 else
                 {
@@ -271,6 +276,11 @@ namespace DKX.Compilation.Scopes
                             span: nameToken.Span);
 
                         _variableStore.AddVariable(variable);
+                    }
+
+                    if (Phase == CompilePhase.FullCompilation)
+                    {
+                        modifiers.CheckForMemberVariable(this, this, nameToken.Span);
                     }
                 }
             }
@@ -304,6 +314,11 @@ namespace DKX.Compilation.Scopes
                                 span: nameToken.Span);
 
                             _variableStore.AddVariable(variable);
+                        }
+
+                        if (Phase == CompilePhase.FullCompilation)
+                        {
+                            modifiers.CheckForMemberVariable(this, this, nameToken.Span);
                         }
                     }
                     else throw new CodeException(nameToken.Span, ErrorCode.ExpectedStatementEndToken);

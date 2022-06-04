@@ -100,7 +100,7 @@ namespace DKX.Compilation.Scopes
                     used.Use(bodyToken);
 
                     var modifiers = Modifiers.ReadModifiers(propertyScope, tokens, index, used);
-                    modifiers.CheckForPropertyAccessor(propertyScope, modifiers);
+                    modifiers.CheckForPropertyAccessor(propertyScope, modifiers, keywordToken.Span);
 
                     if (keywordToken.IsKeyword(DkxConst.Keywords.Get))
                     {
@@ -108,7 +108,7 @@ namespace DKX.Compilation.Scopes
                         else propertyScope._getter = PropertyAccessorScope.Parse(
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Getter,
-                            privacy: modifiers.Privacy ?? Privacy.Private,
+                            privacy: modifiers.Privacy ?? propertyScope._privacy,
                             bodyTokens: phase == CompilePhase.FullCompilation ? bodyToken.Tokens : null);
                     }
                     else
@@ -117,7 +117,7 @@ namespace DKX.Compilation.Scopes
                         else propertyScope._setter = PropertyAccessorScope.Parse(
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Setter,
-                            privacy: modifiers.Privacy ?? Privacy.Private,
+                            privacy: modifiers.Privacy ?? propertyScope._privacy,
                             bodyTokens: phase == CompilePhase.FullCompilation ? bodyToken.Tokens : null);
                     }
                 }
@@ -221,6 +221,7 @@ namespace DKX.Compilation.Scopes
                 using (cw.Indent())
                 {
                     var flow = new FlowTrace();
+                    var propertyContext = new CodeGenerationContext(context, _property);
 
                     // Variables
                     foreach (var variable in _wbdkVariables)
@@ -243,11 +244,11 @@ namespace DKX.Compilation.Scopes
                     {
                         foreach (var statement in _statements)
                         {
-                            statement.GenerateWbdkCode(context, cw, flow);
+                            statement.GenerateWbdkCode(propertyContext, cw, flow);
                         }
                     }
 
-                    GenerateScopeEnding(context, cw, flow, methodEnding: true, _property._nameSpan);
+                    GenerateScopeEnding(propertyContext, cw, flow, methodEnding: true, _property._nameSpan);
                 }
             }
 

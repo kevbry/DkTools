@@ -138,6 +138,19 @@ namespace DKX.Compilation
         /// </summary>
         [Description("'{0}' requires an object reference.")]
         MemberRequiresAnObjectReference = 1120,
+
+        [Description("'this' requires an object reference.")]
+        ThisRequiresObjectReference = 1121,
+
+        [Description("Static classes cannot contain non-static members.")]
+        StaticClassesCannotHaveNonStaticMembers = 1122,
+
+        /// <summary>
+        /// {0} = member name
+        /// {1} = privacy
+        /// </summary>
+        [Description("Cannot access '{0}' because it is marked '{1}'")]
+        CannotAccessMemberDueToPrivacy = 1123,
         #endregion
 
         #region Methods (1200-1299)

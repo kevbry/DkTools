@@ -15,7 +15,10 @@ namespace DKX.Compilation.Tokens
 
         public bool EndOfStream => _pos >= _tokens.Count;
         public int Length => _tokens.Count;
+        public DkxTokenCollection RemainingTokens => _tokens.GetRange(_pos);
         public DkxTokenCollection Tokens => _tokens;
+
+        public override string ToString() => _tokens.ToString();
 
         public int Position
         {

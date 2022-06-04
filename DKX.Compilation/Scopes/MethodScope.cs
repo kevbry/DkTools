@@ -71,6 +71,7 @@ namespace DKX.Compilation.Scopes
         public FileTarget FileTarget { get => _fileTarget; set => _fileTarget = value; }
         public ModifierFlags Flags { get => _flags; set => _flags = value; }
         public string Name => _name;
+        public Span NameSpan => _nameSpan;
         public Privacy Privacy => _privacy;
         public DataType ReturnDataType => _returnDataType;
         public DataType ScopeDataType => Parent.GetScope<IObjectReferenceScope>().ScopeDataType;
@@ -103,7 +104,7 @@ namespace DKX.Compilation.Scopes
                 methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens).ToArray();
             }
 
-            if (phase >= CompilePhase.MemberScan) modifiers.CheckForMethod(methodScope, methodScope, phase);
+            if (phase >= CompilePhase.MemberScan) modifiers.CheckForMethod(methodScope, methodScope.GetScope<ClassScope>(), methodScope, phase);
 
             return methodScope;
         }
@@ -263,6 +264,7 @@ namespace DKX.Compilation.Scopes
             using (cw.Indent())
             {
                 var flow = new FlowTrace();
+                var methodContext = new CodeGenerationContext(context, this);
 
                 // Variables
                 foreach (var variable in _wbdkVariables)
@@ -289,10 +291,10 @@ namespace DKX.Compilation.Scopes
                 // Statements
                 foreach (var statement in _statements ?? Statement.EmptyArray)
                 {
-                    statement.GenerateWbdkCode(context, cw, flow);
+                    statement.GenerateWbdkCode(methodContext, cw, flow);
                 }
 
-                GenerateScopeEnding(context, cw, flow, methodEnding: true, _nameSpan);
+                GenerateScopeEnding(methodContext, cw, flow, methodEnding: true, _nameSpan);
             }
         }
 

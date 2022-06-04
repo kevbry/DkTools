@@ -46,6 +46,11 @@ namespace DKX.Compilation.Expressions
 
             if (_method.Flags.HasFlag(ModifierFlags.NotCallable)) throw new CodeException(Span, ErrorCode.MethodNotCallable);
 
+            if (context.IsOutsideClass(_method.Class) && _method.Privacy != Privacy.Public)
+            {
+                throw new CodeException(Span, ErrorCode.CannotAccessMemberDueToPrivacy, _method.Name, _method.Privacy.ToString().ToLower());
+            }
+
             if (_method.AccessType == MethodAccessType.System)
             {
                 var cls = SystemClass.SystemClasses.Where(x => x.FullClassName == _method.Class.FullClassName).FirstOrDefault();

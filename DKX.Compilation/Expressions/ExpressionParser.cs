@@ -24,14 +24,14 @@ namespace DKX.Compilation.Expressions
         {
             var startPos = stream.Position;
 
-            if (TryReadDataType(scope, stream, out var dataType, out var dataTypeSpan))
+            var token = stream.Read();
+            if (token.Type == DkxTokenType.DataType)
             {
-                var chain = new DataTypeChain(dataType, dataTypeSpan);
+                if (token.HasError) scope.Report(token.Span, ErrorCode.InvalidDataType);
+                var chain = new DataTypeChain(token.DataType, token.Span);
                 return TryReadAfterValue(scope, stream, chain, leftPrec);
             }
-
-            var token = stream.Read();
-            if (token.Type == DkxTokenType.Keyword)
+            else if (token.Type == DkxTokenType.Keyword)
             {
                 Chain chain;
 
@@ -45,7 +45,7 @@ namespace DKX.Compilation.Expressions
                         return TryReadAfterValue(scope, stream, chain, leftPrec);
 
                     case DkxConst.Keywords.New:
-                        if (TryReadDataType(scope, stream, out dataType, out dataTypeSpan))
+                        if (TryReadDataType(scope, stream, out var dataType, out var dataTypeSpan))
                         {
                             chain = ConstructorChain.Parse(scope, dataType, token.Span, dataTypeSpan,
                                 stream.Peek().IsBrackets ? stream.Read().Tokens : null);
@@ -53,6 +53,12 @@ namespace DKX.Compilation.Expressions
                         }
                         scope.Report(token.Span, ErrorCode.ExpectedDataType);
                         return new ErrorChain(innerChainOrNull: null, token.Span);
+
+                    case DkxConst.Keywords.This:
+                        var objRefScope = scope.GetScope<IObjectReferenceScope>();
+                        if (objRefScope.ScopeStatic) scope.Report(token.Span, ErrorCode.ThisRequiresObjectReference);
+                        chain = new ThisChain(objRefScope.ScopeDataType, token.Span);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
 
                     default:
                         scope.Report(token.Span, ErrorCode.SyntaxError);
@@ -118,6 +124,13 @@ namespace DKX.Compilation.Expressions
                     if (constantStore != null && constantStore.TryGetConstant(token.Text, out var constant))
                     {
                         chain = new ConstantChain(constant, token.Span);
+                        return TryReadAfterValue(scope, stream, chain, leftPrec);
+                    }
+
+                    var cls = scope.Resolver.ResolveClass(token.Text);
+                    if (cls != null)
+                    {
+                        chain = new DataTypeChain(new DataType(cls), token.Span);
                         return TryReadAfterValue(scope, stream, chain, leftPrec);
                     }
 

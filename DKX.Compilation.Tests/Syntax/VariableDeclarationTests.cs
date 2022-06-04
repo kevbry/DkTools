@@ -663,9 +663,5 @@ unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 .Replace("${CreateUnitTestDecoration}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.UnitTest" }), DataType.EmptyArray))
 );
         }
-
-        // TODO: using 'var' statement to instantiate object
-        // TODO: member variable in static class must be defined static
-        // TODO: using 'this' to get at a member variable instead of local variable with same name
     }
 }

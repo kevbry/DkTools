@@ -86,7 +86,7 @@ namespace DKX.Compilation
             /// </summary>
             public static readonly HashSet<string> ControlStatementStartKeyword = new HashSet<string>(new string[]
             {
-                Break, Continue, Do, If, For, Return, Switch, While
+                Break, Continue, Do, If, For, Return, Switch, Var, While
             });
 
             public const string And = "and";

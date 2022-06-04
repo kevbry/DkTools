@@ -1,5 +1,5 @@
-﻿using NUnit.Framework;
-using System.Linq;
+﻿using DKX.Compilation.DataTypes;
+using NUnit.Framework;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Tests.Classes
@@ -215,11 +215,504 @@ void DoTest_%1()
             Assert.AreEqual("x:\\src\\member.dkx", fileDeps[0].ToLower());
         }
 
-        // TODO: using the 'this' keyword to get at a member variable or method
-        // TODO: Can't call static method using an object reference.
-        // TODO: Can't call non-static members with a static class name.
-        // TODO: A property that is named the same as its data type should still work fine.
-        // TODO: Disallow defining non-static members in a static class.
-        // TODO: Calling private members of another class.
+        [Test]
+        public async Task UsingThisToAccessMemberVariable()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int no;
+
+        public void SetData(int no)
+        {
+            this.no = no;
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+void SetData_${SetDataDecoration}(unsigned int this, int no)
+{
+    dkx_setint4(this, 0, no);
+}
+".Replace("${SetDataDecoration}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
+);
+        }
+
+        [Test]
+        public async Task UsingThisToAccessStaticMemberVariable()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private static int no;
+
+        public void SetData(int no)
+        {
+            this.no = no;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticMemberCannotHaveObjectReference);
+        }
+
+        [Test]
+        public async Task UsingThisToAccessProperty()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int no;
+
+        public int No { get { return no; } set { no = value; } }
+
+        public void SetData(int no)
+        {
+            this.No = no;
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+int GetNo(unsigned int this) { return dkx_getint4(this, 0); }
+void SetNo(unsigned int this, int value) { dkx_setint4(this, 0, value); }
+
+void SetData_${SetDataDecoration}(unsigned int this, int no)
+{
+    ${ClassName}.SetNo(this, no);
+}
+"
+.Replace("${ClassName}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${SetDataDecoration}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
+);
+        }
+
+        [Test]
+        public async Task UsingThisToAccessMethod()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int no;
+
+        public void SetNo(int no) { this.no = no; }
+
+        public void SetData(int no)
+        {
+            this.SetNo(no);
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+void SetNo_${SetNoDecoration}(unsigned int this, int no) { dkx_setint4(this, 0, no); }
+
+void SetData_${SetDataDecoration}(unsigned int this, int no)
+{
+    ${ClassName}.SetNo_${SetNoDecoration}(this, no);
+}
+"
+.Replace("${ClassName}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${SetNoDecoration}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
+.Replace("${SetDataDecoration}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
+);
+        }
+
+        [Test]
+        public async Task CantCallStaticMethodWithThis()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        public static void SetData() { }
+
+        public void DoTest()
+        {
+            this.SetData();
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticMemberCannotHaveObjectReference);
+        }
+
+        [Test]
+        public async Task CantCallStaticMethodWithObjectReference()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        public static void SetData() { }
+    }
+
+    class UnitTest
+    {
+        public void DoTest()
+        {
+            var mbr = new Member();
+            mbr.SetData();
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticMemberCannotHaveObjectReference);
+        }
+
+        [Test]
+        public async Task CallStaticMethodFromNonStaticCode()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        public static void SetData() { }
+
+        public void DoTest()
+        {
+            SetData();
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+void SetData_${SetDataDecoration}() { }
+
+void DoTest_${DoTestDecoration}(unsigned int this)
+{
+    ${ClassName}.SetData_${SetDataDecoration}();
+}
+"
+.Replace("${ClassName}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${SetDataDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${DoTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+);
+        }
+
+        [Test]
+        public async Task CantCallNonStaticMethodWithStaticClassName()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        public void SetData() { }
+    }
+
+    class UnitTest
+    {
+        public void DoTest()
+        {
+            Member.SetData();
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.MemberRequiresAnObjectReference);
+        }
+
+        [Test]
+        public async Task PropertyWithSameNameAsDataType()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int No { get { return _no; } }
+    }
+
+    class Party
+    {
+        private Member _mbr;
+        public Member Member { get { return _mbr; } }
+
+        public void PartyTest()
+        {
+            var mbr = Member;
+        }
+    }
+
+    class UnitTest
+    {
+        public static void DoTest()
+        {
+            var party = new Party();
+            var mbr = party.Member;
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+int GetNo(unsigned int this) { return dkx_getint4(this, 0); }
+");
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Party")}.nc", @"
+// Test.Party
+unsigned int GetMember(unsigned int this) { return dkx_getuns4(this, 0); }
+void PartyTest_${PartyTestDecoration}(unsigned int this)
+{
+    unsigned int mbr;
+    mbr = dkx_addref(${PartyClass}.GetMember(this));
+    dkx_release(mbr);
+}
+"
+.Replace("${PartyClass}", Compiler.GetWbdkClassName("Test.Party"))
+.Replace("${PartyTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+void DoTest_${DoTestDecoration}()
+{
+    unsigned int party;
+    unsigned int mbr;
+    party = dkx_addref(dkx_new(4));
+    mbr = dkx_addref(${PartyClass}.GetMember(party));
+    dkx_release(party);
+    dkx_release(mbr);
+}
+"
+.Replace("${PartyClass}", Compiler.GetWbdkClassName("Test.Party"))
+.Replace("${DoTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+);
+        }
+
+        [Test]
+        public async Task StaticClassesCannotHaveNonStaticMemberVariables()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private int _no;
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticClassesCannotHaveNonStaticMembers);
+        }
+
+        [Test]
+        public async Task StaticClassesCannotHaveNonStaticMethods()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private void DoSomething() { }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticClassesCannotHaveNonStaticMembers);
+        }
+
+        [Test]
+        public async Task StaticClassesCannotHaveNonStaticProperties()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private int Number { get { return 0; } }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticClassesCannotHaveNonStaticMembers);
+        }
+
+        [Test]
+        public async Task CannotReadPrivateProperty()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static int Number { get { return 0; } }
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            var no = Member.Number;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessMemberDueToPrivacy);
+        }
+
+        [Test]
+        public async Task CannotWriteToPrivateProperty()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+        private static int Number { get { return _no; } set { _no = value; } }
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            Member.Number = 0;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessMemberDueToPrivacy);
+        }
+
+        [Test]
+        public async Task CannotCallPrivateMethod()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static void DoStuff() { }
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            Member.DoStuff();
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessMemberDueToPrivacy);
+        }
+
+        [Test]
+        public async Task CannotAccessPrivateMemberVariable()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            Member._no = 0;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessMemberDueToPrivacy);
+        }
+
+        // TODO: Property where the getter/setter conflicts with another method (e.g. property Id conflicts with GetId())
+        // TODO: Class cannot have same name as namespace
+        // TODO: 2 classes cannot have the same name (in same file or different files)
+        // TODO: Call class in another namespace with just the class name (using statement at top)
+        // TODO: Cannot instantiate a static class ('new' keyword)
+        // TODO: Cannot write to read-only property
+        // TODO: private property cannot be marked public or protected
     }
 }

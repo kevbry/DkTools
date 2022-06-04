@@ -200,9 +200,15 @@ namespace DKX.Compilation.Scopes
 
         public void CheckForClass(IReportItemCollector report, Span classKeywordSpan) { }
 
-        public void CheckForMethod(IReportItemCollector report, MethodScope method, CompilePhase phase)
+        public void CheckForMethod(IReportItemCollector report, ClassScope class_, MethodScope method, CompilePhase phase)
         {
             if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
+
+            if (class_.Static && !Flags.IsStatic())
+            {
+                report.Report(method.NameSpan, ErrorCode.StaticClassesCannotHaveNonStaticMembers);
+                return;
+            }
 
             foreach (var attribute in Attributes)
             {
@@ -210,14 +216,30 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        public void CheckForProperty(IReportItemCollector report)
+        public void CheckForProperty(IReportItemCollector report, ClassScope class_, Span nameSpan)
         {
             if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
+
+            if (class_.Static && !Flags.IsStatic())
+            {
+                report.Report(nameSpan, ErrorCode.StaticClassesCannotHaveNonStaticMembers);
+                return;
+            }
         }
 
-        public void CheckForPropertyAccessor(IReportItemCollector report, Modifiers propertyModifiers)
+        public void CheckForPropertyAccessor(IReportItemCollector report, Modifiers propertyModifiers, Span keywordSpan)
         {
-            if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
+            if (Const)
+            {
+                report.Report(ConstSpan, ErrorCode.InvalidConst);
+                return;
+            }
+
+            if (Flags.IsStatic())
+            {
+                report.Report(keywordSpan, ErrorCode.InvalidStatic);
+                return;
+            }
 
             if (FileContext != null)
             {
@@ -239,16 +261,39 @@ namespace DKX.Compilation.Scopes
             }
         }
 
-        public void CheckForMemberVariable(IReportItemCollector report)
+        public void CheckForMemberVariable(IReportItemCollector report, ClassScope class_, Span nameSpan)
         {
-            if (Const) report.Report(ConstSpan, ErrorCode.InvalidConst);
+            if (Const)
+            {
+                report.Report(ConstSpan, ErrorCode.InvalidConst);
+                return;
+            }
 
-            if (Privacy.HasValue && Privacy != Scopes.Privacy.Private) report.Report(PrivacySpan, ErrorCode.MemberVariableMustBePrivate);
+            if (Privacy.HasValue && Privacy != Scopes.Privacy.Private)
+            {
+                report.Report(PrivacySpan, ErrorCode.MemberVariableMustBePrivate);
+                return;
+            }
+
+            if (class_.Static && !Flags.IsStatic())
+            {
+                report.Report(nameSpan, ErrorCode.StaticClassesCannotHaveNonStaticMembers);
+                return;
+            }
         }
 
-        public void CheckForConstant(IReportItemCollector report)
+        public void CheckForConstant(IReportItemCollector report, Span nameSpan)
         {
-            if (FileContext != null) report.Report(FileContextSpan, ErrorCode.InvalidFileContext);
+            if (FileContext != null)
+            {
+                report.Report(FileContextSpan, ErrorCode.InvalidFileContext);
+                return;
+            }
+
+            if (Flags.IsStatic())
+            {
+                report.Report(nameSpan, ErrorCode.InvalidStatic);
+            }
         }
 
         public string ToSignature()

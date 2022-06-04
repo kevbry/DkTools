@@ -15,6 +15,8 @@ namespace DKX.Compilation.Tokens
 
         public int Count => _tokens.Count;
 
+        public override string ToString() => string.Join(" ", _tokens);
+
         public DkxToken this[int index] => index >= 0 && index < _tokens.Count ? _tokens[index] : default;
 
         public void Add(DkxToken token) => _tokens.Add(token);
