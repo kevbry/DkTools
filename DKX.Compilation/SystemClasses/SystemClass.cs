@@ -23,26 +23,18 @@ namespace DKX.Compilation.SystemClasses
         }
 
         public string ClassName => _className;
-
+        public uint DataSize => 0;
+        public IEnumerable<IField> Fields => IFieldHelper.EmptyArray;
         public string FullClassName => "System." + _className;
-
         public string NamespaceName => "System";
-
+        public Span NameSpan => Span.Empty;
+        public string DkxPathName => string.Empty;
+        public ModifierFlags Flags => ModifierFlags.Static;
+        public IEnumerable<IMethod> Methods => _methods;
+        public Privacy Privacy => Privacy.Public;
         public string WbdkClassName => FullClassName;
 
-        public string DkxPathName => string.Empty;
-
-        public Privacy Privacy => Privacy.Public;
-
-        public bool Static => true;
-
-        public uint DataSize => 0;
-
-        public IEnumerable<IMethod> Methods => _methods;
-
         public IEnumerable<IMethod> GetMethods(string name) => _methods.Where(x => x.Name == name);
-
-        public IEnumerable<IField> Fields => IFieldHelper.EmptyArray;
 
         public IEnumerable<IField> GetFields(string name) => IFieldHelper.EmptyArray;
 

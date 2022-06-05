@@ -348,7 +348,7 @@ namespace DKX.Compilation.Scopes
         }
     }
 
-    public enum ModifierFlags
+    public enum ModifierFlags : uint
     {
         /// <summary>
         /// Static member which does not require an object pointer.

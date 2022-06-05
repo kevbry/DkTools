@@ -1,7 +1,7 @@
-﻿using DK.AppEnvironment;
+﻿using DK;
+using DK.AppEnvironment;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.Exceptions;
-using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Tokens;
 using System;
@@ -28,7 +28,7 @@ namespace DKX.Compilation.Scopes
         public string Name => _name;
         public string NamespaceName => _name;
 
-        public void ProcessTokens(string namespaceName, DkxTokenCollection tokens, CompilePhase phase, IResolver globalResolver, IProject project)
+        public void ProcessTokens(string namespaceName, DkxTokenCollection tokens)
         {
             var used = new TokenUseTracker();
 
@@ -43,22 +43,25 @@ namespace DKX.Compilation.Scopes
                 used.Use(classKeywordToken, classNameToken, classScopeToken);
 
                 var className = classNameToken.Text;
+                var fullClassName = string.Concat(namespaceName, DkxConst.Operators.Dot, className);
+                var projectClass = Project.GetClassByFullNameOrNull(fullClassName);
+                if (projectClass != null && !projectClass.DkxPathName.EqualsI(classNameToken.Span.PathName)) Report(classNameToken.Span, ErrorCode.DuplicateClass, fullClassName);
 
                 var modifiers = Modifiers.ReadModifiers(this, tokens, classIndex, used);
-                if (phase == CompilePhase.FullCompilation) modifiers.CheckForClass(this, classNameToken.Span);
+                if (Phase == CompilePhase.FullCompilation) modifiers.CheckForClass(this, classNameToken.Span);
 
-                var class_ = new ClassScope(this, namespaceName, classNameToken.Text, GetScope<FileScope>().DkxPathName, modifiers);
+                var class_ = new ClassScope(this, namespaceName, className, fullClassName, GetScope<FileScope>().DkxPathName, classNameToken.Span, modifiers);
 
                 if (_classes.ContainsKey(className)) Report(classNameToken.Span, ErrorCode.DuplicateClass, className);
                 else _classes[className] = class_;
 
-                if (phase >= CompilePhase.MemberScan)
+                if (Phase >= CompilePhase.MemberScan)
                 {
                     class_.ProcessTokens(classScopeToken.Tokens);
                 }
             }
 
-            if (phase == CompilePhase.FullCompilation)
+            if (Phase == CompilePhase.FullCompilation)
             {
                 foreach (var badToken in tokens.GetUnused(used)) Report(badToken.Span, ErrorCode.SyntaxError, badToken.ToString());
             }

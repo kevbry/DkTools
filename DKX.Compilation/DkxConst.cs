@@ -63,6 +63,7 @@ namespace DKX.Compilation
         public static class Operators
         {
             public const string Dot = ".";
+            public const char DotChar = '.';
         }
 
         #region Keywords
@@ -72,7 +73,7 @@ namespace DKX.Compilation
             {
                 And, Break, Bool, Char, Class, Client, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
                 Namespace, Neutral, New, Numeric, Or, Private, Protected, Public, Return, Server, Set, Short, Static, Switch, String,
-                Table, This, Time, True, UInt, Unsigned, Unsupported, UShort, Var, Variant, Void, While
+                Table, This, Time, True, Typedef, UInt, Unsigned, Unsupported, UShort, Using, Var, Variant, Void, While
             });
 
             public static readonly HashSet<string> DataTypeKeyword = new HashSet<string>(new string[]
@@ -125,11 +126,13 @@ namespace DKX.Compilation
             public const string String = "string";
             public const string Switch = "switch";
             public const string Table = "table";
+            public const string Typedef = "typedef";
             public const string This = "this";
             public const string Time = "time";
             public const string True = "true";
             public const string UInt = "uint";
             public const string UShort = "ushort";
+            public const string Using = "using";
             public const string Unsigned = "unsigned";
             public const string Unsupported = "unsupported";
             public const string Var = "var";

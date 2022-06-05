@@ -1,6 +1,7 @@
 ﻿using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -27,6 +28,15 @@ namespace DKX.Compilation.Tokens
         public static bool IsDigit(char ch) => ch >= '0' && ch <= '9';
         public static bool IsHexDigit(char ch) => (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f');
         public static int HexDigitToInt(char ch) => ch >= '0' && ch <= '9' ? ch - '0' : ch >= 'A' && ch <= 'F' ? ch - 'A' + 0x0A : ch >= 'a' && ch <= 'f' ? ch - 'a' + 0x0a : 0;
+
+        public static bool IsWord(string str)
+        {
+            for (int i = 0, ii = str.Length; i < ii; i++)
+            {
+                if (!IsWordChar(str[i], i == 0)) return false;
+            }
+            return true;
+        }
 
         public bool EndOfFile => _pos >= _len;
         public string RemainingSource => _source.Substring(_pos);
@@ -843,6 +853,116 @@ namespace DKX.Compilation.Tokens
 
             _pos = startPos;
             return false;
+        }
+
+        private bool TryReadExactWord(string word, bool allowWhiteSpace = true)
+        {
+            if (string.IsNullOrEmpty(word)) throw new ArgumentNullException(nameof(word));
+
+            if (allowWhiteSpace) SkipWhiteSpace();
+
+            var wordLen = word.Length;
+            for (int i = 0, ii = wordLen; i < ii; i++)
+            {
+                if (_pos + i >= _len) return false;
+                if (word[i] != _source[_pos + i]) return false;
+            }
+
+            if (_pos + wordLen < _len && IsWordChar(_source[_pos + wordLen], first: false)) return false;
+
+            _pos += wordLen;
+            return true;
+        }
+
+        private bool TryReadWord(out string wordOut, bool allowWhiteSpace = true, Func<string, bool> validationCallback = null)
+        {
+            if (allowWhiteSpace) SkipWhiteSpace();
+            if (_pos >= _len || !IsWordChar(_source[_pos], first: true))
+            {
+                wordOut = default;
+                return false;
+            }
+
+            var startPos = _pos;
+            _sb.Clear();
+            char ch;
+            while (_pos < _len && IsWordChar(ch = _source[_pos], first: false))
+            {
+                _sb.Append(ch);
+                _pos++;
+            }
+
+            var word = _sb.ToString();
+            if (validationCallback != null && !validationCallback(word))
+            {
+                _pos = startPos;
+                wordOut = default;
+                return false;
+            }
+
+            wordOut = word;
+            return true;
+        }
+
+        /// <summary>
+        /// Reads the top portion of a code file, which includes the 'using' statements.
+        /// </summary>
+        public void ReadHeader(out List<string> usingNamespacesOut)
+        {
+            var namespaceSB = new StringBuilder();
+            var usingNamespaces = new List<string>();
+
+            while (true)
+            {
+                var resetPos = _pos;
+                if (TryReadExactWord(DkxConst.Keywords.Using))
+                {
+                    namespaceSB.Clear();
+
+                    if (TryReadWord(out var word, validationCallback: w => !DkxConst.Keywords.AllKeywords.Contains(w)))
+                    {
+                        namespaceSB.Append(word);
+
+                        var ended = false;
+                        while (true)
+                        {
+                            if (TryReadExact(DkxConst.StatementEndToken))
+                            {
+                                ended = true;
+                                break;
+                            }
+                            if (!TryReadExact(DkxConst.Operators.DotChar)) break;
+                            if (TryReadWord(out var nsPart, validationCallback: w => !DkxConst.Keywords.AllKeywords.Contains(w)))
+                            {
+                                namespaceSB.Append(DkxConst.Operators.Dot);
+                                namespaceSB.Append(nsPart);
+                            }
+                            else break;
+                        }
+
+                        if (ended)
+                        {
+                            usingNamespaces.Add(namespaceSB.ToString());
+                        }
+                        else
+                        {
+                            _pos = resetPos;
+                            break;
+                        }
+                    }
+                    else // No word after 'using'
+                    {
+                        _pos = resetPos;
+                        break;
+                    }
+                }
+                else // No 'using' keyword
+                {
+                    break;
+                }
+            }
+
+            usingNamespacesOut = usingNamespaces;
         }
     }
 }

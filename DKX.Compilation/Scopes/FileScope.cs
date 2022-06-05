@@ -31,9 +31,14 @@ namespace DKX.Compilation.Scopes
 
         public void ProcessFile()
         {
+            _cp.ReadHeader(out var usingNamespaces);
+            foreach (var ns in usingNamespaces)
+            {
+                ((GlobalResolver)Resolver).AddUsingNamespace(ns);
+            }
+
             var fileTokens = _cp.ReadAll().Tokens;
             var stream = new DkxTokenStream(fileTokens);
-            var resolver = new GlobalResolver(Project, DkxConst.EmptyStringArray);
 
             while (!stream.EndOfStream)
             {
@@ -81,10 +86,10 @@ namespace DKX.Compilation.Scopes
                             {
                                 namespace_ = new NamespaceScope(this, namespaceName);
                                 _namespaces.Add(namespace_);
-                                resolver.AddUsingNamespace(namespaceName);
+                                ((GlobalResolver)Resolver).AddUsingNamespace(namespaceName);
                             }
 
-                            namespace_.ProcessTokens(namespaceName, bodyToken.Tokens, Phase, Resolver, Project);
+                            namespace_.ProcessTokens(namespaceName, bodyToken.Tokens);
                         }
                     }
                     else

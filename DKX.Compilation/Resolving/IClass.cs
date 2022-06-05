@@ -17,9 +17,11 @@ namespace DKX.Compilation.Resolving
 
         Privacy Privacy { get; }
 
-        bool Static { get; }
+        ModifierFlags Flags { get; }
 
         uint DataSize { get; }
+
+        Span NameSpan { get; }
 
         IEnumerable<IMethod> Methods { get; }
 

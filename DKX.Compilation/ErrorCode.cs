@@ -151,6 +151,13 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Cannot access '{0}' because it is marked '{1}'")]
         CannotAccessMemberDueToPrivacy = 1123,
+
+        /// <summary>
+        /// {0} = class name
+        /// {1} = conflicting namespace name
+        /// </summary>
+        [Description("Class name '{0}' cannot be used because it conflicts with namespace '{1}'.")]
+        ClassNameConflictsWithNamespace = 1124,
         #endregion
 
         #region Methods (1200-1299)

@@ -21,6 +21,7 @@ namespace DKX.Compilation.Scopes
         private string _fullName;
         private string _wbdkClassName;
         private string _dkxPathName;
+        private Span _nameSpan;
         private Privacy _privacy;
         private ModifierFlags _flags;
         private List<MethodScope> _methods = new List<MethodScope>();
@@ -30,18 +31,19 @@ namespace DKX.Compilation.Scopes
         private uint _dataSize;
         private DataType _dataType;
 
-        public ClassScope(Scope parent, string namespaceName, string className, string dkxPathName, Modifiers modifiers)
+        public ClassScope(Scope parent, string namespaceName, string className, string fullClassName, string dkxPathName, Span nameSpan, Modifiers modifiers)
             : base(parent, parent.Phase, parent.Resolver, parent.Project)
         {
             _name = className ?? throw new ArgumentNullException(nameof(className));
             _namespaceName = namespaceName ?? throw new ArgumentNullException(nameof(namespaceName));
+            _fullName = fullClassName ?? throw new ArgumentNullException(nameof(fullClassName));
             _dkxPathName = dkxPathName;
+            _nameSpan = nameSpan;
             _variableStore = new VariableStore(parent?.GetScope<IVariableScope>());
             _constantStore = new ConstantStore(parent?.GetScope<IConstantScope>());
             _privacy = modifiers.Privacy ?? Privacy.Public;
             _flags = modifiers.Flags;
 
-            _fullName = string.Concat(_namespaceName, DkxConst.Operators.Dot, _name);
             _wbdkClassName = Compiler.GetWbdkClassName(_fullName);
             _dataType = new DataType(this);
 
@@ -70,6 +72,7 @@ namespace DKX.Compilation.Scopes
         IEnumerable<IMethod> IClass.Methods => _methods;
         public string Name => _name;
         public string NamespaceName => _namespaceName;
+        public Span NameSpan => _nameSpan;
         public Privacy Privacy => _privacy;
         public DataType ScopeDataType => _dataType;
         public bool ScopeStatic => _flags.HasFlag(ModifierFlags.Static);

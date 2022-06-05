@@ -707,10 +707,138 @@ namespace Test
             await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessMemberDueToPrivacy);
         }
 
-        // TODO: Property where the getter/setter conflicts with another method (e.g. property Id conflicts with GetId())
-        // TODO: Class cannot have same name as namespace
-        // TODO: 2 classes cannot have the same name (in same file or different files)
-        // TODO: Call class in another namespace with just the class name (using statement at top)
+        [Test]
+        public async Task ClassNameCannotMatchNamespace()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test.Member
+{
+}
+
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.ClassNameConflictsWithNamespace);
+        }
+
+        [Test]
+        public async Task ClassNameCannotMatchNamespacePrefix()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test.Member.Accounts
+{
+}
+
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.ClassNameConflictsWithNamespace);
+        }
+
+        [Test]
+        public async Task DuplicateClassName()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+    }
+
+    class Member
+    {
+        private int _name;
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.DuplicateClass);
+        }
+
+        [Test]
+        public async Task DuplicateClassNameInDifferentFiles()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+    }
+}
+");
+            await SetCompileFileAsync(app, @"x:\src\Test2.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _name;
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.DuplicateClass);
+        }
+
+        [Test]
+        public async Task UsingNamespace()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            Console.WriteLine(""Hello!"");
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void DoTest_${DoTestDecoration}()
+{
+    puts(""Hello!"");
+}
+"
+.Replace("${DoTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+);
+        }
+
         // TODO: Cannot instantiate a static class ('new' keyword)
         // TODO: Cannot write to read-only property
         // TODO: private property cannot be marked public or protected

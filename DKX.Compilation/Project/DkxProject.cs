@@ -45,19 +45,22 @@ namespace DKX.Compilation.Project
         {
             if (phase != _currentPhase) throw new InvalidOperationException($"Expected completion of phase '{_currentPhase}'.");
 
-            if (phase == CompilePhase.ClassScan)
+            switch (phase)
             {
-                await _app.Log.DebugAsync("Purging old files from project.");
-                var deletedFiles = _files.Where(x => x.Value.GetCompileTime(phase) < _phaseStartTime).Select(x => x.Key).ToList();
-                foreach (var deletedFile in deletedFiles)
-                {
-                    await _app.Log.DebugAsync("Purging file from project: {0}", deletedFile);
-                    _files.Remove(deletedFile);
-                }
-            }
-            else if (phase == CompilePhase.ConstantResolution)
-            {
-                await ResolveAllConstantsAsync(report);
+                case CompilePhase.ClassScan:
+                    await PurgeOldFilesAsync(CompilePhase.ClassScan);
+                    CheckForClassNameConflicts(report);
+                    break;
+
+                case CompilePhase.MemberScan:
+                    break;
+
+                case CompilePhase.ConstantResolution:
+                    await ResolveAllConstantsAsync(report);
+                    break;
+
+                case CompilePhase.FullCompilation:
+                    break;
             }
         }
 
@@ -240,7 +243,7 @@ namespace DKX.Compilation.Project
                     _namespaces[nsName] = ns = new ProjectNamespace(nsName, system: true);
                 }
 
-                var cls = new ProjectClass(sysClass.ClassName, sysClass.FullClassName, sysClass.NamespaceName, sysClass.WbdkClassName, sysClass.DkxPathName);
+                var cls = new ProjectClass(sysClass.ClassName, sysClass.FullClassName, sysClass.NamespaceName, sysClass.WbdkClassName, sysClass.DkxPathName, Span.Empty);
                 cls.Update(CompilePhase.FullCompilation, sysClass);
                 ns.AddClass(cls);
             }
@@ -295,6 +298,42 @@ namespace DKX.Compilation.Project
             }
 
             return count;
+        }
+
+        private async Task PurgeOldFilesAsync(CompilePhase phase)
+        {
+            await _app.Log.DebugAsync("Purging old files from project.");
+            var deletedFiles = _files.Where(x => x.Value.GetCompileTime(phase) < _phaseStartTime).Select(x => x.Key).ToList();
+            foreach (var deletedFile in deletedFiles)
+            {
+                await _app.Log.DebugAsync("Purging file from project: {0}", deletedFile);
+                _files.Remove(deletedFile);
+            }
+        }
+
+        private void CheckForClassNameConflicts(IReportItemCollector report)
+        {
+            foreach (var ns in _namespaces.Values)
+            {
+                if (ns.System) continue;
+
+                foreach (var cls in ns.Classes)
+                {
+                    if (_namespaces.TryGetValue(cls.FullClassName, out var conflictNS))
+                    {
+                        report.Report(cls.NameSpan, ErrorCode.ClassNameConflictsWithNamespace, cls.ClassName, conflictNS.NamespaceName);
+                    }
+                    else
+                    {
+                        var prefix = cls.FullClassName + DkxConst.Operators.Dot;
+                        conflictNS = _namespaces.Values.Where(x => x.NamespaceName.StartsWith(prefix)).FirstOrDefault();
+                        if (conflictNS != null)
+                        {
+                            report.Report(cls.NameSpan, ErrorCode.ClassNameConflictsWithNamespace, cls.ClassName, conflictNS.NamespaceName);
+                        }
+                    }
+                }
+            }
         }
     }
 

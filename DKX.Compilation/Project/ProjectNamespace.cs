@@ -66,7 +66,7 @@ namespace DKX.Compilation.Project
             {
                 if (!_classes.TryGetValue(fileClass.ClassName, out var projectClass))
                 {
-                    _classes[fileClass.ClassName] = projectClass = new ProjectClass(fileClass.ClassName, fileClass.FullClassName, fileClass.NamespaceName, fileClass.WbdkClassName, fileClass.DkxPathName);
+                    _classes[fileClass.ClassName] = projectClass = new ProjectClass(fileClass.ClassName, fileClass.FullClassName, fileClass.NamespaceName, fileClass.WbdkClassName, fileClass.DkxPathName, fileClass.NameSpan);
                 }
 
                 projectClass.Update(phase, fileClass);
