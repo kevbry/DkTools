@@ -83,7 +83,7 @@ namespace DKX.Compilation.Expressions
                 }
                 sb.Append(')');
 
-                return new CodeFragment(sb.ToString(), _method.ReturnDataType, OpPrec.None, Span, readOnly: true);
+                return new CodeFragment(sb.ToString(), _method.ReturnDataType, OpPrec.None, Span);
             }
         }
 

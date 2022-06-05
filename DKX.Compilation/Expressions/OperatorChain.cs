@@ -56,9 +56,8 @@ namespace DKX.Compilation.Expressions
                 case Operator.Increment:
                 case Operator.Decrement:
                     leftFrag = _left.ToWbdkCode_Read(context, flow);
-                    if (leftFrag.ReadOnly) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, _op.GetText());
                     if (!leftFrag.DataType.IsSuitableForIncDec) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    return new CodeFragment($"{leftFrag.Protect(OpPrec.IncDec)} {_op.GetText()} 1", leftFrag.DataType, OpPrec.IncDec, Span, readOnly: false);
+                    return new CodeFragment($"{leftFrag.Protect(OpPrec.IncDec)} {_op.GetText()} 1", leftFrag.DataType, OpPrec.IncDec, Span);
 
                 case Operator.Add:
                 case Operator.Subtract:
@@ -86,7 +85,7 @@ namespace DKX.Compilation.Expressions
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(rightFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
                     ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
-                    return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
+                    return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span);
 
                 case Operator.Assign:
                     rightFrag = _right.ToWbdkCode_Read(context, flow);
@@ -99,13 +98,12 @@ namespace DKX.Compilation.Expressions
                 case Operator.AssignDivide:
                 case Operator.AssignModulus:
                     leftFrag = _left.ToWbdkCode_Read(context, flow);
-                    if (leftFrag.ReadOnly) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorExpectsWriteableValueOnLeft, _op.GetText());
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
                     rightFrag = _right.ToWbdkCode_Read(context, flow);
                     if (!leftFrag.DataType.IsSuitableForNumericMath) throw new CodeException(rightFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
                     ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
-                    var resultFrag = new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span, readOnly: true);
+                    var resultFrag = new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", leftFrag.DataType, prec, Span);
                     return _left.ToWbdkCode_Write(context, resultFrag, flow);
 
                 case Operator.Equal:
@@ -133,7 +131,7 @@ namespace DKX.Compilation.Expressions
                     rightFrag = _right.ToWbdkCode_Read(context, flow);
                     ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
-                    return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", DataType.Bool, prec, Span, readOnly: true);
+                    return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", DataType.Bool, prec, Span);
 
                 default:
                     throw new NotImplementedException();

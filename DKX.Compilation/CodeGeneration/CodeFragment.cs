@@ -11,18 +11,16 @@ namespace DKX.Compilation.CodeGeneration
         private DataType _dataType;
         private OpPrec _precedence;
         private Span _span;
-        private bool _readOnly;
         private ConstValue _constant;
 
         public static readonly CodeFragment Empty = default;
 
-        public CodeFragment(string text, DataType dataType, OpPrec precedence, Span span, bool readOnly, ConstValue constant = null)
+        public CodeFragment(string text, DataType dataType, OpPrec precedence, Span span, ConstValue constant = null)
         {
             _text = text ?? throw new ArgumentNullException(nameof(text));
             _dataType = dataType;
             _precedence = precedence;
             _span = span;
-            _readOnly = readOnly;
             _constant = constant;
         }
 
@@ -31,7 +29,6 @@ namespace DKX.Compilation.CodeGeneration
         public bool IsConstant => _constant != null;
         public bool IsEmpty => _text == null;
         public OpPrec Precedence => _precedence;
-        public bool ReadOnly => _readOnly;
         public Span SourceSpan => _span;
         public string Text => _text;
 
@@ -41,7 +38,7 @@ namespace DKX.Compilation.CodeGeneration
         {
             if (_precedence != OpPrec.None && _precedence < fromPrecedence)
             {
-                return new CodeFragment(string.Concat("(", _text, ")"), _dataType, OpPrec.None, _span, _readOnly);
+                return new CodeFragment(string.Concat("(", _text, ")"), _dataType, OpPrec.None, _span);
             }
             return this;
         }

@@ -73,7 +73,7 @@ namespace DKX.Compilation.Scopes
                 {
                     if (variable.DataType.BaseType != DataTypes.BaseType.Class) continue;
 
-                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span, readOnly: false);
+                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span);
                     cw.Write(ObjectAccess.GenerateLeaveScope(variableFragment));
                     cw.Write(DkxConst.StatementEndToken);
                     cw.WriteLine();
@@ -87,7 +87,7 @@ namespace DKX.Compilation.Scopes
                     if (!variable.Local) continue;
                     if (variable.DataType.BaseType != DataTypes.BaseType.Class) continue;
 
-                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span, readOnly: false);
+                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span);
                     cw.Write(ObjectAccess.GenerateLeaveScope(variableFragment));
                     cw.Write(DkxConst.StatementEndToken);
                     cw.WriteLine();

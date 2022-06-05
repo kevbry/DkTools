@@ -1,5 +1,4 @@
-﻿using DK.Code;
-using DKX.Compilation.CodeGeneration;
+﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
@@ -33,7 +32,7 @@ namespace DKX.Compilation.Expressions
             Span dataTypeSpan,
             DkxTokenCollection argumentTokens)
         {
-            if (dataType.BaseType != BaseType.Class) scope.Report(dataTypeSpan, ErrorCode.DataTypeCannotBeInstantiated);
+            if (dataType.BaseType != BaseType.Class) throw new CodeException(dataTypeSpan, ErrorCode.DataTypeCannotBeInstantiated, dataType.ToString());
 
             var class_ = scope.Resolver.GetClassByFullNameOrNull(dataType.ClassName);
             if (class_ == null)
@@ -41,6 +40,8 @@ namespace DKX.Compilation.Expressions
                 scope.Report(dataTypeSpan, ErrorCode.ClassNotFound, dataType.ClassName);
                 return new ErrorChain(innerChainOrNull: null, dataTypeSpan);
             }
+
+            if (class_.Flags.IsStatic()) scope.Report(dataTypeSpan, ErrorCode.StaticClassCannotBeInstantiated, class_.FullClassName);
 
             var span = newKeywordSpan.Envelope(dataTypeSpan);
             if (argumentTokens != null && argumentTokens.Any()) span = span.Envelope(argumentTokens.Span);
@@ -89,8 +90,7 @@ namespace DKX.Compilation.Expressions
                 text: $"{DkxConst.DkxLib.dkx_new}({_class.DataSize})",
                 dataType: _dataType,
                 precedence: OpPrec.None,
-                span: Span,
-                readOnly: true);
+                span: Span);
         }
 
         public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;

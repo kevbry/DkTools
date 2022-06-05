@@ -80,6 +80,8 @@ namespace DKX.Compilation.Scopes
         public IVariableStore VariableStore => _variableStore;
         public string WbdkClassName => _wbdkClassName;
 
+        public override string ToString() => $"ClassScope: {_fullName}";
+
         public void ProcessTokens(DkxTokenCollection tokens)
         {
             try
@@ -170,6 +172,8 @@ namespace DKX.Compilation.Scopes
                 phase: Phase,
                 resolver: Resolver,
                 project: Project);
+
+            if (_methods.Any(x => x.WbdkName == method.WbdkName)) Report(nameToken.Span, ErrorCode.DuplicateMethod, nameToken.Text);
 
             _methods.Add(method);
         }

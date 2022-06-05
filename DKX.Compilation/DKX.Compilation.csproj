@@ -52,6 +52,7 @@
     <Compile Include="CodeGeneration\CodeWriter.cs" />
     <Compile Include="Expressions\TypedNullChain.cs" />
     <Compile Include="Scopes\FlowTrace.cs" />
+    <Compile Include="Scopes\ModifierFlags.cs" />
     <Compile Include="Validation\ConversionValidator.cs" />
     <Compile Include="DkDate.cs" />
     <Compile Include="DkTime.cs" />

@@ -22,7 +22,8 @@ namespace DKX.Compilation.Variables
         private FieldAccessMethod _accessMethod;
         private ModifierFlags _flags;
         private bool _local;
-        private Privacy _privacy;
+        private Privacy _readPrivacy;
+        private Privacy _writePrivacy;
         private uint _offset;
         private Span _span;
 
@@ -66,7 +67,8 @@ namespace DKX.Compilation.Variables
             _accessMethod = accessMethod;
             _flags = flags;
             _local = local;
-            _privacy = privacy;
+            _readPrivacy = privacy;
+            _writePrivacy = privacy;
             _initializer = initializer;
             _span = span;
         }
@@ -81,7 +83,8 @@ namespace DKX.Compilation.Variables
             _accessMethod = field.AccessMethod;
             _flags = field.Flags;
             _local = false;
-            _privacy = field.ReadPrivacy;
+            _readPrivacy = field.ReadPrivacy;
+            _writePrivacy = field.WritePrivacy;
             _offset = field.Offset;
             _span = field.DefinitionSpan;
         }
@@ -102,11 +105,10 @@ namespace DKX.Compilation.Variables
         public string Name => _name;
         public uint Offset { get => _offset; set => _offset = value; }
         ArgumentPassType IArgument.PassType => _passType ?? ArgumentPassType.ByValue;
-        public Privacy Privacy => _privacy;
         public bool ReadOnly => false;
-        public Privacy ReadPrivacy => _privacy;
+        public Privacy ReadPrivacy => _readPrivacy;
         public string WbdkName => _wbdkName;
-        public Privacy WritePrivacy => _privacy;
+        public Privacy WritePrivacy => _writePrivacy;
 
         public override string ToString()
         {

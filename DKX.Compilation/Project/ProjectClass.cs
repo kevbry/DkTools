@@ -62,6 +62,8 @@ namespace DKX.Compilation.Project
         public Privacy Privacy => _privacy;
         public string WbdkClassName => _wbdkClassName;
 
+        public override string ToString() => $"ProjectClass: {_fullClassName}";
+
         public void Update(CompilePhase phase, IClass fileClass)
         {
             _scanTime = DateTime.Now;

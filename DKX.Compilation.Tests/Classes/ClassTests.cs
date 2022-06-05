@@ -839,8 +839,369 @@ void DoTest_${DoTestDecoration}()
 );
         }
 
-        // TODO: Cannot instantiate a static class ('new' keyword)
-        // TODO: Cannot write to read-only property
-        // TODO: private property cannot be marked public or protected
+        [Test]
+        public async Task CantInstantiateStaticClass()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class Member
+    {
+        private static int _no;
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            var mbr = new Member();
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.StaticClassCannotBeInstantiated);
+        }
+
+        [Test]
+        public async Task CantInstantiatePrimitiveDataType()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            var mbr = new int();
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.DataTypeCannotBeInstantiated);
+        }
+
+        [Test]
+        public async Task CannotWriteToReadOnlyProperty()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { get { return _no; } }
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            var mbr = new Member();
+            mbr.Number = 123;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.PropertyIsReadOnly);
+        }
+
+        [TestCase("public")]
+        [TestCase("protected")]
+        public async Task PropertyGetterCannotBeMarkedPublicOrProtected(string privacy)
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private int Number { ${Privacy} get { return _no; } }
+    }
+}
+"
+.Replace("${Privacy}", privacy)
+);
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.PropertyAccessorMoreAccessibleThanProperty);
+        }
+
+        [TestCase("public")]
+        [TestCase("protected")]
+        public async Task PropertySetterCannotBeMarkedPublicOrProtected(string privacy)
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private int Number { get { return _no; } ${Privacy} set { _no = value; } }
+    }
+}
+"
+.Replace("${Privacy}", privacy)
+);
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.PropertyAccessorMoreAccessibleThanProperty);
+        }
+
+        [Test]
+        public async Task PropertyWithPrivateSetterCanBeRead()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { get { return _no; } private set { _no = value; } }
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            var mbr = new Member();
+            var no = mbr.Number;
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void DoTest_${DoTestDecoration}()
+{
+    unsigned int mbr;
+    int no;
+    mbr = dkx_addref(dkx_new(4));
+    no = ${MemberClass}.GetNumber(mbr);
+    dkx_release(mbr);
+}
+"
+.Replace("${DoTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+);
+        }
+
+        [Test]
+        public async Task PropertyWithPrivateSetterCannotBeWrittenTo()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { get { return _no; } private set { _no = value; } }
+    }
+
+    static class UnitTest
+    {
+        public static void DoTest()
+        {
+            var mbr = new Member();
+            mbr.Number = 123;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessMemberDueToPrivacy);
+        }
+
+        [Test]
+        public async Task PropertyWithDuplicateGetter()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { get { return _no; } get { return _no; } }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.DuplicatePropertyGetter);
+        }
+
+        [Test]
+        public async Task PropertyWithDuplicateSetter()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { get { return _no; } set { _no = value; } set { _no = value } }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.DuplicatePropertySetter);
+        }
+
+        [Test]
+        public async Task PropertyWithNoGetter()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { set { _no = value } }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.PropertyHasNoGetter);
+        }
+
+        [Test]
+        public async Task PropertyWithNoGetterOrSetter()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        public int Number { }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.PropertyHasNoGetterOrSetter);
+        }
+
+        [Test]
+        public async Task DuplicateMethod()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+
+        public void DoTest() { }
+        public void DoTest() { }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.DuplicateMethod);
+        }
+
+        [Test]
+        public async Task MethodOverloading()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+
+        public void DoTest() { }
+        public void DoTest(int no) { _no = no; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member();
+            mbr.DoTest(123);
+            mbr.DoTest();
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+void DoTest_${DoTestDeco1}(unsigned int this)
+{
+}
+void DoTest_${DoTestDeco2}(unsigned int this, int no)
+{
+    dkx_setint4(this, 0, no);
+}
+"
+.Replace("${DoTestDeco1}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${DoTestDeco2}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
+);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void Run_${RunDeco}()
+{
+    unsigned int mbr;
+    mbr = dkx_addref(dkx_new(4));
+    ${MemberClass}.DoTest_${DoTestDeco2}(mbr, 123);
+    ${MemberClass}.DoTest_${DoTestDeco1}(mbr);
+    dkx_release(mbr);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${RunDeco}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${DoTestDeco1}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${DoTestDeco2}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
+);
+        }
+
+        // TODO: Constructor arguments
+        // TODO: Cannot access private class from another namespace
     }
 }

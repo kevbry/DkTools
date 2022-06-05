@@ -29,6 +29,8 @@ namespace DKX.Compilation.Project
         public string Name => _name;
         public ArgumentPassType PassType => _passType;
 
+        public override string ToString() => $"ProjectArgument: {_dataType} {_name}";
+
         public BsonNode ToBson(BsonFile bson)
         {
             var obj = new BsonObject(bson);

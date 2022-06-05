@@ -29,6 +29,8 @@ namespace DKX.Compilation.Scopes
         public IEnumerable<NamespaceScope> Namespaces => _namespaces;
         public IEnumerable<ReportItem> ReportItems => _reportItems;
 
+        public override string ToString() => $"FileScope: {_sourcePathName}";
+
         public void ProcessFile()
         {
             _cp.ReadHeader(out var usingNamespaces);

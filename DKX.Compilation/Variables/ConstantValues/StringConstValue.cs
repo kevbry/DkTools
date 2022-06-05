@@ -45,7 +45,7 @@ namespace DKX.Compilation.Variables.ConstantValues
 
         public override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(CodeParser.StringToStringLiteral(_text), _dataType, Expressions.OpPrec.None, Span, readOnly: true, constant: this);
+            return new CodeFragment(CodeParser.StringToStringLiteral(_text), _dataType, Expressions.OpPrec.None, Span, constant: this);
         }
 
         public override bool? GetComparisonResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector report)

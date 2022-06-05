@@ -62,6 +62,8 @@ namespace DKX.Compilation.Project
         public DataType ReturnDataType => _returnDataType;
         public string WbdkName => _wbdkName;
 
+        public override string ToString() => $"ProjectMethod: {_returnDataType} {_name}({string.Join(", ", _arguments.Select(a => $"{a.DataType} {a.Name}"))})";
+
         public BsonObject ToBson(BsonFile bson)
         {
             var obj = new BsonObject(bson);

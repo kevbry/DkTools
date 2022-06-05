@@ -49,19 +49,19 @@ namespace DKX.Compilation.Expressions
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
-                    return new CodeFragment(_field.Name, _field.DataType, OpPrec.None, Span, readOnly: _field.ReadOnly);
+                    return new CodeFragment(_field.Name, _field.DataType, OpPrec.None, Span);
                 case FieldAccessMethod.Object:
                     var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span);
                 case FieldAccessMethod.Property:
                     if (_field.Flags.IsStatic())
                     {
-                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span, readOnly: true);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span);
                     }
                     else
                     {
                         thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
-                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span, readOnly: true);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span);
                     }
                 case FieldAccessMethod.Constant:
                     var value = _field.ConstantValue;
@@ -80,6 +80,8 @@ namespace DKX.Compilation.Expressions
         {
             context.DependsOnFile(_field.Class.DkxPathName);
 
+            if (_field.Flags.IsReadOnly()) throw new CodeException(Span, ErrorCode.PropertyIsReadOnly, _field.Name);
+
             if (context.IsOutsideClass(_field.Class) && _field.WritePrivacy != Privacy.Public)
             {
                 throw new CodeException(Span, ErrorCode.CannotAccessMemberDueToPrivacy, _field.Name, _field.WritePrivacy.ToString().ToLower());
@@ -88,13 +90,20 @@ namespace DKX.Compilation.Expressions
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
-                    return new CodeFragment($"{_field.Name} = {valueFragment.Protect(OpPrec.Assign)}", _field.DataType, OpPrec.Assign, Span, readOnly: false);
+                    return new CodeFragment($"{_field.Name} = {valueFragment.Protect(OpPrec.Assign)}", _field.DataType, OpPrec.Assign, Span);
                 case FieldAccessMethod.Object:
                     var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return ObjectAccess.GenerateMemberVariableSetter(thisFrag, _field.Offset, _field.DataType, Span, valueFragment);
                 case FieldAccessMethod.Property:
-                    thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
-                    return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({thisFrag}, {valueFragment})", _field.DataType, OpPrec.None, Span, readOnly: true);
+                    if (_field.Flags.IsStatic())
+                    {
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({valueFragment})", _field.DataType, OpPrec.None, Span);
+                    }
+                    else
+                    {
+                        thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({thisFrag}, {valueFragment})", _field.DataType, OpPrec.None, Span);
+                    }
                 case FieldAccessMethod.Constant:
                     context.Report.Report(Span, ErrorCode.ExpressionCannotBeWrittenTo);
                     return CodeFragment.Empty;

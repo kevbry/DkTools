@@ -28,6 +28,8 @@ namespace DKX.Compilation.Scopes
         public string Name => _name;
         public string NamespaceName => _name;
 
+        public override string ToString() => $"NamespaceScope: {_name}";
+
         public void ProcessTokens(string namespaceName, DkxTokenCollection tokens)
         {
             var used = new TokenUseTracker();

@@ -23,13 +23,13 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
-            return new CodeFragment("0", _dataType, OpPrec.None, Span, readOnly: true);
+            return new CodeFragment("0", _dataType, OpPrec.None, Span);
         }
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             context.Report.Report(valueFragment.SourceSpan, ErrorCode.StaticReferenceCannotBeModified);
-            return new CodeFragment("0", _dataType, OpPrec.None, Span, readOnly: false);
+            return new CodeFragment("0", _dataType, OpPrec.None, Span);
         }
 
         public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;

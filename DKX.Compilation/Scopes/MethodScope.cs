@@ -80,6 +80,8 @@ namespace DKX.Compilation.Scopes
         public IVariableStore VariableStore => _variableStore;
         public string WbdkName { get => _wbdkName; set => _wbdkName = value ?? throw new ArgumentNullException(); }
 
+        public override string ToString() => $"MethodScope: {_returnDataType} {_name}({string.Join(", ", Arguments.Select(a => $"{a.DataType} {a.Name}"))})";
+
         public static MethodScope Parse(
             Scope parent,
             string className,
@@ -345,7 +347,7 @@ namespace DKX.Compilation.Scopes
 
             sb.Append(')');
 
-            return Task.FromResult(new CodeFragment(sb.ToString(), method.ReturnDataType, OpPrec.None, span, readOnly: true));
+            return Task.FromResult(new CodeFragment(sb.ToString(), method.ReturnDataType, OpPrec.None, span));
         }
     }
 }

@@ -35,6 +35,8 @@ namespace DKX.Compilation.Project
         public IEnumerable<string> FileDependencies { get => _fileDeps ?? DkxConst.EmptyStringArray; set => _fileDeps = value.ToArray(); }
         public IEnumerable<TableHash> TableDependencies { get => _tableDeps; set => _tableDeps = value.ToArray(); }
 
+        public override string ToString() => $"ProjectFile: {_dkxPathName}";
+
         public DateTime GetCompileTime(CompilePhase phase)
         {
             switch (phase)

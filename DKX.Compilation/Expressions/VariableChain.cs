@@ -30,7 +30,7 @@ namespace DKX.Compilation.Expressions
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             if (!flow.IsVariableInitialized(_variable.WbdkName)) context.Report.Report(Span, ErrorCode.UseOfUninitializedVariable, _variable.Name);
-            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, readOnly: false);
+            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span);
         }
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
@@ -42,7 +42,7 @@ namespace DKX.Compilation.Expressions
                 oldFragment: ToWbdkCode_Read(context, flow),
                 newFragment: valueFragment);
 
-            return new CodeFragment($"{_variable.WbdkName} = {valueFragment.Protect(OpPrec.Assign)}", _variable.DataType, OpPrec.Assign, Span, readOnly: false);
+            return new CodeFragment($"{_variable.WbdkName} = {valueFragment.Protect(OpPrec.Assign)}", _variable.DataType, OpPrec.Assign, Span);
         }
 
         public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;

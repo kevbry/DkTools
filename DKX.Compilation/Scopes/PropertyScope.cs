@@ -1,6 +1,7 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.Jobs;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes.Statements;
@@ -60,7 +61,6 @@ namespace DKX.Compilation.Scopes
         public bool IsConstant => false;
         public string Name => _name;
         public uint Offset => default;
-        public bool ReadOnly => _setter == null;
         public Privacy ReadPrivacy => _getter?.Privacy ?? Privacy.Private;
         public DataType ScopeDataType => Parent.GetScope<IObjectReferenceScope>().ScopeDataType;
         public bool ScopeStatic => _flags.HasFlag(ModifierFlags.Static);
@@ -78,14 +78,21 @@ namespace DKX.Compilation.Scopes
         {
             var propertyScope = new PropertyScope(class_, name, nameSpan, dataType, modifiers);
 
-            ParseAccessors(propertyScope, bodyTokens, phase, resolver, nameSpan);
+            try
+            {
+                ParseAccessors(propertyScope, bodyTokens, phase, resolver, nameSpan, modifiers);
+            }
+            catch (CodeException ex)
+            {
+                propertyScope.AddReportItem(ex.ToReportItem());
+            }
 
             return propertyScope;
         }
 
-        private static void ParseAccessors(PropertyScope propertyScope, DkxTokenCollection tokens, CompilePhase phase, IResolver resolver, Span nameSpan)
+        private static void ParseAccessors(PropertyScope propertyScope, DkxTokenCollection tokens, CompilePhase phase, IResolver resolver, Span nameSpan, Modifiers propertyModifiers)
         {
-            if (!tokens.Any()) propertyScope.Report(nameSpan, ErrorCode.PropertyHasNoGetterOrSetter);
+            if (!tokens.Any()) throw new CodeException(nameSpan, ErrorCode.PropertyHasNoGetterOrSetter);
 
             var used = new TokenUseTracker();
 
@@ -100,11 +107,11 @@ namespace DKX.Compilation.Scopes
                     used.Use(bodyToken);
 
                     var modifiers = Modifiers.ReadModifiers(propertyScope, tokens, index, used);
-                    modifiers.CheckForPropertyAccessor(propertyScope, modifiers, keywordToken.Span);
+                    modifiers.CheckForPropertyAccessor(propertyScope, propertyModifiers, keywordToken.Span);
 
                     if (keywordToken.IsKeyword(DkxConst.Keywords.Get))
                     {
-                        if (propertyScope._getter != null) propertyScope.Report(keywordToken.Span, ErrorCode.DuplicatePropertyGetter);
+                        if (propertyScope._getter != null) throw new CodeException(keywordToken.Span, ErrorCode.DuplicatePropertyGetter);
                         else propertyScope._getter = PropertyAccessorScope.Parse(
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Getter,
@@ -113,7 +120,7 @@ namespace DKX.Compilation.Scopes
                     }
                     else
                     {
-                        if (propertyScope._setter != null) propertyScope.Report(keywordToken.Span, ErrorCode.DuplicatePropertySetter);
+                        if (propertyScope._setter != null) throw new CodeException(keywordToken.Span, ErrorCode.DuplicatePropertySetter);
                         else propertyScope._setter = PropertyAccessorScope.Parse(
                             property: propertyScope,
                             accessorType: PropertyAccessorType.Setter,
@@ -122,6 +129,9 @@ namespace DKX.Compilation.Scopes
                     }
                 }
             }
+
+            if (propertyScope._getter == null) throw new CodeException(nameSpan, ErrorCode.PropertyHasNoGetter);
+            if (propertyScope._setter == null) propertyScope._flags |= ModifierFlags.ReadOnly;
 
             propertyScope.ReportUnusedTokens(tokens, used);
         }
@@ -134,6 +144,8 @@ namespace DKX.Compilation.Scopes
             _getter.GenerateWbdkCode(context, cw);
             _setter?.GenerateWbdkCode(context, cw);
         }
+
+        public override string ToString() => $"PropertyScope: {_dataType} {_name}";
 
         class PropertyAccessorScope : Scope, IReturnScope, IVariableScope, IVariableWbdkScope
         {
@@ -267,6 +279,8 @@ namespace DKX.Compilation.Scopes
             }
 
             public IEnumerable<Variable> GetWbdkVariables() => _wbdkVariables;
+
+            public override string ToString() => $"{(_accessorType == PropertyAccessorType.Getter ? "Get" : "Set")} {_property}";
         }
 
         enum PropertyAccessorType

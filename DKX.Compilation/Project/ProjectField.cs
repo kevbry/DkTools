@@ -18,7 +18,6 @@ namespace DKX.Compilation.Project
         private ProjectClass _class;
         private string _name;
         private DataType _dataType;
-        private bool _readOnly;
         private Privacy _readPrivacy;
         private Privacy _writePrivacy;
         private ModifierFlags _flags;
@@ -34,7 +33,6 @@ namespace DKX.Compilation.Project
             _class = class_ ?? throw new ArgumentNullException(nameof(class_));
             _name = fileField.Name;
             _dataType = fileField.DataType;
-            _readOnly = fileField.ReadOnly;
             _readPrivacy = fileField.ReadPrivacy;
             _writePrivacy = fileField.WritePrivacy;
             _flags = fileField.Flags;
@@ -46,13 +44,12 @@ namespace DKX.Compilation.Project
             _span = fileField.DefinitionSpan;
         }
 
-        private ProjectField(ProjectClass class_, string name, DataType dataType, bool readOnly, Privacy readPrivacy, Privacy writePrivacy,
+        private ProjectField(ProjectClass class_, string name, DataType dataType, Privacy readPrivacy, Privacy writePrivacy,
             ModifierFlags flags, FieldAccessMethod accessMethod, FileContext fileContext, uint offset, ConstTerm constExp, ConstValue constValue, Span span)
         {
             _class = class_;
             _name = name;
             _dataType = dataType;
-            _readOnly = readOnly;
             _readPrivacy = readPrivacy;
             _writePrivacy = writePrivacy;
             _flags = flags;
@@ -75,9 +72,10 @@ namespace DKX.Compilation.Project
         public ModifierFlags Flags => _flags;
         public string Name => _name;
         public uint Offset => _offset;
-        public bool ReadOnly => _readOnly;
         public Privacy ReadPrivacy => _readPrivacy;
         public Privacy WritePrivacy => _writePrivacy;
+
+        public override string ToString() => $"ProjectField: {_dataType} {_name}";
 
         public BsonObject ToBson(BsonFile bson)
         {
@@ -85,7 +83,6 @@ namespace DKX.Compilation.Project
 
             obj.SetString("Name", _name);
             obj.SetDataType("DataType", _dataType);
-            obj.SetBoolean("ReadOnly", _readOnly);
             obj.SetEnum("ReadPrivacy", _readPrivacy);
             obj.SetEnum("WritePrivacy", _writePrivacy);
             obj.SetUInt32("Flags", (uint)_flags);
@@ -105,7 +102,6 @@ namespace DKX.Compilation.Project
 
             var name = obj.GetString("Name");
             var dataType = obj.GetDataType("DataType");
-            var readOnly = obj.GetBoolean("ReadOnly");
             var readPrivacy = obj.GetEnum<Privacy>("ReadPrivacy");
             var writePrivacy = obj.GetEnum<Privacy>("WritePrivacy");
             var flags = (ModifierFlags)obj.GetUInt32("Flags");
@@ -118,7 +114,7 @@ namespace DKX.Compilation.Project
             var constValue = node != null ? ConstValue.FromBson(node) : null;
             var span = obj.GetSpan("DefinitionSpan");
 
-            return new ProjectField(class_, name, dataType, readOnly, readPrivacy, writePrivacy, flags, accessMethod, fileContext, offset, constExp, constValue, span);
+            return new ProjectField(class_, name, dataType, readPrivacy, writePrivacy, flags, accessMethod, fileContext, offset, constExp, constValue, span);
         }
 
         public void ClearConstant()

@@ -41,6 +41,8 @@ namespace DKX.Compilation.Project
         public DateTime ScanTime => _scanTime;
         public bool System => _system;
 
+        public override string ToString() => $"ProjectNamespace: {_name}";
+
         IClass INamespace.GetClass(string name)
         {
             if (_classes.TryGetValue(name, out var class_)) return class_;

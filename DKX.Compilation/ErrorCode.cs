@@ -97,7 +97,10 @@ namespace DKX.Compilation
         [Description("Duplicate class '{0}'.")]
         DuplicateClass = 1112,
 
-        [Description("Type cannot be instantiated.")]
+        /// <summary>
+        /// {0} = type name
+        /// </summary>
+        [Description("Type '{0}' cannot be instantiated.")]
         DataTypeCannotBeInstantiated = 1113,
 
         /// <summary>
@@ -158,26 +161,50 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Class name '{0}' cannot be used because it conflicts with namespace '{1}'.")]
         ClassNameConflictsWithNamespace = 1124,
+
+        /// <summary>
+        /// {0} = class name
+        /// </summary>
+        [Description("Static class '{0}' cannot be instantiated.")]
+        StaticClassCannotBeInstantiated = 1125,
         #endregion
 
         #region Methods (1200-1299)
         [Description("Expected method name.")]
         ExpectedMethodName = 1200,
 
-        [Description("No method was found with matching number of arguments.")]
+        /// <summary>
+        /// {0} = method name
+        /// </summary>
+        [Description("No method of '{0}' was found with matching number of arguments.")]
         NoMethodWithSameNumberOfArguments = 1201,
 
-        [Description("No method was found with compatible arguments.")]
+        /// <summary>
+        /// {0} = method name
+        /// </summary>
+        [Description("No method '{0}' was found with compatible arguments.")]
         NoMethodWithCompatibleArguments = 1202,
 
-        [Description("More than one method with compatible arguments was found.")]
+        /// <summary>
+        /// {0} = method name
+        /// </summary>
+        [Description("More than one method '{0}' with compatible arguments was found.")]
         MethodAmbiguous = 1203,
 
         [Description("This method cannot be called directly.")]
         MethodNotCallable = 1204,
 
-        [Description("Method not found.")]
+        /// <summary>
+        /// {0} = method name
+        /// </summary>
+        [Description("Method '{0}' not found.")]
         MethodNotFound = 1205,
+
+        /// <summary>
+        /// {0} = method name
+        /// </summary>
+        [Description("Duplicate method '{0}'.")]
+        DuplicateMethod = 1206,
         #endregion
 
         #region Properties (1300-1399)

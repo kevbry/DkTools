@@ -76,8 +76,8 @@ namespace DKX.Compilation.Expressions
                     var args = SplitArgumentExpressions(scope, argsToken.Tokens, methodNameToken.Span);
 
                     var objRefScope = scope.GetScope<IObjectReferenceScope>();
-                    var methods = scope.Resolver.GetMethods(objRefScope.ScopeDataType, token.Text).ToList();
-                    var method = FindBestMethodForArguments(methods, args, token.Span);
+                    var methods = scope.Resolver.GetMethods(objRefScope.ScopeDataType, methodNameToken.Text).ToList();
+                    var method = FindBestMethodForArguments(methodNameToken.Text, methods, args, token.Span);
 
                     var thisChain = method.Flags.HasFlag(ModifierFlags.Static) ? (ThisChain)null : new ThisChain(objRefScope.ScopeDataType, methodNameToken.Span + argsToken.Span);
                     var chain = new MethodCallChain(thisChain, methodNameToken, args, argsToken.Span, method);
@@ -257,7 +257,7 @@ namespace DKX.Compilation.Expressions
                     var args = SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span);
 
                     var methods = scope.Resolver.GetMethods(leftChain.DataType, nameToken.Text).ToList();
-                    var method = FindBestMethodForArguments(methods, args, nameToken.Span);
+                    var method = FindBestMethodForArguments(nameToken.Text, methods, args, nameToken.Span);
 
                     if (method.Flags.IsStatic() && !leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.StaticMemberCannotHaveObjectReference, nameToken.Text);
                     if (!method.Flags.IsStatic() && leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.MemberRequiresAnObjectReference, nameToken.Text);
@@ -491,12 +491,12 @@ namespace DKX.Compilation.Expressions
         /// The method with the best match.
         /// Throws an error if no good match could be found, or was ambiguous.
         /// </returns>
-        public static IMethod FindBestMethodForArguments(IEnumerable<IMethod> methods, Chain[] args, Span methodNameSpan)
+        public static IMethod FindBestMethodForArguments(string methodName, IEnumerable<IMethod> methods, Chain[] args, Span methodNameSpan)
         {
-            if (!methods.Any()) throw new CodeException(methodNameSpan, ErrorCode.MethodNotFound);
+            if (!methods.Any()) throw new CodeException(methodNameSpan, ErrorCode.MethodNotFound, methodName);
 
             var methodsWithSameNumberOfArguments = methods.Where(m => m.Arguments.Length == args.Length).ToArray();
-            if (methodsWithSameNumberOfArguments.Length == 0) throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithSameNumberOfArguments);
+            if (methodsWithSameNumberOfArguments.Length == 0) throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithSameNumberOfArguments, methodName);
 
             if (methodsWithSameNumberOfArguments.Length == 1) return methodsWithSameNumberOfArguments[0];
 
@@ -530,10 +530,10 @@ namespace DKX.Compilation.Expressions
             }
 
             if (methodsAllGood.Count == 1) return methodsAllGood[0];
-            if (methodsAllGood.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous);
+            if (methodsAllGood.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous, methodName);
             if (methodsWithWarnings.Count == 1) return methodsAllGood[0];
-            if (methodsWithWarnings.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous);
-            throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithCompatibleArguments);
+            if (methodsWithWarnings.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous, methodName);
+            throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithCompatibleArguments, methodName);
         }
 
         /// <summary>

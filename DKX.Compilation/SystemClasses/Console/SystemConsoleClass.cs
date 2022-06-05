@@ -24,7 +24,7 @@ namespace DKX.Compilation.SystemClasses.Console
             if (arguments.Length != 1) throw new CodeException(span, ErrorCode.InvalidNumberOfArguments);
             var argFrag = arguments[0].ToWbdkCode_Read(context, flow);
             ConversionValidator.CheckConversion(DataType.String255, argFrag, context.Report);
-            return new CodeFragment($"puts({argFrag})", DataType.Void, OpPrec.None, span, readOnly: true);
+            return new CodeFragment($"puts({argFrag})", DataType.Void, OpPrec.None, span);
         }
     }
 }
