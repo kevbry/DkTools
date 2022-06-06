@@ -83,7 +83,7 @@ namespace DK.Implementation.Windows
 
         public async Task WriteFileBytesAsync(string pathName, byte[] data)
         {
-            using (var fileStream = new FileStream(pathName, FileMode.Open, FileAccess.Write, FileShare.Read, bufferSize: 4096, useAsync: true))
+            using (var fileStream = new FileStream(pathName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read, bufferSize: 4096, useAsync: true))
             {
                 await fileStream.WriteAsync(data, 0, data.Length);
             }

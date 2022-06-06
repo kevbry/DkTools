@@ -35,8 +35,7 @@ namespace Processes
 ".Replace("%SP", gateway ? "Gateway" : "Server")
 .Replace("${context}", gateway ? "client" : "server"));
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\TestProg.{(gateway ? "gp" : "sp")}", @"
-// Processes.TestProgram
+            await ValidateOutputAsync(app, "Processes.TestProgram", $"x:\\gen\\.dkx\\TestProg.{(gateway ? "gp" : "sp")}", @"
 int main(char(255) fileName)
 {
     puts(fileName);
@@ -107,8 +106,7 @@ namespace Processes
             var className = Compiler.GetWbdkClassName("Processes.TestProgram");
             var decoGenerateReport = Compiler.ComputeHash("void, string").ToString("X");
 
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\TestProg.{(gateway ? "gp" : "sp")}", @"
-// Processes.TestProgram
+            await ValidateOutputAsync(app, "Processes.TestProgram", $"x:\\gen\\.dkx\\TestProg.{(gateway ? "gp" : "sp")}", @"
 int main(char(255) fileName)
 {
     ${ClassName}.GenerateReport_${GenerateReportDecoration}(fileName);
@@ -118,8 +116,7 @@ int main(char(255) fileName)
 .Replace("${GenerateReportDecoration}", decoGenerateReport)
 .Replace("${ClassName}", className)
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{className}.nc", @"
-// Processes.TestProgram
+            await ValidateOutputAsync(app, "Processes.TestProgram", $"x:\\gen\\.dkx\\{className}.nc", @"
 void GenerateReport_${GenerateReportDecoration}(char(255) fileName)
 {
     puts(fileName);
@@ -161,8 +158,7 @@ namespace Processes
 
             var className = Compiler.GetWbdkClassName("Processes.TestProgram");
 
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\TestProg.{(gateway ? "gp" : "sp")}", @"
-// Processes.TestProgram
+            await ValidateOutputAsync(app, "Processes.TestProgram", $"x:\\gen\\.dkx\\TestProg.{(gateway ? "gp" : "sp")}", @"
 int main(char(255) fileName)
 {
     if fileName == ${ClassName}.GetReportName() { puts(""match""); }
@@ -172,8 +168,7 @@ int main(char(255) fileName)
 "
 .Replace("${ClassName}", className)
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{className}.nc", @"
-// Processes.TestProgram
+            await ValidateOutputAsync(app, "Processes.TestProgram", $"x:\\gen\\.dkx\\{className}.nc", @"
 char(255) GetReportName() { return ""TestReport""; }
 ");
         }

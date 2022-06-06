@@ -130,7 +130,10 @@ namespace DKX.Compilation.Project
 
             var cls = new ProjectClass(className, fullClassName, namespaceName, wbdkClassName, dkxPathName, privacy, flags, dataSize, scanTime, nameSpan);
 
+            if (cls._methods == null) cls._methods = new List<ProjectMethod>();
             foreach (var bsonMethod in obj.GetArray("Methods")) cls._methods.Add(ProjectMethod.FromBson(cls, bsonMethod));
+
+            if (cls._fields == null) cls._fields = new List<ProjectField>();
             foreach (var bsonField in obj.GetArray("Fields")) cls._fields.Add(ProjectField.FromBson(cls, bsonField));
 
             return cls;

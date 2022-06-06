@@ -206,13 +206,15 @@ namespace DKX.Compilation.Tests
             return app;
         }
 
-        protected async Task ValidateOutputAsync(DkAppContext app, string wbdkPathName, string wbdkCode)
+        protected async Task ValidateOutputAsync(DkAppContext app, string className, string wbdkPathName, string wbdkCode)
         {
             Assert.IsTrue(app.FileSystem.FileExists(wbdkPathName), $"WBDK file '{wbdkPathName}' was not created.");
 
             var actualWbdkCode = await app.FileSystem.ReadFileTextAsync(wbdkPathName);
             TestContext.Out.WriteLine($"WBDK Code Generated: {wbdkPathName}\n{actualWbdkCode}");
-            WbdkCodeValidator.Validate(wbdkCode, actualWbdkCode);
+
+            var header = $"// {className}\n#define _LINK dkx.lib\n#include <dkx.i>\n#warndel 108\n";
+            WbdkCodeValidator.Validate(header + wbdkCode, actualWbdkCode);
         }
 
         protected async Task DumpBsonFileAsync(DkAppContext app, string pathName)

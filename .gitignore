@@ -1,5 +1,6 @@
 *.bak
 *.csproj.user
+*.sdf
 *.suo
 
 /.vs/
@@ -21,6 +22,9 @@
 /DKX.Compilation.Tests/obj/
 /DKX.Compiler/bin/
 /DKX.Compiler/obj/
+/DkxLib/ipch/
+/DkxLib/Debug/
+/DkxLib/Release/
 /packages/
 /TestResults/
 /Tests/bin/

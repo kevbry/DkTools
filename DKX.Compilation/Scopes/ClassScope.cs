@@ -409,6 +409,9 @@ namespace DKX.Compilation.Scopes
         {
             // Put the original class name at the top of the file, for troubleshooting if needed.
             cw.WriteLine($"// {_fullName}");
+            cw.WriteLine("#define _LINK dkx.lib");
+            cw.WriteLine("#include <dkx.i>");
+            cw.WriteLine("#warndel 108");
             cw.WriteLine();
 
             // Generate global variables for any static member variables

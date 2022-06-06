@@ -51,9 +51,7 @@ namespace Test
     }
 }
 ");
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 char(255) _inst;
 
 int GetNumber(unsigned int this) { return dkx_getint4(this, 0); }
@@ -75,9 +73,7 @@ void SetInstitution_%2(char(255) inst)
 ".Replace("%1", Compiler.ComputeHash("void, int, string").ToString("X"))
 .Replace("%2", Compiler.ComputeHash("void, string").ToString("X"))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
-// Test.User
-
+            await ValidateOutputAsync(app, "Test.User", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
 void DoTest_%0()
 {
     int no;
@@ -123,9 +119,7 @@ namespace Test
     }
 }
 ");
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 char(255) _inst;
 
 void SetInstitution_%1(char(255) inst)
@@ -134,9 +128,7 @@ void SetInstitution_%1(char(255) inst)
 }
 ".Replace("%1", Compiler.ComputeHash("void, string").ToString("X"))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
-// Test.User
-
+            await ValidateOutputAsync(app, "Test.User", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.User")}.nc", @"
 void DoTest_%2()
 {
     %M.SetInstitution_%1(""Bank1"");
@@ -183,8 +175,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 int GetNumber(unsigned int this) { return dkx_getint4(this, 0); }
 char(255) GetName(unsigned int this) { return dkx_getstr(this, 4); }
 void SetName(unsigned int this, char(255) value) { dkx_setstr(this, 4, value); }
@@ -193,8 +184,7 @@ int Update_%1(unsigned int this) { return 0; }
 .Replace("%1", Compiler.ComputeHash("int").ToString("X"))
 );
 
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_%1()
 {
     unsigned int mbr;
@@ -237,9 +227,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 void SetData_${SetDataDecoration}(unsigned int this, int no)
 {
     dkx_setint4(this, 0, no);
@@ -296,9 +284,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 int GetNo(unsigned int this) { return dkx_getint4(this, 0); }
 void SetNo(unsigned int this, int value) { dkx_setint4(this, 0, value); }
 
@@ -336,9 +322,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 void SetNo_${SetNoDecoration}(unsigned int this, int no) { dkx_setint4(this, 0, no); }
 
 void SetData_${SetDataDecoration}(unsigned int this, int no)
@@ -426,9 +410,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 void SetData_${SetDataDecoration}() { }
 
 void DoTest_${DoTestDecoration}(unsigned int this)
@@ -507,12 +489,10 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 int GetNo(unsigned int this) { return dkx_getint4(this, 0); }
 ");
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Party")}.nc", @"
-// Test.Party
+            await ValidateOutputAsync(app, "Test.Party", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Party")}.nc", @"
 unsigned int GetMember(unsigned int this)
 {
     return dkx_addref(dkx_getuns4(this, 0));
@@ -527,8 +507,7 @@ void PartyTest_${PartyTestDecoration}(unsigned int this)
 .Replace("${PartyClass}", Compiler.GetWbdkClassName("Test.Party"))
 .Replace("${PartyTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     unsigned int party;
@@ -830,9 +809,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     puts(""Hello!"");
@@ -993,9 +970,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     unsigned int mbr;
@@ -1171,9 +1146,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 void DoTest_${DoTestDeco1}(unsigned int this)
 {
 }
@@ -1185,9 +1158,7 @@ void DoTest_${DoTestDeco2}(unsigned int this, int no)
 .Replace("${DoTestDeco1}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
 .Replace("${DoTestDeco2}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { DataType.Int }))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void Run_${RunDeco}()
 {
     unsigned int mbr;
@@ -1231,9 +1202,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 unsigned int Member_${CtorDeco}(int no)
 {
     unsigned int this;
@@ -1245,9 +1214,7 @@ unsigned int Member_${CtorDeco}(int no)
 .Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
 .Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void Run_${RunDeco}()
 {
     unsigned int mbr;
@@ -1291,9 +1258,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 unsigned int Member_${Ctor1Deco}(int no)
 {
     unsigned int this;
@@ -1316,9 +1281,7 @@ unsigned int Member_${Ctor2Deco}(int no, char(255) name)
 .Replace("${Ctor1Deco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
 .Replace("${Ctor2Deco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int, DataType.String255 }))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void Run_${RunDeco}()
 {
     unsigned int mbr;
@@ -1502,9 +1465,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void Run_${RunDeco}(unsigned int this)
 {
     unsigned int mbr;
@@ -1564,9 +1525,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 unsigned int GetJoint(unsigned int this)
 {
     return dkx_addref(dkx_getuns4(this, 516));
@@ -1593,9 +1552,7 @@ unsigned int Member_${CtorDeco}(int no, char(255) name)
 "
 .Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int, DataType.String255 }))
 );
-        await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+        await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void Run_${RunDeco}()
 {
     unsigned int mbr;
@@ -1665,9 +1622,7 @@ namespace Test
 ");
             await RunCompileAsync(app);
             var memberDataType = new DataType(BaseType.Class, new string[] { "Test.Member" });
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 unsigned int Member_${CtorDeco}(int no)
 {
     unsigned int this;
@@ -1691,9 +1646,7 @@ unsigned int CreateMember_${CreateMemberDeco}(int no)
 .Replace("${ShowMemberDeco}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { memberDataType }))
 .Replace("${CreateMemberDeco}", Compiler.GetMethodDecoration(memberDataType, new DataType[] { DataType.Int }))
 );
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void Run_${RunDeco}()
 {
     unsigned int mbr;
@@ -1744,9 +1697,7 @@ namespace Test
 ");
             await RunCompileAsync(app);
             var memberDataType = new DataType(BaseType.Class, new string[] { "Test.Member" });
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
-// Test.Member
-
+            await ValidateOutputAsync(app, "Test.Member", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
 unsigned int Member_${CtorDeco}(int no, char(255) name)
 {
     unsigned int this;

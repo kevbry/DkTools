@@ -31,8 +31,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     int x;
@@ -65,8 +64,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     int x;
@@ -110,8 +108,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     int x;
@@ -167,8 +164,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 int GetValue()
 {
     int x;
@@ -233,8 +229,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     int x;
@@ -269,8 +264,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     int x;
@@ -423,8 +417,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 int x;
 
 void DoTest_${DoTestDecoration}()
@@ -458,9 +451,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 void DoTest_${DoTestDecoration}()
 {
     int x;
@@ -492,9 +483,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 int GetValue() { return 0; }
 
 void DoTest_${DoTestDecoration}()
@@ -527,9 +516,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
@@ -564,9 +551,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
@@ -604,9 +589,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
@@ -645,9 +628,7 @@ namespace Test
 }
 ");
             await RunCompileAsync(app);
-            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
-// Test.UnitTest
-
+            await ValidateOutputAsync(app, "Test.UnitTest", $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
 unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
