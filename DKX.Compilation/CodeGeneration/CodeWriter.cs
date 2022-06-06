@@ -42,6 +42,10 @@ namespace DKX.Compilation.CodeGeneration
             _newLine = true;
         }
 
+        public void WriteSpace() => Write(DkxConst.Space);
+        public void WriteStatementEnd() => Write(DkxConst.StatementEndToken);
+        public void WriteDelimiter() => Write(DkxConst.DelimiterToken);
+
         private void CheckIndent()
         {
             if (_newLine)

@@ -1,6 +1,7 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
+using DKX.Compilation.Objects;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
@@ -79,11 +80,14 @@ namespace DKX.Compilation.Expressions
                 {
                     if (firstArg) firstArg = false;
                     else sb.Append(", ");
-                    sb.Append(arg.ToWbdkCode_Read(context, flow));
+                    var argFrag = arg.ToWbdkCode_Read(context, flow);
+                    if (argFrag.DataType.IsClass && !argFrag.IsUnownedObjectReference) argFrag = ObjectAccess.GenerateAddReference(argFrag);
+                    sb.Append(argFrag);
                 }
                 sb.Append(')');
 
-                return new CodeFragment(sb.ToString(), _method.ReturnDataType, OpPrec.None, Span);
+                return new CodeFragment(sb.ToString(), _method.ReturnDataType, OpPrec.None, Span, reportable: !_method.ReturnDataType.IsVoid,
+                    flags: _method.ReturnDataType.IsClass ? CodeFragmentFlags.UnownedObjectReference : default);
             }
         }
 

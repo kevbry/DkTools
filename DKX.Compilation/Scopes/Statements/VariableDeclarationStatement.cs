@@ -36,7 +36,7 @@ namespace DKX.Compilation.Scopes.Statements
                 while (true)
                 {
                     var nameToken = stream.Read();
-                    if (!nameToken.IsIdentifier) throw new CodeException(nameToken.Span, ErrorCode.ExpectedVariableName);
+                    if (!nameToken.IsIdentifier()) throw new CodeException(nameToken.Span, ErrorCode.ExpectedVariableName);
                     var name = nameToken.Text;
 
                     if (!Validation.VariableValidator.IsValidVariableName(name)) varDeclStmt.Report(nameToken.Span, ErrorCode.InvalidVariableName, name);
@@ -45,7 +45,7 @@ namespace DKX.Compilation.Scopes.Statements
                     if (stream.Peek().IsOperator(Operator.Assign))
                     {
                         var assignToken = stream.Read();
-                        var initializerExp = ExpressionParser.ReadExpressionOrNull(varDeclStmt, stream);
+                        var initializerExp = ExpressionParser.ReadExpressionOrNull(varDeclStmt, stream, dataType);
                         if (initializerExp == null) throw new CodeException(assignToken.Span, ErrorCode.ExpectedExpression);
 
                         var variable = new Variable(

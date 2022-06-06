@@ -42,9 +42,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override decimal Number => _value;
         public override string String => default;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(_value.ToString(), _dataType, Expressions.OpPrec.None, Span, constant: this);
+            return new CodeFragment(_value.ToString(), _dataType, Expressions.OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override ConstValue GetMathResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull)

@@ -1,16 +1,12 @@
 ﻿using DK.Code;
-using DKX.Compilation.DataTypes;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.ReportItems;
-using DKX.Compilation.Resolving;
 using DKX.Compilation.SystemClasses;
 using DKX.Compilation.Tokens;
-using DKX.Compilation.Variables;
 using DKX.Compilation.Variables.ConstTerms;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
@@ -22,7 +18,7 @@ namespace DKX.Compilation.Scopes
         public Span FileContextSpan { get; private set; }
         public bool Const { get; private set; }
         public Span ConstSpan { get; private set; }
-        public ModifierFlags Flags { get; private set; }
+        public ModifierFlags Flags { get; set; }
         public AttributeModifier[] Attributes { get; private set; }
 
         public Modifiers(
@@ -127,7 +123,7 @@ namespace DKX.Compilation.Scopes
                 while (true)
                 {
                     var token = stream.Peek();
-                    if (!token.IsIdentifier)
+                    if (!token.IsIdentifier())
                     {
                         scope.Report(token.Span, ErrorCode.SyntaxError);
                         break;
@@ -178,7 +174,7 @@ namespace DKX.Compilation.Scopes
                 }
 
                 var argStream = new DkxTokenStream(argTokens);
-                var exp = ExpressionParser.ReadExpressionOrNull(scope, argStream);
+                var exp = ExpressionParser.ReadExpressionOrNull(scope, argStream, expectedDataType: default);
                 if (exp == null)
                 {
                     scope.Report((argStream.Position > 0 ? argStream.Peek(-1) : attribToken).Span, ErrorCode.MethodContainsEmptyArguments);

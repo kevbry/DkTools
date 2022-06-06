@@ -42,7 +42,6 @@ namespace DKX.Compilation.Tokens
         public bool IsDataType => _type == DkxTokenType.DataType;
         public bool IsDelimiter => _type == DkxTokenType.Delimiter;
         public bool IsGroup => _type == DkxTokenType.Brackets || _type == DkxTokenType.Array || _type == DkxTokenType.Scope;
-        public bool IsIdentifier => _type == DkxTokenType.Identifier;
         public bool IsNone => _type == DkxTokenType.None;
         public bool IsNumber => _type == DkxTokenType.Number;
         public bool IsScope => _type == DkxTokenType.Scope;
@@ -52,6 +51,8 @@ namespace DKX.Compilation.Tokens
         public Span Span => _span;
         public DkxTokenType Type => _type;
 
+        public bool IsIdentifier() => _type == DkxTokenType.Identifier;
+        public bool IsIdentifier(string name) => _type == DkxTokenType.Identifier && _text == name;
         public bool IsKeyword(string keyword) => _type == DkxTokenType.Keyword && _text == keyword;
         public bool IsOperator(Operator op) => _type == DkxTokenType.Operator && _number == (decimal)op;
 

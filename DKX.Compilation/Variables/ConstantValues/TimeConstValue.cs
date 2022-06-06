@@ -32,9 +32,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override bool IsTime => true;
         public override DkTime Time => _time;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(CodeParser.StringToStringLiteral(_time.ToString()), DataType.Time, Expressions.OpPrec.None, Span, constant: this);
+            return new CodeFragment(CodeParser.StringToStringLiteral(_time.ToString()), DataType.Time, Expressions.OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override bool? GetComparisonResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull)

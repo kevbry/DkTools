@@ -73,8 +73,22 @@ namespace DKX.Compilation.Scopes
                 {
                     if (variable.DataType.BaseType != DataTypes.BaseType.Class) continue;
 
-                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span);
+                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span, reportable: true);
+                    cw.Write(DkxConst.CastToVoid);
                     cw.Write(ObjectAccess.GenerateLeaveScope(variableFragment));
+                    cw.Write(DkxConst.StatementEndToken);
+                    cw.WriteLine();
+                }
+
+                var variableScope = GetScope<IVariableScope>();
+                foreach (var argument in variableScope.VariableStore.GetVariables(includeParents: false))
+                {
+                    if (!argument.Local || argument.PassType == null) continue;
+                    if (!argument.DataType.IsClass) continue;
+
+                    var argumentFragment = new CodeFragment(argument.WbdkName, argument.DataType, Expressions.OpPrec.None, span, reportable: true);
+                    cw.Write(DkxConst.CastToVoid);
+                    cw.Write(ObjectAccess.GenerateLeaveScope(argumentFragment));
                     cw.Write(DkxConst.StatementEndToken);
                     cw.WriteLine();
                 }
@@ -85,9 +99,10 @@ namespace DKX.Compilation.Scopes
                 foreach (var variable in variableScope.VariableStore.GetVariables(includeParents: false))
                 {
                     if (!variable.Local) continue;
-                    if (variable.DataType.BaseType != DataTypes.BaseType.Class) continue;
+                    if (!variable.DataType.IsClass) continue;
 
-                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span);
+                    var variableFragment = new CodeFragment(variable.WbdkName, variable.DataType, Expressions.OpPrec.None, span, reportable: true);
+                    cw.Write(DkxConst.CastToVoid);
                     cw.Write(ObjectAccess.GenerateLeaveScope(variableFragment));
                     cw.Write(DkxConst.StatementEndToken);
                     cw.WriteLine();

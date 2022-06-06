@@ -533,9 +533,9 @@ namespace Test
 unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
-    ret = dkx_addref(dkx_new(0));
-    dkx_release(ret);
-    return ret;
+    ret = dkx_new(0);
+    (void)dkx_release(ret);
+    return dkx_addref(ret);
 }
 "
 .Replace("${CreateUnitTestDecoration}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.UnitTest" }), DataType.EmptyArray))
@@ -571,11 +571,11 @@ unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
     unsigned int ret2;
-    ret = dkx_addref(dkx_new(0));
+    ret = dkx_new(0);
     ret2 = dkx_addref(ret);
-    dkx_release(ret);
-    dkx_release(ret2);
-    return ret;
+    (void)dkx_release(ret);
+    (void)dkx_release(ret2);
+    return dkx_addref(ret);
 }
 "
 .Replace("${CreateUnitTestDecoration}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.UnitTest" }), DataType.EmptyArray))
@@ -611,11 +611,11 @@ unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
     unsigned int ret2;
-    ret = dkx_addref(dkx_new(0));
+    ret = dkx_new(0);
     ret2 = dkx_addref(ret);
-    dkx_release(ret);
-    dkx_release(ret2);
-    return ret;
+    (void)dkx_release(ret);
+    (void)dkx_release(ret2);
+    return dkx_addref(ret);
 }
 "
 .Replace("${CreateUnitTestDecoration}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.UnitTest" }), DataType.EmptyArray))
@@ -652,12 +652,12 @@ unsigned int CreateUnitTest_${CreateUnitTestDecoration}()
 {
     unsigned int ret;
     unsigned int ret2;
-    ret = dkx_addref(dkx_new(0));
+    ret = dkx_new(0);
     ret2 = 0;
     ret2 = dkx_swap(ret2, ret);
-    dkx_release(ret);
-    dkx_release(ret2);
-    return ret;
+    (void)dkx_release(ret);
+    (void)dkx_release(ret2);
+    return dkx_addref(ret);
 }
 "
 .Replace("${CreateUnitTestDecoration}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.UnitTest" }), DataType.EmptyArray))

@@ -43,9 +43,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override decimal Number => default;
         public override string String => _text;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(CodeParser.StringToStringLiteral(_text), _dataType, Expressions.OpPrec.None, Span, constant: this);
+            return new CodeFragment(CodeParser.StringToStringLiteral(_text), _dataType, Expressions.OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override bool? GetComparisonResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector report)

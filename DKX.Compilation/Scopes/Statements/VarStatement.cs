@@ -39,7 +39,7 @@ namespace DKX.Compilation.Scopes.Statements
             {
                 if (stream.EndOfStream) throw new CodeException(keywordToken.Span, ErrorCode.ExpectedVariableName);
                 var nameToken = stream.Read();
-                if (!nameToken.IsIdentifier) throw new CodeException(nameToken.Span, ErrorCode.ExpectedVariableName);
+                if (!nameToken.IsIdentifier()) throw new CodeException(nameToken.Span, ErrorCode.ExpectedVariableName);
                 var name = nameToken.Text;
                 if (!Validation.VariableValidator.IsValidVariableName(name)) varStatement.Report(nameToken.Span, ErrorCode.InvalidVariableName, name);
                 if (variableScope.VariableStore.HasVariable(name, includeParents: true, localOnly: true)) varStatement.Report(nameToken.Span, ErrorCode.DuplicateVariable, name);
@@ -48,7 +48,7 @@ namespace DKX.Compilation.Scopes.Statements
                 var assignToken = stream.Read();
                 if (!assignToken.IsOperator(Operator.Assign)) throw new CodeException(assignToken.Span, ErrorCode.ExpectedToken, '=');
 
-                var exp = ExpressionParser.ReadExpressionOrNull(scope, stream);
+                var exp = ExpressionParser.ReadExpressionOrNull(scope, stream, expectedDataType: default);
                 if (exp == null) throw new CodeException(assignToken.Span, ErrorCode.VariableInitializationRequired);
                 var dataType = exp.InferredDataType;
 
@@ -90,7 +90,9 @@ namespace DKX.Compilation.Scopes.Statements
             if (_initializer == null) return;
 
             cw.Write(_variable.WbdkName);
-            cw.Write(" = ");
+            cw.WriteSpace();
+            cw.Write(DkxConst.Operators.AssignChar);
+            cw.WriteSpace();
             var frag = _initializer.ToWbdkCode_Read(context, flow);
             if (frag.DataType.IsClass) frag = ObjectAccess.GenerateInitializeToReference(frag);
             cw.Write(frag);

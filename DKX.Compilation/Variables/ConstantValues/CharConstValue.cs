@@ -39,9 +39,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override decimal Number => (decimal)_ch;
         public override string String => default;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(CodeParser.CharToCharLiteral(_ch), DataType.Char, OpPrec.None, Span, constant: this);
+            return new CodeFragment(CodeParser.CharToCharLiteral(_ch), DataType.Char, OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override bool? GetComparisonResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull)

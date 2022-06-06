@@ -28,7 +28,7 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
-            return new CodeFragment(CodeParser.StringToStringLiteral(_text), DataType, OpPrec.None, Span);
+            return new CodeFragment(CodeParser.StringToStringLiteral(_text), DataType, OpPrec.None, Span, reportable: true);
         }
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)

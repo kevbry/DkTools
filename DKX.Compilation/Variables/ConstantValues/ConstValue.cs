@@ -14,7 +14,7 @@ namespace DKX.Compilation.Variables.ConstantValues
         public abstract ConstValue GetMathResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull);
         public abstract void SaveInner(BsonObject obj);
 
-        public abstract CodeFragment ToWbdkCode();
+        internal abstract CodeFragment ToWbdkCode();
 
         public virtual bool IsBool => false;
         public virtual bool Bool => default;

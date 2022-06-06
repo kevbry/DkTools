@@ -1,5 +1,6 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
+using DKX.Compilation.Exceptions;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Variables.ConstTerms;
@@ -24,13 +25,12 @@ namespace DKX.Compilation.Expressions
 
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
-            return new CodeFragment(DkxConst.This, _dataType, OpPrec.None, Span);
+            return new CodeFragment(DkxConst.This, _dataType, OpPrec.None, Span, reportable: true);
         }
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
-            context.Report.Report(valueFragment.SourceSpan, ErrorCode.ThisCannotBeModified);
-            return new CodeFragment(DkxConst.This, _dataType, OpPrec.None, Span);
+            throw new CodeException(valueFragment.SourceSpan, ErrorCode.ThisCannotBeModified);
         }
 
         public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;

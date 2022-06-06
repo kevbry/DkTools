@@ -16,8 +16,10 @@ namespace DKX.Compilation
 
         public const char StatementEndToken = ';';
         public const char DelimiterToken = ',';
+        public const char Space = ' ';
 
         public const string This = "this";
+        public const string CastToVoid = "(void)";
 
         public static class Namespaces
         {
@@ -62,6 +64,8 @@ namespace DKX.Compilation
 
         public static class Operators
         {
+            public const string Assign = "=";
+            public const char AssignChar = '=';
             public const string Dot = ".";
             public const char DotChar = '.';
         }
@@ -72,7 +76,7 @@ namespace DKX.Compilation
             public static readonly HashSet<string> AllKeywords = new HashSet<string>(new string[]
             {
                 And, Break, Bool, Char, Class, Client, Const, Continue, Date, Do, Else, Enum, False, For, Get, If, Indrel, Int,
-                Namespace, Neutral, New, Numeric, Or, Private, Protected, Public, Return, Server, Set, Short, Static, Switch, String,
+                Namespace, Neutral, New, Null, Numeric, Or, Private, Protected, Public, Return, Server, Set, Short, Static, Switch, String,
                 Table, This, Time, True, Typedef, UInt, Unsigned, Unsupported, UShort, Using, Var, Variant, Void, While
             });
 
@@ -111,6 +115,7 @@ namespace DKX.Compilation
             public const string Namespace = "namespace";
             public const string Neutral = "neutral";
             public const string New = "new";
+            public const string Null = "null";
             public const string Numeric = "numeric";
             public const string Or = "or";
             public const string Out = "out";

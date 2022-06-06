@@ -1,9 +1,9 @@
 ﻿using DK.Code;
 using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
-using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
 using DKX.Compilation.Jobs;
+using DKX.Compilation.Objects;
 using DKX.Compilation.Project;
 using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes.Statements;
@@ -13,7 +13,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DKX.Compilation.Scopes
 {
@@ -70,6 +69,7 @@ namespace DKX.Compilation.Scopes
         public FileContext FileContext { get => _fileContext; set => _fileContext = value; }
         public FileTarget FileTarget { get => _fileTarget; set => _fileTarget = value; }
         public ModifierFlags Flags { get => _flags; set => _flags = value; }
+        public bool IsConstructor => _flags.IsConstructor();
         public string Name => _name;
         public Span NameSpan => _nameSpan;
         public Privacy Privacy => _privacy;
@@ -103,7 +103,7 @@ namespace DKX.Compilation.Scopes
 
             if (bodyTokens != null)
             {
-                methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens).ToArray();
+                methodScope.Statements = StatementParser.SplitTokensIntoStatements(methodScope, bodyTokens);
             }
 
             if (phase >= CompilePhase.MemberScan) modifiers.CheckForMethod(methodScope, methodScope.GetScope<ClassScope>(), methodScope, phase);
@@ -153,7 +153,7 @@ namespace DKX.Compilation.Scopes
                     else
                     {
                         token = stream.Peek();
-                        if (token.IsIdentifier)
+                        if (token.IsIdentifier())
                         {
                             name = token.Text;
                             nameSpan = token.Span;
@@ -247,7 +247,7 @@ namespace DKX.Compilation.Scopes
             cw.Write(_wbdkName);
             cw.Write('(');
             var firstArg = true;
-            if (!_flags.HasFlag(ModifierFlags.Static))
+            if (!_flags.IsStatic() && !_flags.IsConstructor())
             {
                 cw.Write("unsigned int this");
                 firstArg = false;
@@ -269,12 +269,20 @@ namespace DKX.Compilation.Scopes
                 var methodContext = new CodeGenerationContext(context, this);
 
                 // Variables
+                if (_flags.IsConstructor())
+                {
+                    cw.Write(DataType.UInt.ToWbdkCode());
+                    cw.WriteSpace();
+                    cw.Write(DkxConst.Keywords.This);
+                    cw.Write(DkxConst.StatementEndToken);
+                    cw.WriteLine();
+                }
                 foreach (var variable in _wbdkVariables)
                 {
                     cw.Write(variable.DataType.ToWbdkCode());
-                    cw.Write(' ');
+                    cw.WriteSpace();
                     cw.Write(variable.WbdkName);
-                    cw.Write(';');
+                    cw.Write(DkxConst.StatementEndToken);
                     cw.WriteLine();
                 }
 
@@ -291,9 +299,28 @@ namespace DKX.Compilation.Scopes
                 }
 
                 // Statements
+                if (_flags.IsConstructor())
+                {
+                    cw.Write(DkxConst.Keywords.This);
+                    cw.WriteSpace();
+                    cw.Write(DkxConst.Operators.AssignChar);
+                    cw.WriteSpace();
+                    cw.Write(ObjectAccess.GenerateNewObject(GetScope<ClassScope>(), _nameSpan));
+                    cw.WriteStatementEnd();
+                    cw.WriteLine();
+                }
                 foreach (var statement in _statements ?? Statement.EmptyArray)
                 {
                     statement.GenerateWbdkCode(methodContext, cw, flow);
+                }
+
+                if (_flags.IsConstructor() && !flow.IsEnded)
+                {
+                    cw.Write(DkxConst.Keywords.Return);
+                    cw.WriteSpace();
+                    cw.Write(DkxConst.Keywords.This);
+                    cw.WriteStatementEnd();
+                    cw.WriteLine();
                 }
 
                 GenerateScopeEnding(methodContext, cw, flow, methodEnding: true, _nameSpan);
@@ -315,39 +342,5 @@ namespace DKX.Compilation.Scopes
         }
 
         public IEnumerable<Variable> GetWbdkVariables() => _wbdkVariables;
-    }
-
-    static class MethodScopeHelper
-    {
-        public static Task<CodeFragment> ToWbdkCode_MethodCallAsync(this IMethod method, CodeFragment parentFragment, IEnumerable<CodeFragment> arguments, Span span)
-        {
-            if (method.Flags.HasFlag(ModifierFlags.NotCallable)) throw new CodeException(span, ErrorCode.MethodNotCallable);
-
-            var sb = new StringBuilder();
-
-            var cls = method.Class;
-            sb.Append(cls.WbdkClassName);
-            sb.Append('.');
-            sb.Append(method.WbdkName);
-            sb.Append('(');
-
-            var firstArg = true;
-            if (!method.Flags.HasFlag(ModifierFlags.Static))
-            {
-                // First argument is the 'this' pointer.
-                sb.Append(parentFragment);
-                firstArg = false;
-            }
-            foreach (var arg in arguments)
-            {
-                if (firstArg) firstArg = false;
-                else sb.Append(", ");
-                sb.Append(arg);
-            }
-
-            sb.Append(')');
-
-            return Task.FromResult(new CodeFragment(sb.ToString(), method.ReturnDataType, OpPrec.None, span));
-        }
     }
 }

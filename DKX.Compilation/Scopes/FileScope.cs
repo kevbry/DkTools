@@ -54,7 +54,7 @@ namespace DKX.Compilation.Scopes
                     while (true)
                     {
                         token = stream.Read();
-                        if (!token.IsIdentifier)
+                        if (!token.IsIdentifier())
                         {
                             Report(token.Span, ErrorCode.ExpectedNamespaceName);
                             gotErrors = true;

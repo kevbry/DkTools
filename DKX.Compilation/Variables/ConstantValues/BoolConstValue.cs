@@ -38,9 +38,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override decimal Number => default;
         public override string String => default;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(_value ? "1" : "0", DataType.Bool, Expressions.OpPrec.None, Span, constant: this);
+            return new CodeFragment(_value ? "1" : "0", DataType.Bool, Expressions.OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override bool? GetComparisonResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull)

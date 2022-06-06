@@ -15,10 +15,10 @@ namespace DKX.Compilation.Tests
             {
                 while (expIndex < expSource.Length && expSource[expIndex].IsWhiteSpace()) expIndex++;
                 while (actIndex < actSource.Length && actSource[actIndex].IsWhiteSpace()) actIndex++;
-                Assert.IsTrue(expIndex >= expSource.Length == actIndex >= actSource.Length, "Expected and actual code ends differently.{0}", StringDiff(expSource, expIndex, actSource, actIndex));
+                if (!(expIndex >= expSource.Length == actIndex >= actSource.Length)) throw new AssertionException($"Expected and actual code ends differently.{StringDiff(expSource, expIndex, actSource, actIndex)}");
                 if (expIndex >= expSource.Length) break;
 
-                Assert.AreEqual(expSource[expIndex], actSource[actIndex], "Characters differ.{0}", StringDiff(expSource, expIndex, actSource, actIndex));
+                if (expSource[expIndex] != actSource[actIndex]) throw new AssertionException($"Characters differ.{StringDiff(expSource, expIndex, actSource, actIndex)}");
                 expIndex++;
                 actIndex++;
             }
@@ -36,6 +36,9 @@ namespace DKX.Compilation.Tests
             var sb = new StringBuilder();
 
             if (errorIndex > source.Length) errorIndex = source.Length;
+
+            StringHelper.CalcLineAndPosFromOffset(source, errorIndex, out var lineNum, out var linePos);
+            sb.Append($"Line: {lineNum + 1} Pos: {linePos + 1}\n");
 
             var start = errorIndex - ContextLength;
             if (start < 0) start = 0;

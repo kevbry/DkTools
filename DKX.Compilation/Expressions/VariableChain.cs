@@ -30,19 +30,48 @@ namespace DKX.Compilation.Expressions
         public override CodeFragment ToWbdkCode_Read(CodeGenerationContext context, FlowTrace flow)
         {
             if (!flow.IsVariableInitialized(_variable.WbdkName)) context.Report.Report(Span, ErrorCode.UseOfUninitializedVariable, _variable.Name);
-            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span);
+            return new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, reportable: true);
         }
 
         public override CodeFragment ToWbdkCode_Write(CodeGenerationContext context, CodeFragment valueFragment, FlowTrace flow)
         {
             ConversionValidator.CheckConversion(_variable.DataType, valueFragment, context.Report);
+
+            if (_variable.DataType.IsClass)
+            {
+                if (valueFragment.IsUnownedObjectReference)
+                {
+                    // We need to assign the value to the variable without incrementing the ref count of the new value.
+                    if (flow.IsVariableInitialized(_variable.WbdkName))
+                    {
+                        // This variable is already assigned, so we need to decrement the ref count of the old value.
+                        valueFragment = ObjectAccess.GenerateSwapNoAddReference(oldFragment: ToWbdkCode_Read(context, flow), newFragment: valueFragment);
+                    }
+                    else
+                    {
+                        // Variable is new, so no need to decrement ref count of old value.
+                        // No change to valueFragment
+                    }
+                }
+                else
+                {
+                    // We need to increment the ref count of the new value.
+                    if (flow.IsVariableInitialized(_variable.WbdkName))
+                    {
+                        // This variable is already assigned, so we need to decrement the ref count of the old value.
+                        var oldFragment = new CodeFragment(_variable.WbdkName, _variable.DataType, OpPrec.None, Span, reportable: true);
+                        valueFragment = ObjectAccess.GenerateSwapReference(oldFragment, valueFragment);
+                    }
+                    else
+                    {
+                        // Variable is new, so no need to decrement ref count of old value.
+                        valueFragment = ObjectAccess.GenerateAddReference(valueFragment);
+                    }
+                }
+            }
+
             flow.OnVariableAssigned(_variable.WbdkName);
-
-            if (_variable.DataType.IsClass) valueFragment = ObjectAccess.GenerateSwapReference(
-                oldFragment: ToWbdkCode_Read(context, flow),
-                newFragment: valueFragment);
-
-            return new CodeFragment($"{_variable.WbdkName} = {valueFragment.Protect(OpPrec.Assign)}", _variable.DataType, OpPrec.Assign, Span);
+            return new CodeFragment($"{_variable.WbdkName} = {valueFragment.Protect(OpPrec.Assign)}", _variable.DataType, OpPrec.Assign, Span, reportable: false);
         }
 
         public override ConstTerm ToConstTermOrNull(IReportItemCollector report) => null;

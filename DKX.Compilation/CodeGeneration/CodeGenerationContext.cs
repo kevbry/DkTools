@@ -72,7 +72,7 @@ namespace DKX.Compilation.CodeGeneration
             }
 
             if (_tableDeps == null) _tableDeps = new HashSet<string>();
-            if (!_tableDeps.Contains(tableName)) _tableDeps.Add(tableName);
+            _tableDeps.Add(tableName);
         }
 
         public bool IsOutsideClass(IClass class_)

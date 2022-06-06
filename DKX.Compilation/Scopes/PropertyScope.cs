@@ -183,6 +183,7 @@ namespace DKX.Compilation.Scopes
                 }
             }
 
+            public bool IsConstructor => false;
             public Privacy Privacy => _privacy;
             public DataType ReturnDataType => _property.DataType;
             public IVariableStore VariableStore => _variableStore;

@@ -84,6 +84,8 @@ namespace DKX.Compilation.Scopes
 
         public void ProcessTokens(DkxTokenCollection tokens)
         {
+            DkxToken nameToken;
+
             try
             {
                 var used = new TokenUseTracker();
@@ -91,6 +93,18 @@ namespace DKX.Compilation.Scopes
                 var stream = new DkxTokenStream(tokens);
                 while (!stream.EndOfStream)
                 {
+                    if (stream.Peek().IsIdentifier(_name) && stream.Peek(1).IsBrackets && stream.Peek(2).IsScope)
+                    {
+                        // Constructor
+                        var nameIndex = stream.Position;
+                        nameToken = stream.Read();
+                        var argsToken = stream.Read();
+                        var scopeToken = stream.Read();
+                        used.Use(nameToken, argsToken, scopeToken);
+                        ProcessConstructor(tokens, nameIndex, nameToken, argsToken, scopeToken, used);
+                        continue;
+                    }
+
                     var dataTypePos = stream.Position;
                     if (!ExpressionParser.TryReadDataType(this, stream, out var dataType, out var dataTypeSpan))
                     {
@@ -98,8 +112,8 @@ namespace DKX.Compilation.Scopes
                         continue;
                     }
 
-                    var nameToken = stream.Read();
-                    if (!nameToken.IsIdentifier) continue;
+                    nameToken = stream.Read();
+                    if (!nameToken.IsIdentifier()) continue;
                     used.Use(stream.GetRange(dataTypePos, stream.Position - dataTypePos));
 
                     if (stream.Peek().IsBrackets)
@@ -145,6 +159,39 @@ namespace DKX.Compilation.Scopes
             }
         }
 
+        private void ProcessConstructor(DkxTokenCollection tokens, int nameIndex, DkxToken nameToken, DkxToken argsToken, DkxToken scopeToken, TokenUseTracker used)
+        {
+            switch (Phase)
+            {
+                case CompilePhase.MemberScan:
+                case CompilePhase.ConstantResolution:
+                case CompilePhase.FullCompilation:
+                    break;
+                default:
+                    return;
+            }
+
+            var modifiers = Modifiers.ReadModifiers(this, tokens, nameIndex, used);
+            modifiers.Flags |= ModifierFlags.NotCallable | ModifierFlags.Constructor;
+
+            var method = MethodScope.Parse(
+                parent: this,
+                className: _name,
+                name: _name,
+                nameSpan: nameToken.Span,
+                returnDataType: new DataType(this),
+                argumentTokens: argsToken.Tokens,
+                modifiers: modifiers,
+                bodyTokens: Phase == CompilePhase.FullCompilation ? scopeToken.Tokens : null,
+                phase: Phase,
+                resolver: Resolver,
+                project: Project);
+
+            if (_methods.Any(x => x.WbdkName == method.WbdkName)) Report(nameToken.Span, ErrorCode.DuplicateMethod, nameToken.Text);
+
+            _methods.Add(method);
+        }
+
         private void ProcessMethod(DkxTokenCollection tokens, DataType dataType, int dataTypeIndex,
             DkxToken nameToken, DkxToken argsToken, DkxToken scopeToken, TokenUseTracker used)
         {
@@ -157,6 +204,8 @@ namespace DKX.Compilation.Scopes
                 default:
                     return;
             }
+
+            if (nameToken.Text == _name) Report(nameToken.Span, ErrorCode.MemberNameCannotBeSameAsClassName);
 
             var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
 
@@ -189,6 +238,8 @@ namespace DKX.Compilation.Scopes
                     return;
             }
 
+            if (nameToken.Text == _name) Report(nameToken.Span, ErrorCode.MemberNameCannotBeSameAsClassName);
+
             var modifiers = Modifiers.ReadModifiers(this, tokens, dataTypeIndex, used);
             if (Phase == CompilePhase.FullCompilation) modifiers.CheckForProperty(this, GetScope<ClassScope>(), nameToken.Span);
 
@@ -207,6 +258,8 @@ namespace DKX.Compilation.Scopes
 
         private void ProcessMemberVariableOrConstant(DkxTokenStream stream, DataType dataType, int dataTypeIndex, DkxToken nameToken, TokenUseTracker used)
         {
+            if (nameToken.Text == _name) Report(nameToken.Span, ErrorCode.MemberNameCannotBeSameAsClassName);
+
             var modifiers = Modifiers.ReadModifiers(this, stream.Tokens, dataTypeIndex, used);
 
             if (stream.Peek().IsOperator(Operator.Assign))
@@ -226,7 +279,7 @@ namespace DKX.Compilation.Scopes
                 if (Phase >= CompilePhase.ConstantResolution)
                 {
                     var initializerStream = initializerTokens.ToStream();
-                    initializerChain = ExpressionParser.ReadExpressionOrNull(this, initializerStream);
+                    initializerChain = ExpressionParser.ReadExpressionOrNull(this, initializerStream, dataType);
                     if (initializerChain == null) Report(initializerTokens.Span, ErrorCode.ExpectedExpression);
                     else if (!initializerStream.EndOfStream) Report(initializerStream.Read().Span, ErrorCode.SyntaxError);
                 }

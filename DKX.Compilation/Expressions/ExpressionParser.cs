@@ -13,14 +13,14 @@ namespace DKX.Compilation.Expressions
 {
     static class ExpressionParser
     {
-        public static Chain ReadExpressionOrNull(Scope scope, DkxTokenStream stream)
+        public static Chain ReadExpressionOrNull(Scope scope, DkxTokenStream stream, DataType expectedDataType)
         {
-            var chain = TryReadValue(scope, stream, 0);
+            var chain = TryReadValue(scope, stream, 0, expectedDataType);
             if (chain == null) return null;
             return chain;
         }
 
-        private static Chain TryReadValue(Scope scope, DkxTokenStream stream, OpPrec leftPrec)
+        private static Chain TryReadValue(Scope scope, DkxTokenStream stream, OpPrec leftPrec, DataType expectedDataType)
         {
             var startPos = stream.Position;
 
@@ -47,12 +47,24 @@ namespace DKX.Compilation.Expressions
                     case DkxConst.Keywords.New:
                         if (TryReadDataType(scope, stream, out var dataType, out var dataTypeSpan))
                         {
-                            chain = ConstructorChain.Parse(scope, dataType, token.Span, dataTypeSpan,
-                                stream.Peek().IsBrackets ? stream.Read().Tokens : null);
+                            DkxToken argsToken;
+                            if (stream.Peek().IsBrackets) argsToken = stream.Read();
+                            else argsToken = default;
+
+                            chain = ConstructorChain.Parse(scope, dataType, dataTypeSpan, argsToken);
                             return chain;
                         }
                         scope.Report(token.Span, ErrorCode.ExpectedDataType);
                         return new ErrorChain(innerChainOrNull: null, token.Span);
+
+                    case DkxConst.Keywords.Null:
+                        if (expectedDataType.IsClass)
+                        {
+                            chain = new TypedNullChain(expectedDataType, token.Span);
+                            return TryReadAfterValue(scope, stream, chain, leftPrec);
+                        }
+                        else if (expectedDataType.IsValue) throw new CodeException(token.Span, ErrorCode.NullInvalidForDataType, expectedDataType);
+                        else throw new CodeException(token.Span, ErrorCode.KeywordNotValidHere, expectedDataType);
 
                     case DkxConst.Keywords.This:
                         var objRefScope = scope.GetScope<IObjectReferenceScope>();
@@ -65,7 +77,7 @@ namespace DKX.Compilation.Expressions
                         return new ErrorChain(innerChainOrNull: null, token.Span);
                 }
             }
-            else if (token.IsIdentifier)
+            else if (token.IsIdentifier())
             {
                 if (stream.Peek().IsBrackets)
                 {
@@ -77,7 +89,7 @@ namespace DKX.Compilation.Expressions
 
                     var objRefScope = scope.GetScope<IObjectReferenceScope>();
                     var methods = scope.Resolver.GetMethods(objRefScope.ScopeDataType, methodNameToken.Text).ToList();
-                    var method = FindBestMethodForArguments(methodNameToken.Text, methods, args, token.Span);
+                    var method = FindBestMethodForArguments(methodNameToken.Text, methods, args, token.Span, isConstructor: false);
 
                     var thisChain = method.Flags.HasFlag(ModifierFlags.Static) ? (ThisChain)null : new ThisChain(objRefScope.ScopeDataType, methodNameToken.Span + argsToken.Span);
                     var chain = new MethodCallChain(thisChain, methodNameToken, args, argsToken.Span, method);
@@ -168,7 +180,7 @@ namespace DKX.Compilation.Expressions
             else if (token.IsBrackets)
             {
                 var subStream = new DkxTokenStream(token.Tokens);
-                var chain = TryReadValue(scope, subStream, 0);
+                var chain = TryReadValue(scope, subStream, 0, expectedDataType);
                 if (chain == null)
                 {
                     scope.Report(token.Span, ErrorCode.ExpectedExpression);
@@ -210,7 +222,7 @@ namespace DKX.Compilation.Expressions
                 }
                 else
                 {
-                    var right = TryReadValue(scope, stream, opPrec);
+                    var right = TryReadValue(scope, stream, opPrec, chain.DataType);
                     if (right == null)
                     {
                         // Was unable to read a value to the right of the operator, so stop the expression before this operator.
@@ -257,7 +269,7 @@ namespace DKX.Compilation.Expressions
                     var args = SplitArgumentExpressions(scope, argsToken.Tokens, nameToken.Span);
 
                     var methods = scope.Resolver.GetMethods(leftChain.DataType, nameToken.Text).ToList();
-                    var method = FindBestMethodForArguments(nameToken.Text, methods, args, nameToken.Span);
+                    var method = FindBestMethodForArguments(nameToken.Text, methods, args, nameToken.Span, isConstructor: false);
 
                     if (method.Flags.IsStatic() && !leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.StaticMemberCannotHaveObjectReference, nameToken.Text);
                     if (!method.Flags.IsStatic() && leftChain.IsStatic) throw new CodeException(nameToken.Span, ErrorCode.MemberRequiresAnObjectReference, nameToken.Text);
@@ -300,7 +312,7 @@ namespace DKX.Compilation.Expressions
                 stream.Position++;
 
                 var token = stream.Read();
-                if (!token.IsIdentifier)
+                if (!token.IsIdentifier())
                 {
                     scope.Report(token.Span, ErrorCode.SyntaxError);
                     return new ErrorChain(innerChainOrNull: null, nsSpan + token.Span);
@@ -366,7 +378,7 @@ namespace DKX.Compilation.Expressions
                 return true;
             }
 
-            if (token.IsIdentifier)
+            if (token.IsIdentifier())
             {
                 var name = token.Text;
                 var class_ = scope.Resolver.ResolveClass(name);
@@ -388,7 +400,7 @@ namespace DKX.Compilation.Expressions
                     {
                         if (!stream.Read().IsOperator(Operator.Dot)) break;
                         token = stream.Read();
-                        if (!token.IsIdentifier) break;
+                        if (!token.IsIdentifier()) break;
                         name = token.Text;
 
                         var ns = scope.Project.GetNamespaceOrNull(sb.ToString());
@@ -465,7 +477,7 @@ namespace DKX.Compilation.Expressions
                 }
 
                 var argStream = new DkxTokenStream(argTokens);
-                var expression = ReadExpressionOrNull(scope, argStream);
+                var expression = ReadExpressionOrNull(scope, argStream, expectedDataType: default);
                 if (expression == null)
                 {
                     scope.Report(argTokens.Span, ErrorCode.ExpectedExpression);
@@ -491,12 +503,17 @@ namespace DKX.Compilation.Expressions
         /// The method with the best match.
         /// Throws an error if no good match could be found, or was ambiguous.
         /// </returns>
-        public static IMethod FindBestMethodForArguments(string methodName, IEnumerable<IMethod> methods, Chain[] args, Span methodNameSpan)
+        public static IMethod FindBestMethodForArguments(string methodName, IEnumerable<IMethod> methods, Chain[] args, Span methodNameSpan, bool isConstructor)
         {
             if (!methods.Any()) throw new CodeException(methodNameSpan, ErrorCode.MethodNotFound, methodName);
 
             var methodsWithSameNumberOfArguments = methods.Where(m => m.Arguments.Length == args.Length).ToArray();
-            if (methodsWithSameNumberOfArguments.Length == 0) throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithSameNumberOfArguments, methodName);
+            if (methodsWithSameNumberOfArguments.Length == 0)
+            {
+                throw new CodeException(methodNameSpan, isConstructor
+                    ? ErrorCode.NoConstructorWithSameNumberOfArguments
+                    : ErrorCode.NoMethodWithSameNumberOfArguments, methodName);
+            }
 
             if (methodsWithSameNumberOfArguments.Length == 1) return methodsWithSameNumberOfArguments[0];
 
@@ -530,10 +547,10 @@ namespace DKX.Compilation.Expressions
             }
 
             if (methodsAllGood.Count == 1) return methodsAllGood[0];
-            if (methodsAllGood.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous, methodName);
+            if (methodsAllGood.Count > 1) throw new CodeException(methodNameSpan, isConstructor ? ErrorCode.ConstructorAmbiguous : ErrorCode.MethodAmbiguous, methodName);
             if (methodsWithWarnings.Count == 1) return methodsAllGood[0];
-            if (methodsWithWarnings.Count > 1) throw new CodeException(methodNameSpan, ErrorCode.MethodAmbiguous, methodName);
-            throw new CodeException(methodNameSpan, ErrorCode.NoMethodWithCompatibleArguments, methodName);
+            if (methodsWithWarnings.Count > 1) throw new CodeException(methodNameSpan, isConstructor ? ErrorCode.ConstructorAmbiguous :  ErrorCode.MethodAmbiguous, methodName);
+            throw new CodeException(methodNameSpan, isConstructor ? ErrorCode.NoConstructorWithCompatibleArguments : ErrorCode.NoMethodWithCompatibleArguments, methodName);
         }
 
         /// <summary>
@@ -552,7 +569,7 @@ namespace DKX.Compilation.Expressions
             if (tokens.Count == 0) throw new CodeException(errorSpan, ErrorCode.ExpectedExpression);
 
             var stream = new DkxTokenStream(tokens);
-            var exp = ReadExpressionOrNull(scope, stream);
+            var exp = ReadExpressionOrNull(scope, stream, expectedDataType: default);
             if (exp == null) throw new CodeException(errorSpan, ErrorCode.ExpectedExpression);
 
             if (!stream.EndOfStream) throw new CodeException(stream.Read().Span, ErrorCode.SyntaxError);

@@ -32,9 +32,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override DkDate Date => _date;
         public override bool IsDate => true;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment(CodeParser.StringToStringLiteral(_date.ToString()), DataType.Date, Expressions.OpPrec.None, Span, constant: this);
+            return new CodeFragment(CodeParser.StringToStringLiteral(_date.ToString()), DataType.Date, Expressions.OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override bool? GetComparisonResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull)

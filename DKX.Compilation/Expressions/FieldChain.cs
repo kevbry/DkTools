@@ -49,19 +49,23 @@ namespace DKX.Compilation.Expressions
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
-                    return new CodeFragment(_field.Name, _field.DataType, OpPrec.None, Span);
+                    return new CodeFragment(_field.Name, _field.DataType, OpPrec.None, Span, reportable: true);
                 case FieldAccessMethod.Object:
                     var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
                     return ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span);
                 case FieldAccessMethod.Property:
                     if (_field.Flags.IsStatic())
                     {
-                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()", _field.DataType, OpPrec.None, Span);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}()",
+                            _field.DataType, OpPrec.None, Span, reportable: true,
+                            flags: _field.DataType.IsClass ? CodeFragmentFlags.UnownedObjectReference : default);
                     }
                     else
                     {
                         thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
-                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})", _field.DataType, OpPrec.None, Span);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})",
+                            _field.DataType, OpPrec.None, Span, reportable: true,
+                            flags: _field.DataType.IsClass ? CodeFragmentFlags.UnownedObjectReference : default);
                     }
                 case FieldAccessMethod.Constant:
                     var value = _field.ConstantValue;
@@ -90,19 +94,39 @@ namespace DKX.Compilation.Expressions
             switch (_field.AccessMethod)
             {
                 case FieldAccessMethod.Variable:
-                    return new CodeFragment($"{_field.Name} = {valueFragment.Protect(OpPrec.Assign)}", _field.DataType, OpPrec.Assign, Span);
+                    return new CodeFragment($"{_field.Name} = {valueFragment.Protect(OpPrec.Assign)}", _field.DataType, OpPrec.Assign, Span, reportable: false);
                 case FieldAccessMethod.Object:
                     var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+
+                    if (_field.DataType.IsClass)
+                    {
+                        var valueFlags = valueFragment.Flags;
+
+                        valueFragment = ObjectAccess.GenerateSwapLink(
+                            objFragment: thisFrag,
+                            oldFragment: ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span),
+                            newFragment: valueFragment);
+
+                        if (valueFlags.HasFlag(CodeFragmentFlags.UnownedObjectReference))
+                        {
+                            // We need to release the ref count on the value.
+                            valueFragment = ObjectAccess.GenerateReleaseReference(valueFragment);
+                        }
+                    }
+
                     return ObjectAccess.GenerateMemberVariableSetter(thisFrag, _field.Offset, _field.DataType, Span, valueFragment);
                 case FieldAccessMethod.Property:
+                    if (valueFragment.DataType.IsClass && !valueFragment.IsUnownedObjectReference) valueFragment = ObjectAccess.GenerateAddReference(valueFragment);
                     if (_field.Flags.IsStatic())
                     {
-                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({valueFragment})", _field.DataType, OpPrec.None, Span);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({valueFragment})",
+                            _field.DataType, OpPrec.None, Span, reportable: false);
                     }
                     else
                     {
                         thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
-                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({thisFrag}, {valueFragment})", _field.DataType, OpPrec.None, Span);
+                        return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({thisFrag}, {valueFragment})",
+                            _field.DataType, OpPrec.None, Span, reportable: false);
                     }
                 case FieldAccessMethod.Constant:
                     context.Report.Report(Span, ErrorCode.ExpressionCannotBeWrittenTo);

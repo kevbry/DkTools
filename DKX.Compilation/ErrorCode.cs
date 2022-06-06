@@ -167,6 +167,9 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Static class '{0}' cannot be instantiated.")]
         StaticClassCannotBeInstantiated = 1125,
+
+        [Description("Member name cannot be the same as its enclosing class.")]
+        MemberNameCannotBeSameAsClassName = 1126,
         #endregion
 
         #region Methods (1200-1299)
@@ -205,6 +208,21 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Duplicate method '{0}'.")]
         DuplicateMethod = 1206,
+
+        [Description("No contructor was found with matching number of arguments.")]
+        NoConstructorWithSameNumberOfArguments = 1207,
+
+        [Description("More constructor with compatible arguments was found.")]
+        ConstructorAmbiguous = 1208,
+
+        [Description("No constructor was found with compatible arguments.")]
+        NoConstructorWithCompatibleArguments = 1209,
+
+        /// <summary>
+        /// {0} = privacy
+        /// </summary>
+        [Description("Cannot access this constructor because it is marked '{0}'")]
+        CannotAccessConstructorDueToPrivacy = 1210,
         #endregion
 
         #region Properties (1300-1399)
@@ -378,6 +396,12 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Keyword '{0}' is not valid here.")]
         KeywordNotValidHere = 1519,
+
+        /// <summary>
+        /// {0} = type
+        /// </summary>
+        [Description("Null cannot be used with type '{0}'.")]
+        NullInvalidForDataType = 1520,
         #endregion
 
         #region Attributes (1600-1699)

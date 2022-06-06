@@ -147,7 +147,7 @@ namespace DKX.Compilation.Scopes.Statements
                 var stream = new DkxTokenStream(tokens);
                 if (ExpressionParser.TryReadDataType(scope, stream, out var dataType, out var dataTypeSpan))
                 {
-                    if (stream.Peek().IsIdentifier)
+                    if (stream.Peek().IsIdentifier())
                     {
                         // This is a variable declaration.
                         var stmt = VariableDeclarationStatement.Parse(scope, dataType, dataTypeSpan, stream);
@@ -157,7 +157,7 @@ namespace DKX.Compilation.Scopes.Statements
                     else stream.Position = 0;
                 }
 
-                var exp = ExpressionParser.ReadExpressionOrNull(scope, stream);
+                var exp = ExpressionParser.ReadExpressionOrNull(scope, stream, expectedDataType: default);
                 if (exp != null)
                 {
                     var stmt = new ExpressionStatement(scope, exp);

@@ -83,14 +83,14 @@ void DoTest_%0()
     int no;
     unsigned int mbr;
     char(255) name;
-    mbr = dkx_addref(dkx_new(516));
+    mbr = dkx_new(516);
     no = %M.GetNumber(mbr);
     %M.SetData_%1(mbr, 123, ""John"");
     name = %M.GetName(mbr);
     name = ""Bob"";
     %M.SetName(mbr, name);
     %M.SetName(mbr, ""Bob2"");
-    dkx_release(mbr);
+    (void)dkx_release(mbr);
 }
 ".Replace("%0", Compiler.ComputeHash("void").ToString("X"))
 .Replace("%1", Compiler.ComputeHash("void, int, string").ToString("X"))
@@ -198,10 +198,10 @@ int Update_%1(unsigned int this) { return 0; }
 void DoTest_%1()
 {
     unsigned int mbr;
-    mbr = dkx_addref(dkx_new(516));
+    mbr = dkx_new(516);
     %M.SetName(mbr, ""Bob"");
-    %M.Update_%2(mbr);
-    dkx_release(mbr);
+    (void)%M.Update_%2(mbr);
+    (void)dkx_release(mbr);
 }
 "
 .Replace("%1", Compiler.ComputeHash("void").ToString("X"))
@@ -386,7 +386,7 @@ namespace Test
             await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
 namespace Test
 {
-    static class Member
+    class Member
     {
         public static void SetData() { }
     }
@@ -513,12 +513,15 @@ int GetNo(unsigned int this) { return dkx_getint4(this, 0); }
 ");
             await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Party")}.nc", @"
 // Test.Party
-unsigned int GetMember(unsigned int this) { return dkx_getuns4(this, 0); }
+unsigned int GetMember(unsigned int this)
+{
+    return dkx_addref(dkx_getuns4(this, 0));
+}
 void PartyTest_${PartyTestDecoration}(unsigned int this)
 {
     unsigned int mbr;
-    mbr = dkx_addref(${PartyClass}.GetMember(this));
-    dkx_release(mbr);
+    mbr = ${PartyClass}.GetMember(this);
+    (void)dkx_release(mbr);
 }
 "
 .Replace("${PartyClass}", Compiler.GetWbdkClassName("Test.Party"))
@@ -530,10 +533,10 @@ void DoTest_${DoTestDecoration}()
 {
     unsigned int party;
     unsigned int mbr;
-    party = dkx_addref(dkx_new(4));
-    mbr = dkx_addref(${PartyClass}.GetMember(party));
-    dkx_release(party);
-    dkx_release(mbr);
+    party = dkx_new(4);
+    mbr = ${PartyClass}.GetMember(party);
+    (void)dkx_release(party);
+    (void)dkx_release(mbr);
 }
 "
 .Replace("${PartyClass}", Compiler.GetWbdkClassName("Test.Party"))
@@ -997,9 +1000,9 @@ void DoTest_${DoTestDecoration}()
 {
     unsigned int mbr;
     int no;
-    mbr = dkx_addref(dkx_new(4));
+    mbr = dkx_new(4);
     no = ${MemberClass}.GetNumber(mbr);
-    dkx_release(mbr);
+    (void)dkx_release(mbr);
 }
 "
 .Replace("${DoTestDecoration}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
@@ -1188,10 +1191,10 @@ void DoTest_${DoTestDeco2}(unsigned int this, int no)
 void Run_${RunDeco}()
 {
     unsigned int mbr;
-    mbr = dkx_addref(dkx_new(4));
+    mbr = dkx_new(4);
     ${MemberClass}.DoTest_${DoTestDeco2}(mbr, 123);
     ${MemberClass}.DoTest_${DoTestDeco1}(mbr);
-    dkx_release(mbr);
+    (void)dkx_release(mbr);
 }
 "
 .Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
@@ -1201,7 +1204,633 @@ void Run_${RunDeco}()
 );
         }
 
-        // TODO: Constructor arguments
+        [Test]
+        public async Task Constructor()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+
+        public Member(int no) { _no = no; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member(123);
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+unsigned int Member_${CtorDeco}(int no)
+{
+    unsigned int this;
+    this = dkx_new(4);
+    dkx_setint4(this, 0, no);
+    return this;
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
+);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void Run_${RunDeco}()
+{
+    unsigned int mbr;
+    mbr = ${MemberClass}.Member_${CtorDeco}(123);
+    (void)dkx_release(mbr);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${RunDeco}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
+);
+        }
+
+        [Test]
+        public async Task MultipleConstructors()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        public Member(int no) { _no = no; _name = ""unknown""; }
+        public Member(int no, string name) { _no = no; _name = name; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member(123);
+            mbr = new Member(456, ""Julio"");
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+unsigned int Member_${Ctor1Deco}(int no)
+{
+    unsigned int this;
+    this = dkx_new(516);
+    dkx_setint4(this, 0, no);
+    dkx_setstr(this, 4, ""unknown"");
+    return this;
+}
+
+unsigned int Member_${Ctor2Deco}(int no, char(255) name)
+{
+    unsigned int this;
+    this = dkx_new(516);
+    dkx_setint4(this, 0, no);
+    dkx_setstr(this, 4, name);
+    return this;
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${Ctor1Deco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
+.Replace("${Ctor2Deco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int, DataType.String255 }))
+);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void Run_${RunDeco}()
+{
+    unsigned int mbr;
+    mbr = ${MemberClass}.Member_${Ctor1Deco}(123);
+    mbr = dkx_swapnoadd(mbr, ${MemberClass}.Member_${Ctor2Deco}(456, ""Julio""));
+    (void)dkx_release(mbr);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${RunDeco}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${Ctor1Deco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
+.Replace("${Ctor2Deco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int, DataType.String255 }))
+);
+        }
+
+        [Test]
+        public async Task CannotCallConstructorDirectly()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        public Member(int no) { _no = no; _name = ""unknown""; }
+        public Member(int no, string name) { _no = no; _name = name; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member(123);
+            mbr = mbr.Member(456);
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.MethodNotCallable);
+        }
+
+        [Test]
+        public async Task CannotUseDefaultConstructorWhenNotDefined()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        public Member(int no) { _no = no; _name = ""unknown""; }
+        public Member(int no, string name) { _no = no; _name = name; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.NoConstructorWithSameNumberOfArguments);
+        }
+
+        [TestCase("private")]
+        [TestCase("protected")]
+        public async Task PrivateDefaultConstructor(string privacy)
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        ${privacy} Member() { }
+        public Member(int no) { _no = no; _name = ""unknown""; }
+        public Member(int no, string name) { _no = no; _name = name; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member;
+        }
+    }
+}
+"
+.Replace("${privacy}", privacy)
+);
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessConstructorDueToPrivacy);
+        }
+
+        [TestCase("private")]
+        [TestCase("protected")]
+        public async Task PrivateNonDefaultConstructor(string privacy)
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        public Member() { }
+        ${privacy} Member(int no) { _no = no; _name = ""unknown""; }
+        public Member(int no, string name) { _no = no; _name = name; }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = new Member(123);
+        }
+    }
+}
+"
+.Replace("${privacy}", privacy)
+);
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.CannotAccessConstructorDueToPrivacy);
+        }
+
+        [Test]
+        public async Task ObjectReferencesWithMemberVariables()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        public Member(int no) { _no = no; _name = ""unknown""; }
+    }
+
+    class UnitTest
+    {
+        Member _mbr1;
+        Member _mbr2;
+
+        public void Run()
+        {
+            var mbr = new Member(123);
+            _mbr1 = mbr;
+            _mbr2 = new Member(456);
+            _mbr1 = _mbr2;
+            _mbr2 = null;
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void Run_${RunDeco}(unsigned int this)
+{
+    unsigned int mbr;
+    mbr = ${MemberClass}.Member_${CtorDeco}(123);
+    dkx_setuns4(this, 0, dkx_swaplink(this, dkx_getuns4(this, 0), mbr));
+    dkx_setuns4(this, 4, dkx_release(dkx_swaplink(this, dkx_getuns4(this, 4), ${MemberClass}.Member_${CtorDeco}(456))));
+    dkx_setuns4(this, 0, dkx_swaplink(this, dkx_getuns4(this, 0), dkx_getuns4(this, 4)));
+    dkx_setuns4(this, 4, dkx_swaplink(this, dkx_getuns4(this, 4), 0));
+    (void)dkx_release(mbr);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${RunDeco}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int }))
+);
+        }
+
+        [Test]
+        public async Task ObjectReferencesWithProperties()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+        private Member _joint;
+
+        public Member(int no, string name) { _no = no; _name = name; }
+
+        public Member Joint { get { return _joint; } set { _joint = value; } }
+        public string Name { get { return _name; } }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            Member mbr = new Member(123, ""Jimbo"");
+            mbr.Joint = new Member(456, ""Ned"");
+            Console.WriteLine(mbr.Joint.Name);
+
+            var jntMbr = mbr.Joint;
+            Member jntMbr2 = mbr.Joint;
+            jntMbr.Joint = jntMbr2;
+            jntMbr.Joint = jntMbr2.Joint;
+            Console.WriteLine(jntMbr.Name);
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+unsigned int GetJoint(unsigned int this)
+{
+    return dkx_addref(dkx_getuns4(this, 516));
+}
+void SetJoint(unsigned int this, unsigned int value)
+{
+    dkx_setuns4(this, 516, dkx_swaplink(this, dkx_getuns4(this, 516), value));
+    (void)dkx_release(value);
+}
+
+char(255) GetName(unsigned int this)
+{
+    return dkx_getstr(this, 4);
+}
+
+unsigned int Member_${CtorDeco}(int no, char(255) name)
+{
+    unsigned int this;
+    this = dkx_new(520);
+    dkx_setint4(this, 0, no);
+    dkx_setstr(this, 4, name);
+    return this;
+}
+"
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int, DataType.String255 }))
+);
+        await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void Run_${RunDeco}()
+{
+    unsigned int mbr;
+    unsigned int jntMbr;
+    unsigned int jntMbr2;
+
+    mbr = ${MemberClass}.Member_${CtorDeco}(123, ""Jimbo"");
+    ${MemberClass}.SetJoint(mbr, ${MemberClass}.Member_${CtorDeco}(456, ""Ned""));
+    puts(${MemberClass}.GetName(${MemberClass}.GetJoint(mbr)));
+
+    jntMbr = ${MemberClass}.GetJoint(mbr);
+    jntMbr2 = ${MemberClass}.GetJoint(mbr);
+    ${MemberClass}.SetJoint(jntMbr, dkx_addref(jntMbr2));
+    ${MemberClass}.SetJoint(jntMbr, ${MemberClass}.GetJoint(jntMbr2));
+    puts(${MemberClass}.GetName(jntMbr));
+    (void)dkx_release(mbr);
+    (void)dkx_release(jntMbr);
+    (void)dkx_release(jntMbr2);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${RunDeco}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(new DataType(BaseType.Class, new string[] { "Test.Member" }), new DataType[] { DataType.Int, DataType.String255 }))
+);
+        }
+
+        [Test]
+        public async Task ObjectReferencesWithMethods()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+
+        public Member(int no) { _no = no; }
+
+        public static void ShowMember(Member member)
+        {
+        }
+
+        public static Member CreateMember(int no)
+        {
+            return new Member(no);
+        }
+    }
+
+    static class UnitTest
+    {
+        public static void Run()
+        {
+            var mbr = Member.CreateMember(123);
+            Member.ShowMember(mbr);
+            Member.ShowMember(Member.CreateMember(456));
+            mbr = Member.CreateMember(789);
+            Member.CreateMember(101112);
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            var memberDataType = new DataType(BaseType.Class, new string[] { "Test.Member" });
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+unsigned int Member_${CtorDeco}(int no)
+{
+    unsigned int this;
+    this = dkx_new(4);
+    dkx_setint4(this, 0, no);
+    return this;
+}
+
+void ShowMember_${ShowMemberDeco}(unsigned int member)
+{
+    (void)dkx_release(member);
+}
+
+unsigned int CreateMember_${CreateMemberDeco}(int no)
+{
+    return ${MemberClass}.Member_${CtorDeco}(no);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(memberDataType, new DataType[] { DataType.Int }))
+.Replace("${ShowMemberDeco}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { memberDataType }))
+.Replace("${CreateMemberDeco}", Compiler.GetMethodDecoration(memberDataType, new DataType[] { DataType.Int }))
+);
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.UnitTest")}.nc", @"
+// Test.UnitTest
+
+void Run_${RunDeco}()
+{
+    unsigned int mbr;
+    mbr = ${MemberClass}.CreateMember_${CreateMemberDeco}(123);
+    ${MemberClass}.ShowMember_${ShowMemberDeco}(dkx_addref(mbr));
+    ${MemberClass}.ShowMember_${ShowMemberDeco}(${MemberClass}.CreateMember_${CreateMemberDeco}(456));
+    mbr = dkx_swapnoadd(mbr, ${MemberClass}.CreateMember_${CreateMemberDeco}(789));
+    (void)dkx_release(${MemberClass}.CreateMember_${CreateMemberDeco}(101112));
+    (void)dkx_release(mbr);
+}
+"
+.Replace("${MemberClass}", Compiler.GetWbdkClassName("Test.Member"))
+.Replace("${RunDeco}", Compiler.GetMethodDecoration(DataType.Void, DataType.EmptyArray))
+.Replace("${ShowMemberDeco}", Compiler.GetMethodDecoration(DataType.Void, new DataType[] { memberDataType }))
+.Replace("${CreateMemberDeco}", Compiler.GetMethodDecoration(memberDataType, new DataType[] { DataType.Int }))
+);
+        }
+
+        [Test]
+        public async Task ReturnInsideConstructor()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    class Member
+    {
+        private int _no;
+        private string _name;
+
+        public Member(int no, string name)
+        {
+            _no = no;
+            if (name == """")
+            {
+                _name = ""Unnamed"";
+                return;
+            }
+            _name = name;
+        }
+    }
+}
+");
+            await RunCompileAsync(app);
+            var memberDataType = new DataType(BaseType.Class, new string[] { "Test.Member" });
+            await ValidateOutputAsync(app, $"x:\\gen\\.dkx\\{Compiler.GetWbdkClassName("Test.Member")}.nc", @"
+// Test.Member
+
+unsigned int Member_${CtorDeco}(int no, char(255) name)
+{
+    unsigned int this;
+    this = dkx_new(516);
+    dkx_setint4(this, 0, no);
+    if name == """"
+    {
+        dkx_setstr(this, 4, ""Unnamed"");
+        return this;
+    }
+    dkx_setstr(this, 4, name);
+    return this;
+}
+"
+.Replace("${CtorDeco}", Compiler.GetMethodDecoration(memberDataType, new DataType[] { DataType.Int, DataType.String255 }))
+);
+        }
+
+        [Test]
+        public async Task MethodNameSameAsClass()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    class Member
+    {
+        public int Member()
+        {
+            return 0;
+        }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.MemberNameCannotBeSameAsClassName);
+        }
+
+        [Test]
+        public async Task PropertyNameSameAsClass()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    class Member
+    {
+        public int Member { get { return 0; } }
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.MemberNameCannotBeSameAsClassName);
+        }
+
+        [Test]
+        public async Task MemberVariableNameSameAsClass()
+        {
+            var app = CreateApp();
+            SetupCompile(app);
+            app.LoadAppSettings();
+
+            await SetCompileFileAsync(app, @"x:\src\Test.dkx", @"
+using System;
+
+namespace Test
+{
+    class Member
+    {
+        private int Member;
+    }
+}
+");
+            await RunCompileAsync(app, expectedErrorCode: ErrorCode.MemberNameCannotBeSameAsClassName);
+        }
+
         // TODO: Cannot access private class from another namespace
     }
 }

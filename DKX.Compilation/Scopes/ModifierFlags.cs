@@ -21,6 +21,12 @@
         /// The field is read-only.
         /// </summary>
         ReadOnly = 0x08,
+
+        /// <summary>
+        /// This method is a constructor and only to be used when instantiating an object.
+        /// It will always be paired with NotCallable.
+        /// </summary>
+        Constructor = 0x10,
     }
 
     public static class ModifierFlagsHelper
@@ -28,5 +34,7 @@
         public static bool IsStatic(this ModifierFlags flags) => flags.HasFlag(ModifierFlags.Static);
 
         public static bool IsReadOnly(this ModifierFlags flags) => flags.HasFlag(ModifierFlags.ReadOnly);
+
+        public static bool IsConstructor(this ModifierFlags flags) => flags.HasFlag(ModifierFlags.Constructor);
     }
 }

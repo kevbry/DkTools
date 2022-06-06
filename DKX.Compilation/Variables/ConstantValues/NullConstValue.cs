@@ -18,9 +18,9 @@ namespace DKX.Compilation.Variables.ConstantValues
         public override DataType DataType => DataType.Int;
         public override bool IsNull => true;
 
-        public override CodeFragment ToWbdkCode()
+        internal override CodeFragment ToWbdkCode()
         {
-            return new CodeFragment("0", DataType.Int, OpPrec.None, Span, constant: this);
+            return new CodeFragment("0", DataType.Int, OpPrec.None, Span, constant: this, reportable: true);
         }
 
         public override ConstValue GetMathResultOrNull(Operator op, ConstValue rightValue, IReportItemCollector reportOrNull)

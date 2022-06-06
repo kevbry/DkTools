@@ -2,6 +2,7 @@
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
 using DKX.Compilation.Expressions;
+using DKX.Compilation.Objects;
 using DKX.Compilation.Tokens;
 using System;
 
@@ -11,6 +12,7 @@ namespace DKX.Compilation.Scopes.Statements
     {
         private DataType _dataType;
         private Chain _expression;
+        private bool _isConstructor;
 
         private ReturnStatement(Scope parent, Span keywordSpan) : base(parent, keywordSpan) { }
 
@@ -28,8 +30,9 @@ namespace DKX.Compilation.Scopes.Statements
                 var returnScope = ret.GetScope<IReturnScope>();
                 if (returnScope == null) throw new InvalidOperationException("Could not get return scope.");
                 ret._dataType = returnScope.ReturnDataType;
+                ret._isConstructor = returnScope.IsConstructor;
 
-                if (ret._dataType.IsVoid)
+                if (ret._dataType.IsVoid || ret._isConstructor)
                 {
                     if (tokens.Count == 1)
                     {
@@ -44,7 +47,7 @@ namespace DKX.Compilation.Scopes.Statements
                 else
                 {
                     var stream = new DkxTokenStream(tokens, 1);
-                    var expression = ExpressionParser.ReadExpressionOrNull(ret, stream);
+                    var expression = ExpressionParser.ReadExpressionOrNull(ret, stream, ret._dataType);
                     if (expression == null) throw new CodeException(keywordToken.Span, ErrorCode.ExpectedExpression);
 
                     if (stream.EndOfStream || !stream.Peek().IsStatementEnd) throw new CodeException(stream.Read().Span, ErrorCode.ExpectedToken, ';');
@@ -65,13 +68,20 @@ namespace DKX.Compilation.Scopes.Statements
         {
             GenerateScopeEnding(context, cw, flow, methodEnding: true, Span);
 
-            cw.Write("return");
+            cw.Write(DkxConst.Keywords.Return);
             if (_expression != null)
             {
-                cw.Write(' ');
-                cw.Write(_expression.ToWbdkCode_Read(context, flow));
+                cw.WriteSpace();
+                var frag = _expression.ToWbdkCode_Read(context, flow);
+                if (frag.DataType.IsClass && !frag.IsUnownedObjectReference) frag = ObjectAccess.GenerateAddReference(frag);
+                cw.Write(frag);
             }
-            cw.Write(';');
+            else if (_isConstructor)
+            {
+                cw.WriteSpace();
+                cw.Write(DkxConst.Keywords.This);
+            }
+            cw.WriteStatementEnd();
             cw.WriteLine();
 
             flow.OnBranchEnded();
