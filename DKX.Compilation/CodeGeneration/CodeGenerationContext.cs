@@ -1,4 +1,5 @@
 ﻿using DKX.Compilation.Jobs;
+using DKX.Compilation.Objects;
 using DKX.Compilation.Project;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Resolving;
@@ -17,6 +18,7 @@ namespace DKX.Compilation.CodeGeneration
         private IObjectReferenceScope _objRefScope;
         private HashSet<string> _fileDeps;
         private HashSet<string> _tableDeps;
+        private bool _releaseDeferPending;
 
         public CodeGenerationContext(FileTarget fileTarget, IReportItemCollector report, IProject project)
         {
@@ -36,10 +38,20 @@ namespace DKX.Compilation.CodeGeneration
             _objRefScope = objRefScope ?? throw new ArgumentNullException(nameof(objRefScope));
         }
 
+        public CodeGenerationContext(CodeGenerationContext parentContext)
+        {
+            _parent = parentContext ?? throw new ArgumentNullException(nameof(parentContext));
+            _fileTarget = parentContext._fileTarget;
+            _report = parentContext._report;
+            _project = parentContext._project;
+            _objRefScope = parentContext._objRefScope;
+        }
+
         public FileTarget FileTarget => _fileTarget;
         public IEnumerable<string> FileDependencies => (IEnumerable<string>)_fileDeps ?? DkxConst.EmptyStringArray;
         public IObjectReferenceScope ObjectReferenceScope => _objRefScope;
         public IProject Project => _project;
+        public bool ReleaseDeferPending { get => _releaseDeferPending; set => _releaseDeferPending = value; }
         public IReportItemCollector Report => _report;
         public IEnumerable<string> TableDependencies => (IEnumerable<string>)_tableDeps ?? DkxConst.EmptyStringArray;
 
@@ -89,6 +101,18 @@ namespace DKX.Compilation.CodeGeneration
             if (class_.FullClassName.StartsWith(scopeClass.FullClassName + DkxConst.DelimiterToken)) return false;
 
             return true;
+        }
+
+        public void AfterStatementGenerated(CodeWriter cw)
+        {
+            if (_releaseDeferPending)
+            {
+                _releaseDeferPending = false;
+
+                cw.Write(ObjectAccess.GenerateReleaseNow());
+                cw.Write(DkxConst.StatementEndToken);
+                cw.WriteLine();
+            }
         }
     }
 }

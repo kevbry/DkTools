@@ -109,7 +109,7 @@ namespace DKX.Compilation.Scopes.Statements
 
             public override bool IsEmpty => false;
 
-            internal override void GenerateWbdkCode(CodeGenerationContext context, CodeWriter cw, FlowTrace flow)
+            internal override void GenerateWbdkCode(CodeGenerationContext parentContext, CodeWriter cw, FlowTrace flow)
             {
                 if (!_first)
                 {
@@ -120,16 +120,18 @@ namespace DKX.Compilation.Scopes.Statements
                     if (!_first) cw.Write(' ');
                     cw.Write(DkxConst.Keywords.If);
                     cw.Write(' ');
-                    var conditionFrag = _condition.ToWbdkCode_Read(context, flow);
+                    var conditionFrag = _condition.ToWbdkCode_Read(parentContext, flow);
                     cw.Write(conditionFrag);
                     ConversionValidator.CheckConversion(DataType.Bool, conditionFrag, this);
                 }
                 cw.WriteLine();
                 using (cw.Indent())
                 {
+                    var context = new CodeGenerationContext(parentContext);
                     foreach (var stmt in _statements ?? Statement.EmptyArray)
                     {
                         stmt.GenerateWbdkCode(context, cw, flow);
+                        if (!flow.IsEnded) context.AfterStatementGenerated(cw);
                     }
 
                     GenerateScopeEnding(context, cw, flow, methodEnding: false, Span);

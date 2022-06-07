@@ -1,5 +1,6 @@
 *.bak
 *.csproj.user
+*.opensdf
 *.sdf
 *.suo
 

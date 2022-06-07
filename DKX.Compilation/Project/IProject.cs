@@ -12,11 +12,11 @@ namespace DKX.Compilation.Project
     {
         void OnCompilePhaseStarted(CompilePhase phase);
 
-        void OnFileScanCompleted(CompilePhase phase, string dkxPathName, IEnumerable<INamespace> namespaces);
+        Task OnFileScanCompletedAsync(CompilePhase phase, string dkxPathName, IEnumerable<INamespace> namespaces);
 
         Task OnCompilePhaseCompleted(CompilePhase phase, IReportItemCollector report);
 
-        DateTime GetCompileTimeStamp(CompilePhase phase, string dkxPathName);
+        DateTime GetCompileTimeStamp(string dkxPathName);
 
         IEnumerable<string> GetFileDependencies(string dkxPathName);
 

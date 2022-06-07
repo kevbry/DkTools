@@ -258,6 +258,7 @@ namespace DKX.Compilation.Scopes
                         foreach (var statement in _statements)
                         {
                             statement.GenerateWbdkCode(propertyContext, cw, flow);
+                            if (!flow.IsEnded) propertyContext.AfterStatementGenerated(cw);
                         }
                     }
 

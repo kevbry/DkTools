@@ -52,7 +52,7 @@ namespace DKX.Compilation.Expressions
                             else argsToken = default;
 
                             chain = ConstructorChain.Parse(scope, dataType, dataTypeSpan, argsToken);
-                            return chain;
+                            return TryReadAfterValue(scope, stream, chain, leftPrec);
                         }
                         scope.Report(token.Span, ErrorCode.ExpectedDataType);
                         return new ErrorChain(innerChainOrNull: null, token.Span);

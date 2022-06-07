@@ -52,6 +52,7 @@ namespace DKX.Compilation.Expressions
                     return new CodeFragment(_field.Name, _field.DataType, OpPrec.None, Span, reportable: true);
                 case FieldAccessMethod.Object:
                     var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+                    if (thisFrag.IsUnownedObjectReference) thisFrag = ObjectAccess.GenerateReleaseDefer(context, thisFrag);
                     return ObjectAccess.GenerateMemberVariableGetter(thisFrag, _field.Offset, _field.DataType, Span);
                 case FieldAccessMethod.Property:
                     if (_field.Flags.IsStatic())
@@ -63,6 +64,7 @@ namespace DKX.Compilation.Expressions
                     else
                     {
                         thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+                        if (thisFrag.DataType.IsClass && thisFrag.IsUnownedObjectReference) thisFrag = ObjectAccess.GenerateReleaseDefer(context, thisFrag);
                         return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.GetterPrefix}{_field.Name}({thisFrag})",
                             _field.DataType, OpPrec.None, Span, reportable: true,
                             flags: _field.DataType.IsClass ? CodeFragmentFlags.UnownedObjectReference : default);
@@ -110,7 +112,7 @@ namespace DKX.Compilation.Expressions
                         if (valueFlags.HasFlag(CodeFragmentFlags.UnownedObjectReference))
                         {
                             // We need to release the ref count on the value.
-                            valueFragment = ObjectAccess.GenerateReleaseReference(valueFragment);
+                            valueFragment = ObjectAccess.GenerateReleaseDefer(context, valueFragment);
                         }
                     }
 
@@ -125,6 +127,7 @@ namespace DKX.Compilation.Expressions
                     else
                     {
                         thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+                        if (thisFrag.DataType.IsClass && thisFrag.IsUnownedObjectReference) thisFrag = ObjectAccess.GenerateReleaseDefer(context, thisFrag);
                         return new CodeFragment($"{_field.Class.WbdkClassName}.{DkxConst.Properties.SetterPrefix}{_field.Name}({thisFrag}, {valueFragment})",
                             _field.DataType, OpPrec.None, Span, reportable: false);
                     }

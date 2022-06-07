@@ -17,14 +17,14 @@ namespace dkx
 		{
 			_ptr = malloc(_size);
 			memset(_ptr, 0, _size);
-#ifdef OBJ_DEBUG
+#if OBJ_DEBUG >= 2
 			wprintf(L"Allocate object: 0x%08X size: %d\n", _ptr, _size);
 #endif
 		}
 
 		~Object()
 		{
-#ifdef OBJ_DEBUG
+#if OBJ_DEBUG >= 2
 			wprintf(L"Delete object: 0x%08X size: %d\n", _ptr, _size);
 #endif
 			free(_ptr);
@@ -34,13 +34,22 @@ namespace dkx
 		const void* GetPtr() const { return _ptr; }
 		size_t GetSize() const { return _size; }
 
-		void AddNativeRef() { _nativeRefCount++; }
+		void AddNativeRef()
+		{
+			_nativeRefCount++;
+#if OBJ_DEBUG >= 3
+			wprintf(L"Native refcount on object 0x%08X increased to %d\n", _ptr, _nativeRefCount);
+#endif
+		}
 
 		void ReleaseNativeRef()
 		{
 			_nativeRefCount--;
-#ifdef OBJ_DEBUG
-			if (_nativeRefCount < 0) wprintf(L"Native reference on object 0x%08X has dropped to %d\n", _ptr, _nativeRefCount);
+#if OBJ_DEBUG >= 3
+			wprintf(L"Native refcount on object 0x%08X has dropped to %d\n", _ptr, _nativeRefCount);
+#endif
+#if OBJ_DEBUG >= 1
+			if (_nativeRefCount < 0) wprintf(L"WARNING: Native refcount on object 0x%08X has dropped to %d\n", _ptr, _nativeRefCount);
 #endif
 		}
 
@@ -49,6 +58,9 @@ namespace dkx
 		void AddLink(void* ptr)
 		{
 			_linkRefs.push_back(ptr);
+#if OBJ_DEBUG >= 3
+			wprintf(L"Link ref added on object 0x%08X to 0x%08X\n", _ptr, ptr);
+#endif
 		}
 
 		void ReleaseLink(void* ptr)
@@ -56,8 +68,11 @@ namespace dkx
 			auto iter = std::find(_linkRefs.begin(), _linkRefs.end(), ptr);
 			if (iter == _linkRefs.end())
 			{
-#ifdef OBJ_DEBUG
-				wprintf(L"Attempted to release link on object 0x%08X to 0x%08X but it was not found\n", _ptr, ptr);
+#if OBJ_DEBUG >= 3
+			wprintf(L"Link ref released on object 0x%08X to 0x%08X\n", _ptr, ptr);
+#endif
+#if OBJ_DEBUG >= 1
+				wprintf(L"WARNING: Attempted to release link on object 0x%08X to 0x%08X but it was not found\n", _ptr, ptr);
 #endif
 				return;
 			}
@@ -82,8 +97,8 @@ namespace dkx
 				}
 				else
 				{
-#ifdef OBJ_DEBUG
-					wprintf(L"Object 0x%08X contains a link to non-existent 0x%08X\n", _ptr, ptr);
+#if OBJ_DEBUG >= 1
+					wprintf(L"WARNING: Object 0x%08X contains a link to non-existent 0x%08X\n", _ptr, ptr);
 #endif
 				}
 			}

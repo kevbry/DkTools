@@ -125,9 +125,20 @@ namespace DKX.Compilation.Objects
             return new CodeFragment($"dkx_new({cls.DataSize})", new DataType(cls), OpPrec.None, span, reportable: true, flags: CodeFragmentFlags.UnownedObjectReference);
         }
 
-        public static CodeFragment GenerateReleaseReference(CodeFragment fragment)
+        public static CodeFragment GenerateRelease(CodeFragment fragment)
         {
             return new CodeFragment($"dkx_release({fragment})", fragment.DataType, OpPrec.None, fragment.SourceSpan, reportable: true);
+        }
+
+        public static CodeFragment GenerateReleaseDefer(CodeGenerationContext context, CodeFragment fragment)
+        {
+            context.ReleaseDeferPending = true;
+            return new CodeFragment($"dkx_releasedefer({fragment})", fragment.DataType, OpPrec.None, fragment.SourceSpan, reportable: true);
+        }
+
+        public static CodeFragment GenerateReleaseNow()
+        {
+            return new CodeFragment("dkx_releasenow()", DataType.Void, OpPrec.None, Span.Empty, reportable: false);
         }
 
         public static CodeFragment GenerateSwapLink(CodeFragment objFragment, CodeFragment oldFragment, CodeFragment newFragment)

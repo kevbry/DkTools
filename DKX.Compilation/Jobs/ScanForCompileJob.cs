@@ -74,7 +74,7 @@ namespace DKX.Compilation.Jobs
 
         private async Task<bool> ShouldCompileFileAsync(string dkxPathName)
         {
-            var projectTimeStamp = _project.GetCompileTimeStamp(_phase, dkxPathName);
+            var projectTimeStamp = _project.GetCompileTimeStamp(dkxPathName);
             var fileTimeStamp = GetFileDate(dkxPathName);
 
             if (fileTimeStamp > projectTimeStamp)

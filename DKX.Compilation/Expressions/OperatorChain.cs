@@ -1,6 +1,7 @@
 ﻿using DKX.Compilation.CodeGeneration;
 using DKX.Compilation.DataTypes;
 using DKX.Compilation.Exceptions;
+using DKX.Compilation.Objects;
 using DKX.Compilation.ReportItems;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.Validation;
@@ -128,7 +129,9 @@ namespace DKX.Compilation.Expressions
                     }
 
                     leftFrag = _left.ToWbdkCode_Read(context, flow);
+                    if (leftFrag.DataType.IsClass && leftFrag.IsUnownedObjectReference) leftFrag = ObjectAccess.GenerateReleaseDefer(context, leftFrag);
                     rightFrag = _right.ToWbdkCode_Read(context, flow);
+                    if (rightFrag.DataType.IsClass && rightFrag.IsUnownedObjectReference) leftFrag = ObjectAccess.GenerateReleaseDefer(context, rightFrag);
                     ConversionValidator.CheckConversion(leftFrag.DataType, rightFrag, context.Report);
                     prec = _op.GetPrecedence();
                     return new CodeFragment($"{leftFrag.Protect(prec)} {_op.GetText()} {rightFrag.Protect(prec)}", DataType.Bool, prec, Span, reportable: true);

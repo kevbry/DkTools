@@ -1471,7 +1471,8 @@ void Run_${RunDeco}(unsigned int this)
     unsigned int mbr;
     mbr = ${MemberClass}.Member_${CtorDeco}(123);
     dkx_setuns4(this, 0, dkx_swaplink(this, dkx_getuns4(this, 0), mbr));
-    dkx_setuns4(this, 4, dkx_release(dkx_swaplink(this, dkx_getuns4(this, 4), ${MemberClass}.Member_${CtorDeco}(456))));
+    dkx_setuns4(this, 4, dkx_releasedefer(dkx_swaplink(this, dkx_getuns4(this, 4), ${MemberClass}.Member_${CtorDeco}(456))));
+    dkx_releasenow();
     dkx_setuns4(this, 0, dkx_swaplink(this, dkx_getuns4(this, 0), dkx_getuns4(this, 4)));
     dkx_setuns4(this, 4, dkx_swaplink(this, dkx_getuns4(this, 4), 0));
     (void)dkx_release(mbr);
@@ -1561,7 +1562,8 @@ void Run_${RunDeco}()
 
     mbr = ${MemberClass}.Member_${CtorDeco}(123, ""Jimbo"");
     ${MemberClass}.SetJoint(mbr, ${MemberClass}.Member_${CtorDeco}(456, ""Ned""));
-    puts(${MemberClass}.GetName(${MemberClass}.GetJoint(mbr)));
+    puts(${MemberClass}.GetName(dkx_releasedefer(${MemberClass}.GetJoint(mbr))));
+    dkx_releasenow();
 
     jntMbr = ${MemberClass}.GetJoint(mbr);
     jntMbr2 = ${MemberClass}.GetJoint(mbr);

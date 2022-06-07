@@ -312,6 +312,7 @@ namespace DKX.Compilation.Scopes
                 foreach (var statement in _statements ?? Statement.EmptyArray)
                 {
                     statement.GenerateWbdkCode(methodContext, cw, flow);
+                    if (!flow.IsEnded) methodContext.AfterStatementGenerated(cw);
                 }
 
                 if (_flags.IsConstructor() && !flow.IsEnded)

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DKX.Compilation.Project
@@ -21,6 +22,7 @@ namespace DKX.Compilation.Project
         private Dictionary<string, ProjectNamespace> _namespaces = new Dictionary<string, ProjectNamespace>();
         private CompilePhase _currentPhase;
         private DateTime _phaseStartTime;
+        private SemaphoreSlim _fileScanSem = new SemaphoreSlim(1, 1);
 
         private DkxProject(DkAppContext app, string pathName)
         {
@@ -48,7 +50,7 @@ namespace DKX.Compilation.Project
             switch (phase)
             {
                 case CompilePhase.ClassScan:
-                    await PurgeOldFilesAsync(CompilePhase.ClassScan);
+                    await PurgeOldFilesAsync();
                     CheckForClassNameConflicts(report);
                     break;
 
@@ -64,35 +66,37 @@ namespace DKX.Compilation.Project
             }
         }
 
-        public void OnFileScanCompleted(CompilePhase phase, string dkxPathName, IEnumerable<INamespace> namespaces)
+        public async Task OnFileScanCompletedAsync(CompilePhase phase, string dkxPathName, IEnumerable<INamespace> namespaces)
         {
-            if (phase == CompilePhase.ClassScan)
+            await _fileScanSem.WaitAsync();
+            try
             {
-                if (!_files.TryGetValue(dkxPathName, out var projectFile))
+                if (phase == CompilePhase.FullCompilation)
                 {
-                    _files[dkxPathName] = projectFile = new ProjectFile(dkxPathName);
-                }
-                projectFile.SetCompileTime(phase, DateTime.Now);
-
-                foreach (var fileNamespace in namespaces)
-                {
-                    if (!_namespaces.TryGetValue(fileNamespace.NamespaceName, out var projectNamespace))
+                    if (!_files.TryGetValue(dkxPathName, out var projectFile))
                     {
-                        _namespaces[fileNamespace.NamespaceName] = projectNamespace = new ProjectNamespace(fileNamespace.NamespaceName);
+                        _files[dkxPathName] = projectFile = new ProjectFile(dkxPathName);
+                    }
+
+                    projectFile.SetCompileTime(DateTime.Now);
+                }
+
+                if (phase == CompilePhase.ClassScan || phase == CompilePhase.MemberScan || phase == CompilePhase.ConstantResolution)
+                {
+                    foreach (var fileNamespace in namespaces)
+                    {
+                        if (!_namespaces.TryGetValue(fileNamespace.NamespaceName, out var projectNamespace))
+                        {
+                            _namespaces[fileNamespace.NamespaceName] = projectNamespace = new ProjectNamespace(fileNamespace.NamespaceName, DateTime.Now);
+                        }
+
+                        projectNamespace.Update(phase, fileNamespace);
                     }
                 }
             }
-            if (phase == CompilePhase.ClassScan || phase == CompilePhase.MemberScan || phase == CompilePhase.ConstantResolution)
+            finally
             {
-                foreach (var fileNamespace in namespaces)
-                {
-                    if (!_namespaces.TryGetValue(fileNamespace.NamespaceName, out var projectNamespace))
-                    {
-                        throw new InvalidOperationException($"Namespace '{fileNamespace.NamespaceName}' could not be found.");
-                    }
-
-                    projectNamespace.Update(phase, fileNamespace);
-                }
+                _fileScanSem.Release();
             }
         }
 
@@ -107,9 +111,9 @@ namespace DKX.Compilation.Project
             projectFile.TableDependencies = tableDependencies;
         }
 
-        public DateTime GetCompileTimeStamp(CompilePhase phase, string dkxPathName)
+        public DateTime GetCompileTimeStamp(string dkxPathName)
         {
-            if (_files.TryGetValue(dkxPathName, out var file)) return file.GetCompileTime(phase);
+            if (_files.TryGetValue(dkxPathName, out var file)) return file.GetCompileTime();
             return DateTime.MinValue;
         }
 
@@ -300,10 +304,19 @@ namespace DKX.Compilation.Project
             return count;
         }
 
-        private async Task PurgeOldFilesAsync(CompilePhase phase)
+        private async Task PurgeOldFilesAsync()
         {
             await _app.Log.DebugAsync("Purging old files from project.");
-            var deletedFiles = _files.Where(x => x.Value.GetCompileTime(phase) < _phaseStartTime).Select(x => x.Key).ToList();
+
+            var deletedFiles = new List<string>();
+            foreach (var file in _files)
+            {
+                if (!_app.FileSystem.FileExists(file.Key))
+                {
+                    deletedFiles.Add(file.Key);
+                }
+            }
+
             foreach (var deletedFile in deletedFiles)
             {
                 await _app.Log.DebugAsync("Purging file from project: {0}", deletedFile);

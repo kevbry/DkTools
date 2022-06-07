@@ -113,6 +113,8 @@ REPEAT18
 extern unsigned int dkx_new(unsigned int size);
 extern unsigned int dkx_addref(unsigned int ptr);
 extern unsigned int dkx_release(unsigned int ptr);
+extern unsigned int dkx_releasedefer(unsigned int ptr);
+extern void dkx_releasenow();
 extern unsigned int dkx_swap(unsigned int oldPtr, unsigned int newPtr);
 extern unsigned int dkx_swapnoadd(unsigned int oldPtr, unsigned int newPtr);
 extern unsigned int dkx_link(unsigned int fromPtr, unsigned int toPtr);

@@ -73,7 +73,9 @@ namespace DKX.Compilation.Expressions
                 var firstArg = true;
                 if (!_method.Flags.HasFlag(ModifierFlags.Static))
                 {
-                    sb.Append(_thisChain.ToWbdkCode_Read(context, flow));
+                    var thisFrag = _thisChain.ToWbdkCode_Read(context, flow);
+                    if (thisFrag.IsUnownedObjectReference) thisFrag = ObjectAccess.GenerateReleaseDefer(context, thisFrag);
+                    sb.Append(thisFrag);
                     firstArg = false;
                 }
                 foreach (var arg in _args)

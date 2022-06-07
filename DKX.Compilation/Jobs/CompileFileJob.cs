@@ -74,7 +74,7 @@ namespace DKX.Compilation.Jobs
                 }
             }
 
-            _project.OnFileScanCompleted(_phase, _dkxPathName, fileScope.Namespaces);
+            await _project.OnFileScanCompletedAsync(_phase, _dkxPathName, fileScope.Namespaces);
 
             if (_phase == CompilePhase.FullCompilation)
             {
