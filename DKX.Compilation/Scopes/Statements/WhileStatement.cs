@@ -7,7 +7,7 @@ using System;
 
 namespace DKX.Compilation.Scopes.Statements
 {
-    class WhileStatement : Statement
+    class WhileStatement : Statement, IBreakScope, IContinueScope
     {
         private Chain _condition;
         private Statement[] _body;
@@ -32,6 +32,8 @@ namespace DKX.Compilation.Scopes.Statements
                 var conditionToken = stream.Read();
                 whileStatement._condition = ExpressionParser.TokensToExpression(whileStatement, conditionToken.Tokens, conditionToken.Span);
                 whileStatement._body = StatementParser.ReadBodyOrStatement(whileStatement, stream, keywordToken.Span);
+
+                if (!stream.EndOfStream) throw new CodeException(stream.Read().Span, ErrorCode.SyntaxError);
             }
             catch (CodeException ex)
             {

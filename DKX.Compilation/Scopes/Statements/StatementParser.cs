@@ -45,6 +45,22 @@ namespace DKX.Compilation.Scopes.Statements
             {
                 if (token.Type == DkxTokenType.Keyword)
                 {
+                    #region break
+                    if (token.IsKeyword(DkxConst.Keywords.Break))
+                    {
+                        pos++;
+                        if (tokens[pos].IsStatementEnd) pos++;
+                        return pos;
+                    }
+                    #endregion
+                    #region continue
+                    if (token.IsKeyword(DkxConst.Keywords.Continue))
+                    {
+                        pos++;
+                        if (tokens[pos].IsStatementEnd) pos++;
+                        return pos;
+                    }
+                    #endregion
                     #region if
                     if (token.IsKeyword(DkxConst.Keywords.If))
                     {
@@ -140,6 +156,10 @@ namespace DKX.Compilation.Scopes.Statements
             {
                 switch (token.Text)
                 {
+                    case DkxConst.Keywords.Break:
+                        return BreakStatement.Parse(scope, tokens);
+                    case DkxConst.Keywords.Continue:
+                        return ContinueStatement.Parse(scope, tokens);
                     case DkxConst.Keywords.If:
                         return IfStatement.Parse(scope, tokens);
                     case DkxConst.Keywords.Return:

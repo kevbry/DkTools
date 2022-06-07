@@ -402,6 +402,12 @@ namespace DKX.Compilation
         /// </summary>
         [Description("Null cannot be used with type '{0}'.")]
         NullInvalidForDataType = 1520,
+
+        [Description("'break' is not valid here.")]
+        NoBreakScope = 1521,
+
+        [Description("'continue' is not valid here.")]
+        NoContinueScope = 1522,
         #endregion
 
         #region Attributes (1600-1699)

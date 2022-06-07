@@ -52,7 +52,11 @@
     <Compile Include="CodeGeneration\CodeWriter.cs" />
     <Compile Include="Expressions\TypedNullChain.cs" />
     <Compile Include="Scopes\FlowTrace.cs" />
+    <Compile Include="Scopes\IBreakScope.cs" />
+    <Compile Include="Scopes\IContinueScope.cs" />
     <Compile Include="Scopes\ModifierFlags.cs" />
+    <Compile Include="Scopes\Statements\BreakStatement.cs" />
+    <Compile Include="Scopes\Statements\ContinueStatement.cs" />
     <Compile Include="Scopes\Statements\WhileStatement.cs" />
     <Compile Include="SystemClasses\SystemTypesClass.cs" />
     <Compile Include="Validation\ConversionValidator.cs" />
