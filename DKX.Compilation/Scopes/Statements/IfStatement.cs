@@ -33,7 +33,7 @@ namespace DKX.Compilation.Scopes.Statements
                 {
                     var conditionToken = stream.Read();
                     if (!conditionToken.IsBrackets) throw new CodeException(conditionToken.Span, ErrorCode.ExpectedCondition);
-                    var condition = ExpressionParser.TokensToExpressionStatement(ifStatement, conditionToken.Tokens, keywordToken.Span);
+                    var condition = ExpressionParser.TokensToExpression(ifStatement, conditionToken.Tokens, keywordToken.Span);
 
                     var ifCase = new IfCase(ifStatement, condition?.Span ?? keywordToken.Span, condition, first, finalElse: false);
                     first = false;
@@ -117,10 +117,11 @@ namespace DKX.Compilation.Scopes.Statements
                 }
                 if (_condition != null)
                 {
-                    if (!_first) cw.Write(' ');
+                    if (!_first) cw.WriteSpace();
                     cw.Write(DkxConst.Keywords.If);
-                    cw.Write(' ');
+                    cw.WriteSpace();
                     var conditionFrag = _condition.ToWbdkCode_Read(parentContext, flow);
+                    if (conditionFrag.DataType.BaseType != BaseType.Bool) throw new CodeException(conditionFrag.SourceSpan, ErrorCode.ExpressionMustBeBool);
                     cw.Write(conditionFrag);
                     ConversionValidator.CheckConversion(DataType.Bool, conditionFrag, this);
                 }

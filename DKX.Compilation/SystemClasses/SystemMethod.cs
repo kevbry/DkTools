@@ -11,20 +11,24 @@ namespace DKX.Compilation.SystemClasses
 {
     class SystemMethod : IMethod
     {
+        public static readonly SystemMethod[] EmptyArray = new SystemMethod[0];
+
         private IClass _class;
         private string _name;
         private DataType _returnDataType;
         private SystemArgument[] _arguments;
         private WbdkCodeGeneratorCallback _wbdkCodeGenerator;
+        private DataType? _onDataType;
 
-        public delegate CodeFragment WbdkCodeGeneratorCallback(CodeGenerationContext context, Chain[] arguments, Span span, FlowTrace flow);
+        public delegate CodeFragment WbdkCodeGeneratorCallback(CodeGenerationContext context, Chain leftChainOrNull, Chain[] arguments, Span span, FlowTrace flow);
 
-        public SystemMethod(IClass class_, string name, DataType returnDataType, SystemArgument[] arguments, WbdkCodeGeneratorCallback wbdkCodeGenerator)
+        public SystemMethod(IClass class_, string name, DataType returnDataType, SystemArgument[] arguments, DataType? onDataType, WbdkCodeGeneratorCallback wbdkCodeGenerator)
         {
             _class = class_ ?? throw new ArgumentNullException(nameof(class_));
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _returnDataType = returnDataType;
             _arguments = arguments;
+            _onDataType = onDataType;
             _wbdkCodeGenerator = wbdkCodeGenerator ?? throw new ArgumentNullException(nameof(wbdkCodeGenerator));
         }
 
@@ -33,7 +37,7 @@ namespace DKX.Compilation.SystemClasses
         public IClass Class => _class;
         public Span DefinitionSpan => Span.Empty;
         public FileContext FileContext => FileContext.NeutralClass;
-        public ModifierFlags Flags => ModifierFlags.Static;
+        public ModifierFlags Flags => _onDataType.HasValue ? default : ModifierFlags.Static;
         public string Name => _name;
         public Privacy Privacy => Privacy.Public;
         public DataType ReturnDataType => _returnDataType;

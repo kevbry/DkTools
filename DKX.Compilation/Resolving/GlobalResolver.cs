@@ -1,5 +1,6 @@
 ﻿using DKX.Compilation.DataTypes;
 using DKX.Compilation.Project;
+using DKX.Compilation.SystemClasses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,10 +43,16 @@ namespace DKX.Compilation.Resolving
             if (dataType.BaseType == BaseType.Class)
             {
                 var cls = _project.GetClassByFullNameOrNull(dataType.Options[0]);
-                return cls?.GetMethods(name) ?? IMethodHelper.EmptyArray;
+                foreach (var method in cls?.GetMethods(name) ?? IMethodHelper.EmptyArray)
+                {
+                    yield return method;
+                }
             }
 
-            return IMethodHelper.EmptyArray;
+            foreach (var method in SystemTypesClass.GetMethodsForDataType(dataType, name))
+            {
+                yield return method;
+            }
         }
 
         public IEnumerable<IField> GetFields(DataType dataType, string name)

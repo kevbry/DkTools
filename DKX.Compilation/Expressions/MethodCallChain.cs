@@ -57,10 +57,18 @@ namespace DKX.Compilation.Expressions
                 var cls = SystemClass.SystemClasses.Where(x => x.FullClassName == _method.Class.FullClassName).FirstOrDefault();
                 if (cls == null) throw new InvalidOperationException($"System class '{_method.Class.FullClassName}' not found.");
 
-                var method = cls.GetMethods(_method.Name).FirstOrDefault() as SystemMethod;
-                if (method == null) throw new InvalidOperationException($"System method '{_method.Class.FullClassName}.{_method.Name}' not found.");
+                SystemMethod sysMethod;
+                if (_thisChain == null)
+                {
+                    sysMethod = cls.GetStaticMethods(_method.Name).Where(m => m.ReturnDataType == _method.ReturnDataType && m.Arguments.IsMatch(_method.Arguments)).FirstOrDefault();
+                }
+                else
+                {
+                    sysMethod = cls.GetNonStaticMethods(_method.Name, _thisChain.DataType).Where(m => m.ReturnDataType == _method.ReturnDataType && m.Arguments.IsMatch(_method.Arguments)).FirstOrDefault();
+                }
+                if (sysMethod == null) throw new InvalidOperationException($"System method '{_method.Class.FullClassName}.{_method.Name}' not found.");
 
-                return method.WbdkCodeGenerator(context, _args, Span, flow);
+                return sysMethod.WbdkCodeGenerator(context, _thisChain, _args, Span, flow);
             }
             else
             {

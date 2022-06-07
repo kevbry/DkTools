@@ -53,7 +53,6 @@ namespace DKX.Compilation.SystemClasses
                             if (!method.Flags.HasFlag(ModifierFlags.Static)) throw new CodeException(attribute.Span, ErrorCode.AttributeMustBeStatic, attribute.Name);
                             method.Flags |= ModifierFlags.NotCallable | ModifierFlags.ProgramEntryPoint;
                             method.FileContext = FileContext.ServerProgram;
-                            method.WbdkName = "main";
                             method.FileTarget = new FileTarget(FileContext.ServerProgram, relPathName);
                         }
                         break;

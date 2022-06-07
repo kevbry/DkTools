@@ -58,7 +58,7 @@ namespace DKX.Compilation.Expressions
                 case Operator.Decrement:
                     leftFrag = _left.ToWbdkCode_Read(context, flow);
                     if (!leftFrag.DataType.IsSuitableForIncDec) throw new CodeException(leftFrag.SourceSpan, ErrorCode.OperatorCannotBeUsedWithThisDataType, _op.GetText());
-                    return new CodeFragment($"{leftFrag.Protect(OpPrec.IncDec)} {_op.GetText()} 1", leftFrag.DataType, OpPrec.IncDec, Span, reportable: false);
+                    return new CodeFragment($"{leftFrag.Protect(OpPrec.IncDec)} {(_op == Operator.Increment ? DkxConst.Operators.AssignAdd : DkxConst.Operators.AssignSubtract)} 1", leftFrag.DataType, OpPrec.IncDec, Span, reportable: false);
 
                 case Operator.Add:
                 case Operator.Subtract:

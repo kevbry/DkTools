@@ -1,4 +1,5 @@
-﻿using DKX.Compilation.Resolving;
+﻿using DKX.Compilation.DataTypes;
+using DKX.Compilation.Resolving;
 using DKX.Compilation.Scopes;
 using DKX.Compilation.SystemClasses.Console;
 using System;
@@ -11,7 +12,8 @@ namespace DKX.Compilation.SystemClasses
     {
         public static readonly SystemClass[] SystemClasses = new SystemClass[]
         {
-            new SystemConsoleClass()
+            new SystemConsoleClass(),
+            new SystemTypesClass()
         };
 
         private string _className;
@@ -35,6 +37,10 @@ namespace DKX.Compilation.SystemClasses
         public string WbdkClassName => FullClassName;
 
         public IEnumerable<IMethod> GetMethods(string name) => _methods.Where(x => x.Name == name);
+
+        public virtual IEnumerable<SystemMethod> GetStaticMethods(string name) => _methods.Where(x => x.Flags.IsStatic() && x.Name == name);
+
+        public virtual IEnumerable<SystemMethod> GetNonStaticMethods(string name, DataType dataType) => _methods.Where(x => !x.Flags.IsStatic() && x.Name == name);
 
         public IEnumerable<IField> GetFields(string name) => IFieldHelper.EmptyArray;
 

@@ -104,6 +104,24 @@ namespace DKX.Compilation.Scopes.Statements
                         return FindStatementEnd(tokens, pos + 1, allowControlStatements: false);
                     }
                     #endregion
+                    #region while
+                    if (token.IsKeyword(DkxConst.Keywords.While))
+                    {
+                        pos++;
+                        if (tokens[pos].IsBrackets)
+                        {
+                            pos++;
+                            if (tokens[pos].IsScope) pos++;
+                            else
+                            {
+                                pos = FindStatementEnd(tokens, pos, allowControlStatements: true);
+                                if (pos < 0) return -1;
+                            }
+                            return pos;
+                        }
+                        else return pos;
+                    }
+                    #endregion
                 }
             }
 
@@ -128,6 +146,8 @@ namespace DKX.Compilation.Scopes.Statements
                         return ReturnStatement.Parse(scope, tokens);
                     case DkxConst.Keywords.Var:
                         return VarStatement.Parse(scope, tokens);
+                    case DkxConst.Keywords.While:
+                        return WhileStatement.Parse(scope, tokens);
                     default:
                         throw new CodeException(token.Span, ErrorCode.KeywordNotValidHere, token.Text);
                 }

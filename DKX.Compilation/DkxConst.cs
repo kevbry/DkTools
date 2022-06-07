@@ -20,6 +20,7 @@ namespace DKX.Compilation
 
         public const string This = "this";
         public const string CastToVoid = "(void)";
+        public const string ProgramEntryPointFunctionName = "main";
 
         public static class Namespaces
         {
@@ -66,6 +67,11 @@ namespace DKX.Compilation
         {
             public const string Assign = "=";
             public const char AssignChar = '=';
+            public const string AssignAdd = "+=";
+            public const string AssignSubtract = "-=";
+            public const string AssignMultiply = "*=";
+            public const string AssignDivide = "/=";
+            public const string AssignModulus = "%=";
             public const string Dot = ".";
             public const char DotChar = '.';
         }
@@ -161,5 +167,10 @@ namespace DKX.Compilation
             public const string GatewayProgram = "GatewayProgram";
         }
         #endregion
+
+        public static class SystemMethods
+        {
+            public const string ToString_ = "ToString";
+        }
     }
 }

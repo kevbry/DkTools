@@ -564,7 +564,7 @@ namespace DKX.Compilation.Expressions
         /// The resulting expression.
         /// Always returns a value; if bad code is detected, throws a CodeException.
         /// </returns>
-        public static Chain TokensToExpressionStatement(Scope scope, DkxTokenCollection tokens, Span errorSpan)
+        public static Chain TokensToExpression(Scope scope, DkxTokenCollection tokens, Span errorSpan)
         {
             if (tokens.Count == 0) throw new CodeException(errorSpan, ErrorCode.ExpectedExpression);
 

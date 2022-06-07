@@ -16,10 +16,10 @@ namespace DKX.Compilation.SystemClasses.Console
             AddMethod(new SystemMethod(this, "WriteLine", DataType.Void, new SystemArgument[]
             {
                 new SystemArgument("text", DataType.String255, ArgumentPassType.ByReference)
-            }, Generate_WriteLine));
+            }, onDataType: null, Generate_WriteLine));
         }
 
-        private CodeFragment Generate_WriteLine(CodeGenerationContext context, Chain[] arguments, Span span, FlowTrace flow)
+        private CodeFragment Generate_WriteLine(CodeGenerationContext context, Chain leftChainOrNull, Chain[] arguments, Span span, FlowTrace flow)
         {
             if (arguments.Length != 1) throw new CodeException(span, ErrorCode.InvalidNumberOfArguments);
             var argFrag = arguments[0].ToWbdkCode_Read(context, flow);

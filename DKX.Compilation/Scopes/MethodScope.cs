@@ -244,7 +244,8 @@ namespace DKX.Compilation.Scopes
 
             cw.Write(_returnDataType.ToWbdkCode());
             cw.Write(' ');
-            cw.Write(_wbdkName);
+            if (_flags.HasFlag(ModifierFlags.ProgramEntryPoint)) cw.Write(DkxConst.ProgramEntryPointFunctionName);
+            else cw.Write(_wbdkName);
             cw.Write('(');
             var firstArg = true;
             if (!_flags.IsStatic() && !_flags.IsConstructor())
