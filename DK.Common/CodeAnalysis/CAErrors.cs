@@ -140,6 +140,9 @@ namespace DK.CodeAnalysis
 
 		[ErrorMessage("Table '{0}' has no column '{1}'.")]
 		CA0040,
+
+		[ErrorMessage("Expected number after 'top'.")]
+		CA0072,
 		#endregion
 
 		#region Conditional Statements
@@ -250,7 +253,7 @@ namespace DK.CodeAnalysis
 		CA0070,
 		#endregion
 
-		// Last CA0071
+		// Last CA0072
 
 		#region Function Calls (0120-0129)
 		/// <summary>
@@ -259,6 +262,9 @@ namespace DK.CodeAnalysis
 		/// </summary>
 		[ErrorMessage("{0}")]
 		CA0120,
+
+		[ErrorMessage("Function requires {0} arguments. ({1} passed)")]
+		CA0121,
 		#endregion
 
 		#region In Operator (0130-0139)

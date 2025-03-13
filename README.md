@@ -18,6 +18,14 @@ Visual Studio Extension for WBDK
 
 ## Change Log
 
+**Version 1.6.8 Changes:**
+- Code analysis on switch statements with enums no longer consider the code branch 'covered' if all enum options are present (but no default). There could be an invalid value in the variable.
+- Fixed incorrect code analysis highlighting on ternary statements.
+- Implemented new navigation bar above code editor. The standard bar disappears in recent versions of VS.
+- Added support for 'distinct' and 'top' keywords in select statements.
+- Code analysis now detects when a funtion is being called with the wrong number of arguments.
+- Fixed various dict parsing issues with newly introduced definitions.
+
 **Version 1.6.7 Changes:**
 - Fixed problem with code analysis warnings when calling widthof() with an uninitialized variable.
 - Added support for using constants with #warndel and #warnadd.
