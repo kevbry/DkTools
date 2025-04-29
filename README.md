@@ -18,6 +18,11 @@ Visual Studio Extension for WBDK
 
 ## Change Log
 
+**Version 1.6.9 Changes:**
+- Added code analysis support for the new 'like' operator.
+- Removed length restriction on create file dialog.
+- Add a command/tool bar button to manually run FEC for errors. (to avoid DK compile data getting corrupted by auto-running multiple times)
+
 **Version 1.6.8 Changes:**
 - Code analysis on switch statements with enums no longer consider the code branch 'covered' if all enum options are present (but no default). There could be an invalid value in the variable.
 - Fixed incorrect code analysis highlighting on ternary statements.
