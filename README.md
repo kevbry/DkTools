@@ -8,7 +8,6 @@ Visual Studio Extension for WBDK
 - Find all references
 - Statement completion
 - Function signature help
-- Code snippets
 - Automatic brace completion
 - Code folding
 - Brace matching
@@ -17,6 +16,24 @@ Visual Studio Extension for WBDK
 - Static code analysis
 
 ## Change Log
+
+**Version 1.6.10 Changes:**
+- Fixed bug in code analysis reporting CA0016 (unreachable code) after a for/while loop with a return statement in it.
+- Re-enabled the Comment Selection command in the text editor.
+- Fixed definitions from include files not refreshing if the include path contains '..'
+- Stopped code analysis errors when assigning a value to/from a variant.
+- Stopped code analysis errors for uninitialized interface types.
+- Added support for table$column and table$$column.
+- Fixed enum value not getting detected properly when used with an array.
+- Removed code snippets. (haven't worked for a long time and nobody complained)
+- Add support for onerror.
+- Fix incorrect implicit columns on many-to-many relationships.
+- Added many AFS table methods/properties.
+- Add support for global AFS methods.
+- Add support for methods and properties on interface types.
+- Added many missing built-in variant functions.
+- Fixed code analysis issues when a switch statement has case-bodies wrapper in braces { }.
+- Fixed keyboard shortcut for goto next/previous reference commands (Ctrl+Alt+[/])
 
 **Version 1.6.9 Changes:**
 - Added code analysis support for the new 'like' operator.

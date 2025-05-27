@@ -296,7 +296,9 @@ namespace DK.Code
 					return true;
 				}
 
-				if (ch == '?' || ch == ':' || ch == ',' || ch == '.' || ch == '(' || ch == ')' || ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == '^' || ch == '!' || ch == ';')
+				if (ch == '?' || ch == ':' || ch == ',' || ch == '.' || ch == '(' || ch == ')' ||
+					ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == '^' || ch == '!' ||
+					ch == ';' || ch == '$')
 				{
 					_tokenText.Append(ch);
 					_pos++;
@@ -426,7 +428,7 @@ namespace DK.Code
 			int lineNum = 0;
 			int linePos = 0;
 
-			while (pos < _length)
+			while (pos < offset)
 			{
 				if (_source[pos] == '\n')
 				{

@@ -17,6 +17,9 @@ namespace DK.CodeAnalysis
 
 		[ErrorMessage("Expected identifier to follow '.'")]
 		CA0004,
+
+		[ErrorMessage("Expected identifier to follow '$'.")]
+		CA0005,
 		#endregion
 
 		[ErrorMessage("Unknown operator '{0}'.")]
@@ -284,6 +287,11 @@ namespace DK.CodeAnalysis
 		#region Like Operator (0140-0149)
 		[ErrorMessage("'like' operator may only be used with a string.")]
 		CA0140,
+		#endregion
+
+		#region Goto Operator (0150-0159)
+		[ErrorMessage("Expected goto label.")]
+		CA0150,
 		#endregion
 	}
 

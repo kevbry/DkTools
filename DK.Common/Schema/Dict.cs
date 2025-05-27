@@ -1374,6 +1374,11 @@ namespace DK.Schema
 			{
 				parentTable.AddRelInd(relind);
 
+				if (hasTable)
+				{
+					relind.AddColumn(new Column(name, "rowno", DataType.Unsigned9, nameFilePos, implicitCol: true));
+				}
+
 				if (parentMany)
 				{
 					// child must be many if parent is many
@@ -1381,16 +1386,24 @@ namespace DK.Schema
 					parentTable.AddColumn(new Column(parentTable.Name, string.Concat("has_", name, "_", childTable.Name),
 						DataType.Unsigned2, nameFilePos, true));
 
-					childTable.AddColumn(new Column(childTable.Name, string.Concat("rowno_", name, "_", parentTable.Name),
-						DataType.Unsigned9, nameFilePos, true));
+					childTable.AddColumn(new Column(childTable.Name, string.Concat("has_", name, "_", parentTable.Name),
+						DataType.Unsigned2, nameFilePos, true));
 
 					if (hasTable)
 					{
 						relind.AddColumn(new Column(name, string.Concat("rowno_", name, "_", parentTable.Name),
 							DataType.Unsigned9, nameFilePos, true));
 
-						relind.AddColumn(new Column(name, string.Concat("rowno_", name, "_", childTable.Name, "2"),
-							DataType.Unsigned9, nameFilePos, true));
+						if (parentTable.Name == childTable.Name)
+						{
+                            relind.AddColumn(new Column(name, string.Concat("rowno_", name, "_", childTable.Name, "2"),
+								DataType.Unsigned9, nameFilePos, implicitCol: true));
+                        }
+						else
+						{
+                            relind.AddColumn(new Column(name, string.Concat("rowno_", name, "_", childTable.Name),
+								DataType.Unsigned9, nameFilePos, implicitCol: true));
+                        }
 					}
 				}
 				else // one parent
@@ -1864,8 +1877,8 @@ namespace DK.Schema
 					}
 					else if (word.Equals("interface", StringComparison.OrdinalIgnoreCase))
 					{
-						if (_code.ReadStringLiteral()) intf.InterfaceName = CodeParser.StringLiteralToString(_code.Text);
-						else if (_code.ReadWord()) intf.InterfaceName = _code.Text;
+						if (_code.ReadStringLiteral()) intf.PlatformName = CodeParser.StringLiteralToString(_code.Text);
+						else if (_code.ReadWord()) intf.PlatformName = _code.Text;
 						else
 						{
 							ReportError(_code.Position, "Expected string literal or identifier to follow 'interface'.");
@@ -1900,7 +1913,17 @@ namespace DK.Schema
 			return null;
 		}
 
-		private void ReadDropInterfaceType()
+		public Interface GetInterfaceByPlatformName(string name)
+		{
+			foreach (var intf in _interfaces.Values)
+			{
+				if (intf.PlatformName == name) return intf;
+			}
+			return null;
+		}
+
+
+        private void ReadDropInterfaceType()
 		{
 			var name = _code.ReadWordR();
 			if (string.IsNullOrEmpty(name))
@@ -1917,10 +1940,16 @@ namespace DK.Schema
 
 			_interfaces.Remove(name);
 		}
-		#endregion
 
-		#region Workspaces
-		private void ReadCreateWorkspace()
+		public void LoadInterfacesMap(string source)
+		{
+			var loader = new InterfaceMapLoader(_appSettings, source);
+			loader.Load();
+		}
+        #endregion
+
+        #region Workspaces
+        private void ReadCreateWorkspace()
 		{
 			var name = _code.ReadWordR();
 			if (string.IsNullOrEmpty(name))

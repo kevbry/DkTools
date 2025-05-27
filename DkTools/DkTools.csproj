@@ -252,9 +252,6 @@
     </Compile>
     <Compile Include="Navigation\GoToBraceHelper.cs" />
     <Compile Include="Navigation\GoToDefinitionHelper.cs" />
-    <Compile Include="Snippets\SnippetCommandHandler.cs" />
-    <Compile Include="Snippets\SnippetCommandProvider.cs" />
-    <Compile Include="Snippets\SnippetDeploy.cs" />
     <Compile Include="CodeSpanUtil.cs" />
     <Compile Include="StatementCompletion\ProbeAsyncCompletionSource.cs" />
     <Compile Include="StatementCompletion\ProbeAsyncCompletionSourceProvider.cs" />
@@ -291,17 +288,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <Content Include="ItemTemplates\MapInterfaces.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <None Include="Snippets\Default\Fincentric.Default.snippet" />
-    <EmbeddedResource Include="Snippets\Default\Client Triggers.Snippets.snippet" />
-    <EmbeddedResource Include="Snippets\Default\Neutral Triggers.Snippets.snippet" />
-    <EmbeddedResource Include="Snippets\Default\Server Triggers.Snippets.snippet" />
-    <EmbeddedResource Include="Snippets\Default\Misc.Snippets.snippet">
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
@@ -310,7 +304,6 @@
     <None Include="Key.snk" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Snippets\SnippetIndex.xml" />
     <None Include="Resources\Relationship.png" />
     <None Include="Resources\Table.png" />
     <None Include="Resources\ProbeExplorerIcon.png" />
@@ -440,6 +433,7 @@
       <Version>13.0.1</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <UseCodebase>true</UseCodebase>
   </PropertyGroup>

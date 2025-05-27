@@ -61,6 +61,8 @@ namespace DK.CodeAnalysis.Nodes
                         return exp;
                 }
 
+                if (code.PeekExactWholeWord("onerror")) return exp;
+
                 if (CheckForStopStrings(p, stopStrings)) return exp;
 
                 if (!code.Read()) break;
@@ -248,6 +250,20 @@ namespace DK.CodeAnalysis.Nodes
                                     }
                                 }
                                 break;
+                            case "$":
+                                {
+                                    var dollarSpan = code.Span;
+                                    if (code.ReadWord())
+                                    {
+                                        var wordSpan = code.Span.Envelope(dollarSpan);
+                                        exp.AddChild(exp.ReadWord(p, parseDataType, overrideWord: $"${code.Text}", overrideWordSpan: wordSpan));
+                                    }
+                                    else
+                                    {
+                                        exp.AddChild(new OperatorNode(p.Statement, code.Span, code.Text, null));
+                                    }
+                                }
+                                break;
                             default:
                                 exp.AddChild(new OperatorNode(p.Statement, code.Span, code.Text, null));
                                 break;
@@ -263,11 +279,11 @@ namespace DK.CodeAnalysis.Nodes
             return exp;
         }
 
-        private Node ReadWord(ReadParams p, DataType refDataType)
+        private Node ReadWord(ReadParams p, DataType refDataType, string overrideWord = null, CodeSpan? overrideWordSpan = null)
         {
             var code = p.Code;
-            var word = code.Text;
-            var wordSpan = code.Span;
+            var word = overrideWord ?? code.Text;
+            var wordSpan = overrideWordSpan ?? code.Span;
 
             if (code.ReadExact('('))
             {
@@ -284,7 +300,7 @@ namespace DK.CodeAnalysis.Nodes
                         return AggregateFunctionCallNode.Read(p, wordSpan, word);
                 }
 
-                return FunctionCallNode.Read(p, wordSpan, word, funcDef: null, argsStartPos);
+                return FunctionCallNode.Read(p, wordSpan, word, funcDefs: null, argsStartPos);
             }
 
             if (code.ReadExact('.'))
@@ -305,10 +321,13 @@ namespace DK.CodeAnalysis.Nodes
                                                    where d.AllowsChild
                                                    select d))
                         {
-                            var childDef = parentDef.GetChildDefinitions(p.AppSettings).FirstOrDefault(c => c.Name == childWord && c.ArgumentsRequired);
-                            if (childDef != null)
+                            var childDefs = parentDef.GetChildDefinitions(p.AppSettings)
+                                .Where(c => c.Name == childWord && c.ArgumentsRequired).ToList();
+                            if (childDefs.Count > 0)
                             {
-                                return FunctionCallNode.Read(p, combinedSpan, combinedWord, childDef, argsStartPos);
+                                var parentNode = new IdentifierNode(p.Statement, wordSpan, word, parentDef);
+                                var childNode = FunctionCallNode.Read(p, combinedSpan, combinedWord, childDefs, argsStartPos);
+                                return new ParentChildNode(parentNode, childNode);
                             }
                         }
 
@@ -321,10 +340,12 @@ namespace DK.CodeAnalysis.Nodes
                                                    where d.AllowsChild
                                                    select d))
                         {
-                            var childDef = parentDef.GetChildDefinitions(p.AppSettings).FirstOrDefault(c => c.Name == childWord && !c.ArgumentsRequired);
+                            var childDef = parentDef.GetChildDefinitions(childWord, p.AppSettings).FirstOrDefault(c => !c.ArgumentsRequired);
                             if (childDef != null)
                             {
-                                return TryReadSubscript(p, combinedSpan, combinedWord, childDef);
+                                var parentNode = new IdentifierNode(p.Statement, wordSpan, word, parentDef);
+                                var childNode = TryReadSubscript(p, combinedSpan, combinedWord, childDef);
+                                return new ParentChildNode(parentNode, childNode);
                             }
                         }
 
@@ -336,6 +357,96 @@ namespace DK.CodeAnalysis.Nodes
                 {
                     ReportError(dotSpan, CAError.CA0004);	// Expected identifier to follow '.'
                     return new UnknownNode(p.Statement, wordSpan.Envelope(dotSpan), string.Concat(word, "."));
+                }
+            }
+            else if (code.ReadExact("$$"))
+            {
+                var dollarSpan = code.Span;
+
+                if (code.ReadWord())
+                {
+                    var childWord = code.Text;
+                    var combinedWord = string.Concat(word, "$$", childWord);
+                    var combinedSpan = wordSpan.Envelope(code.Span);
+
+                    // Double-dollar does not currently have any methods available.
+
+                    foreach (var parentDef in (from d in p.CodeAnalyzer.PreprocessorModel.DefinitionProvider.GetAny(code.Position + p.FuncOffset, word)
+                                                where d.AllowsDoubleDollarChild
+                                                select d))
+                    {
+                        var childDef = parentDef.GetDoubleDollarChildDefinitions(childWord, p.AppSettings).FirstOrDefault(c => !c.ArgumentsRequired);
+                        if (childDef != null)
+                        {
+                            var parentNode = new IdentifierNode(p.Statement, wordSpan, word, parentDef);
+                            var childNode = TryReadSubscript(p, combinedSpan, combinedWord, childDef);
+                            return new ParentChildNode(parentNode, childNode);
+                        }
+                    }
+
+                    ReportError(combinedSpan, CAError.CA0001, combinedWord);	// Unknown '{0}'.
+                    return new UnknownNode(p.Statement, combinedSpan, combinedWord);
+                }
+                else // No word after double-dollar
+                {
+                    ReportError(dollarSpan, CAError.CA0005);	// Expected identifier to follow '$'.
+                    return new UnknownNode(p.Statement, wordSpan.Envelope(dollarSpan), string.Concat(word, "$$"));
+                }
+            }
+            else if (code.ReadExact('$'))
+            {
+                var dollarSpan = code.Span;
+
+                if (code.ReadWord())
+                {
+                    var childWord = code.Text;
+                    var combinedWord = string.Concat(word, "$", childWord);
+                    var combinedSpan = wordSpan.Envelope(code.Span);
+
+                    if (code.ReadExact('('))
+                    {
+                        var argsStartPos = code.Span.Start;
+
+                        foreach (var parentDef in (from d in p.CodeAnalyzer.PreprocessorModel.DefinitionProvider.GetAny(code.Position + p.FuncOffset, word)
+                                                   where d.AllowsDollarChild
+                                                   select d))
+                        {
+                            var childDefs = parentDef.GetDollarChildDefinitions(p.AppSettings)
+                                .Where(c => c.Name == childWord && c.ArgumentsRequired).ToList();
+                            if (childDefs != null)
+                            {
+                                var parentNode = new IdentifierNode(p.Statement, wordSpan, word, parentDef);
+                                var childNode = FunctionCallNode.Read(p, combinedSpan, combinedWord, childDefs, argsStartPos);
+                                return new ParentChildNode(parentNode, childNode);
+                            }
+                        }
+
+                        ReportError(combinedSpan, CAError.CA0003, combinedWord);	// Function '{0}' not found.
+                        return new UnknownNode(p.Statement, combinedSpan, combinedWord);
+                    }
+                    else // No opening bracket
+                    {
+                        foreach (var parentDef in (from d in p.CodeAnalyzer.PreprocessorModel.DefinitionProvider.GetAny(code.Position + p.FuncOffset, word)
+                                                   where d.AllowsDollarChild
+                                                   select d))
+                        {
+                            var childDef = parentDef.GetDollarChildDefinitions(childWord, p.AppSettings).FirstOrDefault(c => !c.ArgumentsRequired);
+                            if (childDef != null)
+                            {
+                                var parentNode = new IdentifierNode(p.Statement, wordSpan, word, parentDef);
+                                var childNode = TryReadSubscript(p, combinedSpan, combinedWord, childDef);
+                                return new ParentChildNode(parentNode, childNode);
+                            }
+                        }
+
+                        ReportError(combinedSpan, CAError.CA0001, combinedWord);	// Unknown '{0}'.
+                        return new UnknownNode(p.Statement, combinedSpan, combinedWord);
+                    }
+                }
+                else // No word after dollar
+                {
+                    ReportError(dollarSpan, CAError.CA0005);	// Expected identifier to follow '$'.
+                    return new UnknownNode(p.Statement, wordSpan.Envelope(dollarSpan), string.Concat(word, "$"));
                 }
             }
 

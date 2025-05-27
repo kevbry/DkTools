@@ -61,6 +61,10 @@ namespace DK.CodeAnalysis.Values
 					return new TableValue(dataType, null);
 				case ValType.IndRel:
 					return new IndRelValue(dataType, null);
+				case ValType.Variant:
+					return new VariantValue();
+				case ValType.Interface:
+					return new InterfaceValue();
 				default:
 					return Value.Void;
 			}
