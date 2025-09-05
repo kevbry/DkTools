@@ -8,7 +8,7 @@ namespace DK.CodeAnalysis.Statements
 {
 	class ExtractStatement : Statement
 	{
-		private List<Node> _colExps = new List<Node>();
+		private List<ExtractColumnNode> _columns = new List<ExtractColumnNode>();
 
 		public ExtractStatement(ReadParams p, CodeSpan keywordSpan)
 			: base(p.CodeAnalyzer, keywordSpan)
@@ -20,7 +20,7 @@ namespace DK.CodeAnalysis.Statements
 
 			if (!code.ReadWord())
 			{
-				ReportError(keywordSpan, CAError.CA0044);	// Expected temp table name to follow 'extract'.
+				ReportError(keywordSpan, CAError.CA10044);	// Expected temp table name to follow 'extract'.
 				return;
 			}
 			var tableName = code.Text;
@@ -28,7 +28,7 @@ namespace DK.CodeAnalysis.Statements
 			var def = p.CodeAnalyzer.PreprocessorModel.DefinitionProvider.GetGlobalFromFile<ExtractTableDefinition>(tableName).FirstOrDefault();
 			if (def == null)
 			{
-				ReportError(code.Span, CAError.CA0045, tableName);	// Extract table '{0}' does not exist.
+				ReportError(code.Span, CAError.CA10045, tableName);	// Extract table '{0}' does not exist.
 				return;
 			}
 
@@ -36,49 +36,48 @@ namespace DK.CodeAnalysis.Statements
 			{
 				if (!code.ReadWord())
 				{
-					ReportError(new CodeSpan(code.Position, code.Position + 1), CAError.CA0046);	// Expected extract column name.
+					ReportError(new CodeSpan(code.Position, code.Position + 1), CAError.CA10046);	// Expected extract column name.
 					return;
 				}
 				var colSpan = code.Span;
 				var colDef = def.GetChildDefinitions(code.Text, p.AppSettings).FirstOrDefault();
 				if (colDef == null)
 				{
-					ReportError(code.Span, CAError.CA0046);	// Expected extract column name.
+					ReportError(code.Span, CAError.CA10046);	// Expected extract column name.
 					return;
 				}
 
 				if (!code.ReadExact('='))
 				{
-					ReportError(new CodeSpan(code.Position, code.Position + 1), CAError.CA0047);	// Expected '=' to follow extract column name.
+					ReportError(new CodeSpan(code.Position, code.Position + 1), CAError.CA10047);	// Expected '=' to follow extract column name.
 					return;
 				}
 				var assignSpan = code.Span;
 
-				var exp = ExpressionNode.Read(p, null, true);
+				var exp = ExpressionNode.Read(p, null);
 				if (exp == null)
 				{
-					ReportError(new CodeSpan(code.Position, code.Position + 1), CAError.CA0048);	// Expected extract column expression.
+					ReportError(new CodeSpan(code.Position, code.Position + 1), CAError.CA10048);	// Expected extract column expression.
 					return;
 				}
 
 				var colNode = new IdentifierNode(p.Statement, colSpan, colDef.Name, colDef, reportable: false);
-				var assignNode = new OperatorNode(p.Statement, assignSpan, "=", special: null);
 
-				_colExps.Add(new AggregateNode(p.Statement, colDef.DataType, colNode, assignNode, exp));
+				_columns.Add(new ExtractColumnNode(p.Statement, colSpan.Envelope(exp.Span), colNode, exp));
 
 				if (code.ReadExact(';')) return;
 			}
 		}
 
-		public override string ToString() => new string[] { "extract... " }.Concat(_colExps.Select(x => x.ToString()).Delim(" ")).Combine();
+		public override string ToString() => new string[] { "extract... " }.Concat(_columns.Select(x => x.ToString()).Delim(" ")).Combine();
 
 		public override void Execute(CAScope scope)
 		{
 			base.Execute(scope);
 
-			foreach (var exp in _colExps)
+			foreach (var col in _columns)
 			{
-				exp.ReadValue(scope);
+				col.Execute(scope);
 			}
 		}
 	}

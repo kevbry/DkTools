@@ -10,26 +10,29 @@ namespace DK.CodeAnalysis.Values
 	{
 		private string _value;
 
-		public StringValue(DataType dataType, string value)
-			: base(dataType)
+		public StringValue(DataType dataType, string value, bool literal)
+			: base(dataType, literal)
 		{
 			_value = value;
 		}
 
 		public override string ToString() => $"\"{_value}\"";
 
-		public override Value CompareEqual(CAScope scope, CodeSpan span, Value rightValue)
+		public override Value CloneNonLiteral() => IsLiteral ? new StringValue(DataType, _value, literal: false) : this;
+
+        public override Value CompareEqual(CAScope scope, CodeSpan span, Value rightValue)
 		{
 			if (_value != null)
 			{
 				var right = rightValue.ToStringValue(scope, span);
 				if (right != null)
 				{
-					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) == 0 ? 1 : 0);
+					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) == 0 ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
 		}
 
 		public override Value CompareNotEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -39,11 +42,12 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToStringValue(scope, span);
 				if (right != null)
 				{
-					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) != 0 ? 1 : 0);
+					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) != 0 ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
 		}
 
 		public override Value CompareLessThan(CAScope scope, CodeSpan span, Value rightValue)
@@ -53,11 +57,12 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToStringValue(scope, span);
 				if (right != null)
 				{
-					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) < 0 ? 1 : 0);
+					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) < 0 ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
 		}
 
 		public override Value CompareGreaterThan(CAScope scope, CodeSpan span, Value rightValue)
@@ -67,11 +72,12 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToStringValue(scope, span);
 				if (right != null)
 				{
-					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) > 0 ? 1 : 0);
+					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) > 0 ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
 		}
 
 		public override Value CompareLessEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -81,11 +87,12 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToStringValue(scope, span);
 				if (right != null)
 				{
-					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) <= 0 ? 1 : 0);
+					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) <= 0 ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
 		}
 
 		public override Value CompareGreaterEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -95,21 +102,22 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToStringValue(scope, span);
 				if (right != null)
 				{
-					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : 0);
+					return new NumberValue(DataType.Int, string.Compare(_value, right, StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
 		}
 
         public override Value CompareLike(CAScope scope, CodeSpan span, Value rightValue)
         {
             if (rightValue.DataType.ValueType != ValType.String)
 			{
-				scope.CodeAnalyzer.ReportError(span, CAError.CA0140);   // 'like' operator may only be used with a string.
+				scope.CodeAnalyzer.ReportError(span, CAError.CA10140);   // 'like' operator may only be used with a string.
             }
 
-			return new NumberValue(DataType.Int, null);
+			return new NumberValue(DataType.Int, number: null, literal: false);
         }
 
         public override string ToStringValue(CAScope scope, CodeSpan span)
@@ -161,7 +169,7 @@ namespace DK.CodeAnalysis.Values
 
 		public override char? ToChar(CAScope scope, CodeSpan span)
 		{
-			scope.CodeAnalyzer.ReportError(span, CAError.CA0055, "string", "char");	// Converting {0} to {1}.
+			scope.CodeAnalyzer.ReportError(span, CAError.CA10055, "string", "char");	// Converting {0} to {1}.
 
 			if (_value != null && _value.Length == 1)
 			{
@@ -173,7 +181,7 @@ namespace DK.CodeAnalysis.Values
 
 		public override Value Convert(CAScope scope, CodeSpan span, Value value)
 		{
-			return new StringValue(DataType, value.ToStringValue(scope, span));
+			return new StringValue(DataType, value.ToStringValue(scope, span), value.IsLiteral);
 		}
 
 		public override bool IsEqualTo(Value other)
@@ -184,7 +192,7 @@ namespace DK.CodeAnalysis.Values
 			return _value == o._value;
 		}
 
-		public override void CheckTypeConversion(CAScope scope, CodeSpan span, DataType dataType)
+		public override void CheckTypeConversion(CAScope scope, CodeSpan span, DataType dataType, ConversionMethod method)
 		{
 			if (_value != null && dataType.HasEnumOptions)
 			{
@@ -192,11 +200,11 @@ namespace DK.CodeAnalysis.Values
 				{
 					if (_value.Length == 0 && dataType.IsValidEnumOption(" "))
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0060, "\"\"");   // Enum option {0} does not exist; use a single space instead of a blank string.
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10060, "\"\"");   // Enum option {0} does not exist; use a single space instead of a blank string.
 					}
 					else
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0059, CodeParser.StringToStringLiteral(_value));   // Enum option {0} does not exist.
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10059, CodeParser.StringToStringLiteral(_value));   // Enum option {0} does not exist.
 					}
 				}
 				//else if (_value.IsWord())

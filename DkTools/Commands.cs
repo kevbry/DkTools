@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using DkTools.ErrorTagging;
+using DK.Modeling;
 
 namespace DkTools
 {
@@ -83,7 +84,6 @@ namespace DkTools
             AddCommand(mcs, CommandId.ShowDrv, ShowDrv);
             AddCommand(mcs, CommandId.DisableDeadCode, DisableDeadCode, checkedCallback: DisableDeadCode_Checked);
             AddCommand(mcs, CommandId.ShowProbeNV, ShowProbeNV);
-            AddCommand(mcs, CommandId.ShowErrors, ShowErrors, checkedCallback: ShowErrors_Checked);
             AddCommand(mcs, CommandId.RunFecErrors, RunFecErrors);
             AddCommand(mcs, CommandId.GoToNextReference, GoToNextReference);
             AddCommand(mcs, CommandId.GoToPrevReference, GoToPrevReference);
@@ -388,7 +388,7 @@ namespace DkTools
 
                     using (var pr = new ProcessRunner())
                     {
-                        var args = string.Concat("\"", baseFileName, "\"");
+                        var args = string.Concat(" /f \"", baseFileName, "\"");
 
                         var output = new StringOutput();
 
@@ -811,36 +811,12 @@ namespace DkTools
             });
         }
 
-        private static void ShowErrors(object sender, EventArgs e)
-        {
-            ThreadHelper.JoinableTaskFactory.Run(async () =>
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                try
-                {
-                    var options = ProbeToolsPackage.Instance.EditorOptions;
-                    options.RunBackgroundFecOnSave = !options.RunBackgroundFecOnSave;
-                    options.SaveSettingsToStorage();
-
-                    ErrorTaskProvider.Instance?.RemoveAllForSource(ErrorTaskSource.BackgroundFec);
-                    ProbeToolsPackage.Instance.App?.OnRefreshAllDocumentsRequired();
-                }
-                catch (Exception ex)
-                {
-                    Shell.ShowError(ex);
-                }
-            });
-        }
-
-        private static bool ShowErrors_Checked(CommandId id)
-        {
-            return ProbeToolsPackage.Instance.EditorOptions.RunBackgroundFecOnSave;
-        }
-
         private static void RunFecErrors(object sender, EventArgs e)
         {
             ThreadHelper.JoinableTaskFactory.Run(async () =>
             {
+                SaveProbeFiles();
+
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                 var view = Shell.ActiveView;
@@ -863,7 +839,7 @@ namespace DkTools
                 try
                 {
                     var options = ProbeToolsPackage.Instance.EditorOptions;
-                    options.RunCodeAnalysisOnSave = !options.RunCodeAnalysisOnSave;
+                    options.RunCodeAnalysisOnUserInput = !options.RunCodeAnalysisOnUserInput;
                     options.SaveSettingsToStorage();
 
                     ErrorTaskProvider.Instance?.RemoveAllForSource(ErrorTaskSource.CodeAnalysis);
@@ -878,7 +854,7 @@ namespace DkTools
 
         private static bool ShowCodeAnalysis_Checked(CommandId id)
         {
-            return ProbeToolsPackage.Instance.EditorOptions.RunCodeAnalysisOnSave;
+            return ProbeToolsPackage.Instance.EditorOptions.RunCodeAnalysisOnUserInput;
         }
 
         private static void GoToNextReference(object sender, EventArgs e)
@@ -931,7 +907,8 @@ namespace DkTools
 
                     var fileStore = FileStoreHelper.GetOrCreateForTextBuffer(view.TextBuffer);
                     if (fileStore == null) return;
-                    var model = fileStore.CreatePreprocessedModelSync(appSettings, fileName, view.TextSnapshot, visible: false, "Code Analysis", CancellationToken.None);
+                    var model = fileStore.CreatePreprocessedModelSync(appSettings, fileName, view.TextSnapshot,
+                        visible: false, "Code Analysis", CodeScanMode.CodeAnalysis, CancellationToken.None);
 
                     var pane = Shell.CreateOutputPane(GuidList.guidCodeAnalysisPane, "DK Code Analysis");
                     pane.Clear();

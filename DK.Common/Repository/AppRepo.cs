@@ -515,10 +515,10 @@ namespace DK.Repository
 
             switch (model.FileContext)
             {
-                case FileContext.Function:
                 case FileContext.ClientClass:
                 case FileContext.ServerClass:
                 case FileContext.NeutralClass:
+                case FileContext.Function:
                     funcs.AddRange(model.DefinitionProvider.GetGlobalFromFile<FunctionDefinition>().Where(x => !x.Extern));
                     break;
             }
@@ -1164,10 +1164,13 @@ namespace DK.Repository
                     {
                         if (Func_GetNameId(func) == funcNameId)
                         {
+                            var sig = FunctionSignature.ParseFromDb(Func_GetSignature(func), _appSettings);
+
                             results.Add(new FunctionDefinition(
-                                signature: FunctionSignature.ParseFromDb(Func_GetSignature(func), _appSettings),
+                                signature: sig,
                                 filePos: Func_GetFilePosition(func),
-                                hasVariableArgumentCount: false
+                                hasVariableArgumentCount: false,
+                                flags: sig.Flags
                             ));
                         }
                         return true;
@@ -1200,7 +1203,8 @@ namespace DK.Repository
                         var funcDef = new FunctionDefinition(
                             signature: sig,
                             filePos: Func_GetFilePosition(func),
-                            hasVariableArgumentCount: false);
+                            hasVariableArgumentCount: false,
+                            flags: sig.Flags);
                         classDef.AddFunction(funcDef);
                         return true;
                     });
@@ -1215,7 +1219,8 @@ namespace DK.Repository
                         var funcDef = new FunctionDefinition(
                             signature: sig,
                             filePos: Func_GetFilePosition(func),
-                            hasVariableArgumentCount: false);
+                            hasVariableArgumentCount: false,
+                            flags: sig.Flags);
                         results.Add(funcDef);
                         return true;
                     });

@@ -7,15 +7,17 @@ namespace DK.CodeAnalysis.Values
 	{
 		private DkTime? _time;
 
-		public TimeValue(DataType dataType, DkTime? time)
-			: base(dataType)
+		public TimeValue(DataType dataType, DkTime? time, bool literal)
+			: base(dataType, literal)
 		{
 			_time = time;
 		}
 
 		public override string ToString() => _time.HasValue ? _time.Value.ToString() : "(null-time)";
 
-		public override Value Multiply(CAScope scope, CodeSpan span, Value rightValue)
+		public override Value CloneNonLiteral() => IsLiteral ? new TimeValue(DataType, _time, literal: false) : this;
+
+        public override Value Multiply(CAScope scope, CodeSpan span, Value rightValue)
 		{
 			if (_time.HasValue)
 			{
@@ -25,15 +27,15 @@ namespace DK.CodeAnalysis.Values
 					var result = _time.Value.Ticks * right.Value.Ticks;
 					if (result < 0 || result > 43200)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0054);	// Time math results in an out-of-bounds value.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10054);	// Time math results in an out-of-bounds value.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
-					return new TimeValue(DataType, new DkTime(result));
+					return new TimeValue(DataType, new DkTime(result), literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value Divide(CAScope scope, CodeSpan span, Value rightValue)
@@ -46,22 +48,22 @@ namespace DK.CodeAnalysis.Values
 					var rightNum = right.Value.Ticks;
 					if (rightNum == 0)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0051);	// Division by zero.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10051);	// Division by zero.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
 					var result = _time.Value.Ticks / rightNum;
 					if (result < 0 || result > 43200)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0054);	// Time math results in an out-of-bounds value.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10054);	// Time math results in an out-of-bounds value.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
-					return new TimeValue(DataType, new DkTime(result));
+					return new TimeValue(DataType, new DkTime(result), literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value ModulusDivide(CAScope scope, CodeSpan span, Value rightValue)
@@ -74,22 +76,22 @@ namespace DK.CodeAnalysis.Values
 					var rightNum = right.Value.Ticks;
 					if (rightNum == 0)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0051);	// Division by zero.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10051);	// Division by zero.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
 					var result = _time.Value.Ticks % rightNum;
 					if (result < 0 || result > 43200)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0054);	// Time math results in an out-of-bounds value.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10054);	// Time math results in an out-of-bounds value.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
-					return new TimeValue(DataType, new DkTime(result));
+					return new TimeValue(DataType, new DkTime(result), literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value Add(CAScope scope, CodeSpan span, Value rightValue)
@@ -102,15 +104,15 @@ namespace DK.CodeAnalysis.Values
 					var result = _time.Value.Ticks + right.Value.Ticks;
 					if (result < 0 || result > 43200)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0054);	// Time math results in an out-of-bounds value.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10054);	// Time math results in an out-of-bounds value.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
-					return new TimeValue(DataType, new DkTime(result));
+					return new TimeValue(DataType, new DkTime(result), literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value Subtract(CAScope scope, CodeSpan span, Value rightValue)
@@ -123,21 +125,21 @@ namespace DK.CodeAnalysis.Values
 					var result = _time.Value.Ticks - right.Value.Ticks;
 					if (result < 0 || result > 43200)
 					{
-						scope.CodeAnalyzer.ReportError(span, CAError.CA0054);	// Time math results in an out-of-bounds value.
-						return new TimeValue(DataType, null);
+						scope.CodeAnalyzer.ReportError(span, CAError.CA10054);	// Time math results in an out-of-bounds value.
+						return new TimeValue(DataType, time: null, literal: false);
 					}
 
-					return new TimeValue(DataType, new DkTime(result));
+					return new TimeValue(DataType, new DkTime(result), literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value Invert(CAScope scope, CodeSpan span)
 		{
-			scope.CodeAnalyzer.ReportError(span, CAError.CA0054);	// Time math results in an out-of-bounds value.
-			return new TimeValue(DataType, null);
+			scope.CodeAnalyzer.ReportError(span, CAError.CA10054);	// Time math results in an out-of-bounds value.
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value CompareEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -147,11 +149,12 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToTime(scope, span);
 				if (right.HasValue)
 				{
-					return new NumberValue(DataType.Int, _time.Value.Ticks == right.Value.Ticks ? 1 : 0);
+					return new NumberValue(DataType.Int, _time.Value.Ticks == right.Value.Ticks ? 1 : 0,
+						literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value CompareNotEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -161,11 +164,11 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToTime(scope, span);
 				if (right.HasValue)
 				{
-					return new NumberValue(DataType.Int, _time.Value.Ticks != right.Value.Ticks ? 1 : 0);
+					return new NumberValue(DataType.Int, _time.Value.Ticks != right.Value.Ticks ? 1 : 0, literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value CompareLessThan(CAScope scope, CodeSpan span, Value rightValue)
@@ -175,11 +178,11 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToTime(scope, span);
 				if (right.HasValue)
 				{
-					return new NumberValue(DataType.Int, _time.Value.Ticks < right.Value.Ticks ? 1 : 0);
+					return new NumberValue(DataType.Int, _time.Value.Ticks < right.Value.Ticks ? 1 : 0, literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value CompareGreaterThan(CAScope scope, CodeSpan span, Value rightValue)
@@ -189,11 +192,11 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToTime(scope, span);
 				if (right.HasValue)
 				{
-					return new NumberValue(DataType.Int, _time.Value.Ticks > right.Value.Ticks ? 1 : 0);
+					return new NumberValue(DataType.Int, _time.Value.Ticks > right.Value.Ticks ? 1 : 0, literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value CompareLessEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -203,11 +206,11 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToTime(scope, span);
 				if (right.HasValue)
 				{
-					return new NumberValue(DataType.Int, _time.Value.Ticks <= right.Value.Ticks ? 1 : 0);
+					return new NumberValue(DataType.Int, _time.Value.Ticks <= right.Value.Ticks ? 1 : 0, literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override Value CompareGreaterEqual(CAScope scope, CodeSpan span, Value rightValue)
@@ -217,11 +220,11 @@ namespace DK.CodeAnalysis.Values
 				var right = rightValue.ToTime(scope, span);
 				if (right.HasValue)
 				{
-					return new NumberValue(DataType.Int, _time.Value.Ticks >= right.Value.Ticks ? 1 : 0);
+					return new NumberValue(DataType.Int, _time.Value.Ticks >= right.Value.Ticks ? 1 : 0, literal: false);
 				}
 			}
 
-			return new TimeValue(DataType, null);
+			return new TimeValue(DataType, time: null, literal: false);
 		}
 
 		public override bool IsTrue
@@ -254,7 +257,7 @@ namespace DK.CodeAnalysis.Values
 
 		public override DkDate? ToDate(CAScope scope, CodeSpan span)
 		{
-			scope.CodeAnalyzer.ReportError(span, CAError.CA0055, "time", "date");	// Converting {0} to {1}.
+			scope.CodeAnalyzer.ReportError(span, CAError.CA10055, "time", "date");	// Converting {0} to {1}.
 
 			if (_time.HasValue) return new DkDate(_time.Value.Ticks);
 			return null;
@@ -268,14 +271,14 @@ namespace DK.CodeAnalysis.Values
 
 		public override char? ToChar(CAScope scope, CodeSpan span)
 		{
-			scope.CodeAnalyzer.ReportError(span, CAError.CA0055, "time", "char");	// Converting {0} to {1}.
+			scope.CodeAnalyzer.ReportError(span, CAError.CA10055, "time", "char");	// Converting {0} to {1}.
 			if (_time.HasValue) return (char)_time.Value.Ticks;
 			return null;
 		}
 
 		public override Value Convert(CAScope scope, CodeSpan span, Value value)
 		{
-			return new TimeValue(DataType, value.ToTime(scope, span));
+			return new TimeValue(DataType, value.ToTime(scope, span), IsLiteral);
 		}
 
 		public override bool IsEqualTo(Value other)

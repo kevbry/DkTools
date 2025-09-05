@@ -3,349 +3,434 @@ using System.Linq;
 
 namespace DK.CodeAnalysis
 {
-	public enum CAError
-	{
-		#region General Parsing
-		[ErrorMessage("Unknown '{0}'.")]
-		CA0001,
+    public enum CAError
+    {
+        #region DK Errors
+        [ErrorMessage("Strings passed by reference are immutable; changes are not reflected back to the caller.")]
+        [Warning]
+        CA00106,
 
-		[ErrorMessage("Function '{0}' with {1} argument(s) not found.")]
-		CA0002,
+        [ErrorMessage("Converting from '{0}' to '{1}'; possible data loss.")]
+        [Warning]
+        CA00108,
+        #endregion
 
-		[ErrorMessage("Function '{0}' not found.")]
-		CA0003,
+        #region General Parsing
+        [ErrorMessage("Unknown '{0}'.")]
+        CA10001,
 
-		[ErrorMessage("Expected identifier to follow '.'")]
-		CA0004,
+        [ErrorMessage("Function '{0}' with {1} argument(s) not found.")]
+        CA10002,
 
-		[ErrorMessage("Expected identifier to follow '$'.")]
-		CA0005,
-		#endregion
+        [ErrorMessage("Function '{0}' not found.")]
+        CA10003,
 
-		[ErrorMessage("Unknown operator '{0}'.")]
-		CA0006,
+        [ErrorMessage("Expected identifier to follow '.'")]
+        CA10004,
 
-		[ErrorMessage("Operator '{0}' expects value on left.")]
-		CA0007,
+        [ErrorMessage("Expected identifier to follow '$'.")]
+        CA10005,
 
-		[ErrorMessage("Operator '{0}' expects value on right.")]
-		CA0008,
+        [ErrorMessage("Expected expression.")]  // In brackets
+        CA10009,
 
-		#region Operator Simplification (0100-0109)
-		[ErrorMessage("Operator '{0}' expects assignable value on left.")]
-		CA0100,
+        [ErrorMessage("Expected ';'.")]
+        CA10015,
 
-		[ErrorMessage("Syntax error.")]
-		CA0101,
+        [ErrorMessage("Expected condition after '{0}'.")]
+        CA10018,
 
-		[ErrorMessage("Unknown identifier.")]	// For writing
-		CA0102,
+        [ErrorMessage("Expected '{'.")]
+        CA10019,
 
-		[ErrorMessage("Unknown identifier.")]	// For reading
-		CA0103,
-		#endregion
+        [ErrorMessage("Expected '('.")]
+        CA10025,
 
-		#region Variable Usage (0110-0119)
-		[ErrorMessage("Use of uninitialized variable '{0}'.")]
-		[Warning]
-		CA0110,
+        [ErrorMessage("Expected ';'.")]
+        CA10026,
 
-		[ErrorMessage("Variable '{0}' is assigned a value, but is never used.")]
-		[Warning]
-		CA0111,
+        [ErrorMessage("Expected ')'.")]
+        CA10027,
 
-		[ErrorMessage("Variable '{0}' is not used.")]
-		[Warning]
-		CA0112,
-		#endregion
+        [ErrorMessage("Statement is not valid here.")]
+        CA10030,
 
-		[ErrorMessage("Expected value after 'return'.")]
-		CA0014,
+        [ErrorMessage("Expected '='.")]
+        CA10033,
 
-		[ErrorMessage("Expected ';'.")]
-		CA0015,
+        [ErrorMessage("Unmatched '{0}'.")]
+        CA10076,
+        #endregion
 
-		[ErrorMessage("Unreachable code.")]
-		[Warning]
-		CA0016,
+        #region Operators
+        [ErrorMessage("Operator '?' expects ':' on right.")]
+        CA10021,
 
-		[ErrorMessage("Not all code branches return a value.")]
-		[Warning]
-		CA0017,
+        [ErrorMessage("Unknown operator '{0}'.")]
+        CA10006,
 
-		[ErrorMessage("Expected condition after '{0}'.")]
-		CA0018,
+        [ErrorMessage("Operator '{0}' expects value on left.")]
+        CA10007,
 
-		[ErrorMessage("Expected '{'.")]
-		CA0019,
+        [ErrorMessage("Operator '{0}' expects value on right.")]
+        CA10008,
 
-		[ErrorMessage("Array indexer requires variable on left.")]
-		CA0020,
+        [ErrorMessage("Operator '{0}' expects assignable value on left.")]
+        CA10100,
 
-		[ErrorMessage("Operator '?' expects ':' on right.")]
-		CA0021,
+        [ErrorMessage("Syntax error.")]
+        CA10101,
 
-		[ErrorMessage("Only 1 or 2 index accessors allowed.")]
-		CA0022,
+        [ErrorMessage("Unknown identifier.")]	// For writing
+        CA10102,
 
-		[ErrorMessage("'break' is not valid here.")]
-		CA0023,
+        [ErrorMessage("Unknown identifier.")]	// For reading
+        CA10103,
+        #endregion
 
-		[ErrorMessage("'continue' is not valid here.")]
-		CA0024,
+        #region Variable Usage (0110-0119)
+        [ErrorMessage("Use of uninitialized variable '{0}'.")]
+        [Warning]
+        CA10110,
 
-		[ErrorMessage("Expected '('.")]
-		CA0025,
+        [ErrorMessage("Variable '{0}' is assigned a value, but is never used.")]
+        [Warning]
+        CA10111,
 
-		[ErrorMessage("Expected ';'.")]
-		CA0026,
+        [ErrorMessage("Variable '{0}' is not used.")]
+        [Warning]
+        CA10112,
 
-		[ErrorMessage("Expected ')'.")]
-		CA0027,
+        [ErrorMessage("Variable '{0}' has already been declared.")]
+        CA10113,
 
-		[ErrorMessage("Expected case value.")]
-		CA0028,
+        [ErrorMessage("Passing the result of division into a string argument will trigger a compiler bug.")]
+        CA10082,
+        #endregion
 
-		[ErrorMessage("Expected ':'.")]
-		CA0029,
+        #region Select Statements
+        [ErrorMessage("Expected '{0}'.")]	// Used for select statements
+        CA10034,
 
-		[ErrorMessage("Statement is not valid here.")]
-		CA0030,
+        [ErrorMessage("Table or relationship '{0}' does not exist.")]
+        CA10035,
 
-		[ErrorMessage("Switch fall-throughs are inadvisable.")]
-		[Warning]
-		CA0031,
+        [ErrorMessage("Expected table name after 'of'.")]
+        CA10036,
 
-		[ErrorMessage("Duplicate default case.")]
-		CA0032,
+        [ErrorMessage("Table or relationship '{0}' is not referenced in the 'from' clause.")]
+        CA10037,
 
-		[ErrorMessage("Expected '='.")]
-		CA0033,
+        [ErrorMessage("Expected table or relationship name.")]
+        CA10038,
 
-		#region Select Statements
-		[ErrorMessage("Expected '{0}'.")]	// Used for select statements
-		CA0034,
+        [ErrorMessage("Expected column name to follow table name.")]
+        CA10039,
 
-		[ErrorMessage("Table or relationship '{0}' does not exist.")]
-		CA0035,
+        [ErrorMessage("Table '{0}' has no column '{1}'.")]
+        CA10040,
 
-		[ErrorMessage("Expected table name after 'of'.")]
-		CA0036,
+        [ErrorMessage("Expected number after 'top'.")]
+        CA10072,
 
-		[ErrorMessage("Table or relationship '{0}' is not referenced in the 'from' clause.")]
-		CA0037,
+        [ErrorMessage("Assignment in select where clause.")]
+        CA10073,
+        #endregion
 
-		[ErrorMessage("Expected table or relationship name.")]
-		CA0038,
+        #region Switch Statements
+        [ErrorMessage("Expected case value.")]
+        CA10028,
 
-		[ErrorMessage("Expected column name to follow table name.")]
-		CA0039,
+        [ErrorMessage("Expected ':'.")]
+        CA10029,
 
-		[ErrorMessage("Table '{0}' has no column '{1}'.")]
-		CA0040,
+        [ErrorMessage("Switch fall-throughs are inadvisable.")]
+        [Warning]
+        CA10031,
 
-		[ErrorMessage("Expected number after 'top'.")]
-		CA0072,
-		#endregion
+        [ErrorMessage("Duplicate default case.")]
+        CA10032,
+        #endregion
 
-		#region Conditional Statements
-		[ErrorMessage("Expected ':' to follow conditional result.")]
-		CA0041,
+        #region Conditional Statements
+        [ErrorMessage("Expected ':' to follow conditional result.")]
+        CA10041,
 
-		[ErrorMessage("Expected value to follow conditional '?'.")]
-		CA0042,
+        [ErrorMessage("Expected value to follow conditional '?'.")]
+        CA10042,
 
-		[ErrorMessage("Expected value to follow conditional ':'.")]
-		CA0043,
+        [ErrorMessage("Expected value to follow conditional ':'.")]
+        CA10043,
 
-		[ErrorMessage("Conditional statements should be wrapped in brackets to avoid compiler bugs.")]
-		[Warning]
-		CA0071,
-		#endregion
+        [ErrorMessage("Conditional statements should be wrapped in brackets to avoid compiler bugs.")]
+        [Warning]
+        CA10071,
+        #endregion
 
-		#region Extract Statements
-		[ErrorMessage("Expected extract table name to follow 'extract'.")]
-		CA0044,
+        #region Extract Statements
+        [ErrorMessage("Expected extract table name to follow 'extract'.")]
+        CA10044,
 
-		[ErrorMessage("Extract table '{0}' does not exist.")]
-		CA0045,
+        [ErrorMessage("Extract table '{0}' does not exist.")]
+        CA10045,
 
-		[ErrorMessage("Expected extract column name.")]
-		CA0046,
+        [ErrorMessage("Expected extract column name.")]
+        CA10046,
 
-		[ErrorMessage("Expected '=' to follow extract column name.")]
-		CA0047,
+        [ErrorMessage("Expected '=' to follow extract column name.")]
+        CA10047,
 
-		[ErrorMessage("Expected extract column expression.")]
-		CA0048,
-		#endregion
+        [ErrorMessage("Expected extract column expression.")]
+        CA10048,
+        #endregion
 
-		#region Values
-		[ErrorMessage("{0} cannot be used with this value.")]
-		CA0050,
+        #region Values
+        [ErrorMessage("{0} cannot be used with this value.")]
+        CA10050,
 
-		[ErrorMessage("Division by zero.")]
-		[Warning]
-		CA0051,
+        [ErrorMessage("Division by zero.")]
+        [Warning]
+        CA10051,
 
-		[ErrorMessage("Date math results in an out-of-bounds value.")]
-		[Warning]
-		CA0052,
+        [ErrorMessage("Date math results in an out-of-bounds value.")]
+        [Warning]
+        CA10052,
 
-		[ErrorMessage("Enum math results in an out-of-bounds value.")]
-		[Warning]
-		CA0053,
+        [ErrorMessage("Enum math results in an out-of-bounds value.")]
+        [Warning]
+        CA10053,
 
-		[ErrorMessage("Time math results in an out-of-bounds value.")]
-		[Warning]
-		CA0054,
+        [ErrorMessage("Time math results in an out-of-bounds value.")]
+        [Warning]
+        CA10054,
 
-		[ErrorMessage("Converting {0} to {1}.")]
-		[Warning]
-		CA0055,
+        [ErrorMessage("Converting {0} to {1}.")]
+        [Warning]
+        CA10055,
 
-		[ErrorMessage("Char math results in an out-of-bounds value.")]
-		[Warning]
-		CA0056,
+        [ErrorMessage("Char math results in an out-of-bounds value.")]
+        [Warning]
+        CA10056,
 
-		[ErrorMessage("Function expects {0} argument(s).")]
-		CA0057,
+        [ErrorMessage("Function expects {0} argument(s).")]
+        CA10057,
 
-		[ErrorMessage("Use non-string enum values when possible.")]
-		[Warning]
-		CA0058,
+        [ErrorMessage("Use non-string enum values when possible.")]
+        [Warning]
+        CA10058,
 
-		[ErrorMessage("Enum option {0} does not exist.")]
-		[Warning]
-		CA0059,
+        [ErrorMessage("Enum option {0} does not exist.")]
+        [Warning]
+        CA10059,
 
-		[ErrorMessage("Enum option {0} does not exist; use a single space instead of an empty string.")]
-		[Warning]
-		CA0060,
-		#endregion
+        [ErrorMessage("Enum option {0} does not exist; use a single space instead of an empty string.")]
+        [Warning]
+        CA10060,
 
-		#region Aggregate Functions
-		[ErrorMessage("Expected aggregate expression.")]
-		CA0061,
+        [ErrorMessage("Enum option '{0}' is ambigious with variable/argument of the same name.")]
+        [Warning]
+        CA10083,
+        #endregion
 
-		[ErrorMessage("Expected expression to follow '{0}'.")]
-		CA0062,
+        #region Aggregate Functions
+        [ErrorMessage("Expected aggregate expression.")]
+        CA10061,
 
-		[ErrorMessage("Expected ')'.")]
-		CA0063,
+        [ErrorMessage("Expected expression to follow '{0}'.")]
+        CA10062,
 
-		[ErrorMessage("Table '{0}' does not exist.")]
-		CA0064,
+        [ErrorMessage("Expected ')'.")]
+        CA10063,
 
-		[ErrorMessage("Expected table name to follow 'group'.")]
-		CA0065,
+        [ErrorMessage("Table '{0}' does not exist.")]
+        CA10064,
 
-		[ErrorMessage("Expected '.'")]
-		CA0066,
+        [ErrorMessage("Expected table name to follow 'group'.")]
+        CA10065,
 
-		[ErrorMessage("Expected column name.")]
-		CA0067,
+        [ErrorMessage("Expected '.'")]
+        CA10066,
 
-		[ErrorMessage("Expected select name to follow 'in'.")]
-		CA0068,
-		#endregion
+        [ErrorMessage("Expected column name.")]
+        CA10067,
 
-		#region Highlighting
-		[ErrorMessage("This expression writes to the report stream.")]
-		[ReportOutputTag]
-		CA0070,
-		#endregion
+        [ErrorMessage("Expected select name to follow 'in'.")]
+        CA10068,
+        #endregion
 
-		// Last CA0072
+        #region Highlighting
+        [ErrorMessage("This expression writes to the report stream.")]
+        [ReportOutputTag]
+        CA10070,
+        #endregion
 
-		#region Function Calls (0120-0129)
-		/// <summary>
-		/// Deprecated function call.
-		/// {0} = description text.
-		/// </summary>
-		[ErrorMessage("{0}")]
-		CA0120,
+        #region Function Calls (10120-10129)
+        /// <summary>
+        /// Deprecated function call.
+        /// {0} = description text.
+        /// </summary>
+        [ErrorMessage("{0}")]
+        CA10120,
 
-		[ErrorMessage("Function requires {0} arguments. ({1} passed)")]
-		CA0121,
-		#endregion
+        [ErrorMessage("Function requires {0} arguments. ({1} passed)")]
+        CA10121,
 
-		#region In Operator (0130-0139)
-		[ErrorMessage("Expected '('.")]
-		CA0130,
+        [ErrorMessage("This function should not be called in a select where clause.")]
+        CA10077,
+        #endregion
 
-		[ErrorMessage("Expected ','.")]
-		CA0131,
+        #region In Operator (0130-0139)
+        [ErrorMessage("Expected '('.")]
+        CA10130,
 
-		[ErrorMessage("Expected expression.")]
-		CA0132,
+        [ErrorMessage("Expected ','.")]
+        CA10131,
 
-		[ErrorMessage("'in' operator requires at least 1 expression.")]
-		CA0133,
-		#endregion
+        [ErrorMessage("Expected expression.")]
+        CA10132,
 
-		#region Like Operator (0140-0149)
-		[ErrorMessage("'like' operator may only be used with a string.")]
-		CA0140,
-		#endregion
+        [ErrorMessage("'in' operator requires at least 1 expression.")]
+        CA10133,
+        #endregion
 
-		#region Goto Operator (0150-0159)
-		[ErrorMessage("Expected goto label.")]
-		CA0150,
-		#endregion
-	}
+        #region Like Operator (10140-10149)
+        [ErrorMessage("'like' operator may only be used with a string.")]
+        CA10140,
+        #endregion
+
+        #region Goto Operator (10150-10159)
+        [ErrorMessage("Expected goto label.")]
+        CA10150,
+        #endregion
+
+        #region Preprocessor (10160-10169)
+        [ErrorMessage("Wrong number of arguments passed to macro. {0} passed, {1} expected.")]
+        CA10160,
+
+        [ErrorMessage("Cannot find include file '{0}'.")]
+        CA10074,
+        #endregion
+
+        #region Function Arguments (10170-10179)
+        [ErrorMessage("String constant must be quoted.")]
+        CA10170,
+
+        [ErrorMessage("Function arguments could not be parsed.")]
+        CA10171,
+
+        [ErrorMessage("Expected ','.")]
+        CA10172,
+        #endregion
+
+        #region Arrays
+        [ErrorMessage("Array indexer requires variable on left.")]
+        CA10020,
+
+        [ErrorMessage("Only 1 or 2 index accessors allowed.")]
+        CA10022,
+
+        [ErrorMessage("Expected {0} array indexers but got {1}.")]
+        CA10180,
+
+        [ErrorMessage("Expected array indexer to follow variable.")]
+        CA10075,
+        #endregion
+
+        #region Function Definitions (10190-10199)
+        [ErrorMessage("Unreachable code.")]
+        [Warning]
+        CA10016,
+
+        [ErrorMessage("Not all code branches return a value.")]
+        [Warning]
+        CA10017,
+
+        [ErrorMessage("Function '{0}' has already been defined.")]
+        CA10190,
+
+        [ErrorMessage("Argument '{0}' has already been declared.")]
+        CA10191,
+
+        [ErrorMessage("Duplicate #SQLWhereClauseCompatibleAttribute.")]
+        CA10078,
+
+        [ErrorMessage("#SQLResultsFilteringAttribute cannot be used with #SQLWhereClauseCompatibleAttribute.")]
+        CA10079,
+
+        [ErrorMessage("Duplicate #SQLResultsFilteringAttribute.")]
+        CA10080,
+
+        [ErrorMessage("#SQLWhereClauseCompatibleAttribute cannot be used with #SQLResultsFilteringAttribute.")]
+        CA10081,
+        #endregion
+
+        #region Return Statements
+        [ErrorMessage("Expected value after 'return'.")]
+        CA10014,
+        #endregion
+
+        #region Break / Continue
+        [ErrorMessage("'break' is not valid here.")]
+        CA10023,
+
+        [ErrorMessage("'continue' is not valid here.")]
+        CA10024,
+        #endregion
+
+        // Last CA10083
+    }
 
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-	class ErrorMessageAttribute : Attribute
-	{
-		private string _message;
+    class ErrorMessageAttribute : Attribute
+    {
+        private string _message;
 
-		public ErrorMessageAttribute(string message)
-		{
-			_message = message;
-		}
+        public ErrorMessageAttribute(string message)
+        {
+            _message = message;
+        }
 
-		public string Message
-		{
-			get { return _message; }
-		}
-	}
+        public string Message
+        {
+            get { return _message; }
+        }
+    }
 
-	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-	class WarningAttribute : Attribute
-	{
-	}
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+    class WarningAttribute : Attribute
+    {
+    }
 
-	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-	class ReportOutputTagAttribute : Attribute
-	{
-	}
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+    class ReportOutputTagAttribute : Attribute
+    {
+    }
 
-	static class CAErrorEx
-	{
-		public static string GetText(this CAError code, object[] args)
-		{
-			var codeString = code.ToString();
+    static class CAErrorEx
+    {
+        public static string GetText(this CAError code, object[] args)
+        {
+            var codeString = code.ToString();
 
-			var memInfo = typeof(CAError).GetMember(codeString);
-			if (memInfo == null || memInfo.Length == 0) return codeString;
+            var memInfo = typeof(CAError).GetMember(codeString);
+            if (memInfo == null || memInfo.Length == 0) return codeString;
 
-			var attrib = memInfo[0].GetCustomAttributes(typeof(ErrorMessageAttribute), false);
-			if (attrib == null || attrib.Length == 0) return codeString;
+            var attrib = memInfo[0].GetCustomAttributes(typeof(ErrorMessageAttribute), false);
+            if (attrib == null || attrib.Length == 0) return codeString;
 
-			var message = ((ErrorMessageAttribute)attrib[0]).Message;
-			if (args != null && args.Length > 0) message = string.Format(message, args);
-			return string.Concat(codeString, ": ", message);
-		}
+            var message = ((ErrorMessageAttribute)attrib[0]).Message;
+            if (args != null && args.Length > 0) message = string.Format(message, args);
+            return string.Concat(codeString, ": ", message);
+        }
 
-		public static CAErrorType GetErrorType(this CAError code)
-		{
-			var memInfo = typeof(CAError).GetMember(code.ToString());
-			if (memInfo == null || memInfo.Length == 0) return CAErrorType.Error;
+        public static CAErrorType GetErrorType(this CAError code)
+        {
+            var memInfo = typeof(CAError).GetMember(code.ToString());
+            if (memInfo == null || memInfo.Length == 0) return CAErrorType.Error;
 
-			if (memInfo[0].GetCustomAttributes(typeof(WarningAttribute), false).Any()) return CAErrorType.Warning;
-			if (memInfo[0].GetCustomAttributes(typeof(ReportOutputTagAttribute), false).Any()) return CAErrorType.ReportOutputTag;
-			return CAErrorType.Error;
-		}
-	}
+            if (memInfo[0].GetCustomAttributes(typeof(WarningAttribute), false).Any()) return CAErrorType.Warning;
+            if (memInfo[0].GetCustomAttributes(typeof(ReportOutputTagAttribute), false).Any()) return CAErrorType.ReportOutputTag;
+            return CAErrorType.Error;
+        }
+    }
 }
